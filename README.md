@@ -1,12 +1,11 @@
 # Sojourn: Deep-Space Reverse Engineering Game Platform
 
 ## Team Members
-
+* Macsen Casaus
+* Susan Hamilton
 * Isaac Lagoy
 * Owen Shadburne
-* Macsen Casaus
 * David Zhang
-* Susan Hamilton
 
 ## Sponsor / Mentor
 
