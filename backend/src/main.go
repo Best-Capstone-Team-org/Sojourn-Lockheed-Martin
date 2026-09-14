@@ -1,11 +1,36 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"sojourn/emulator"
+	"time"
 )
+
+func uartReader() {
+	address := fmt.Sprintf("%s:%d", emulator.UartTCPAddr, emulator.UartTCPPort)
+	timeout := 5 * time.Second
+
+	log.Printf("Connecting to %s", address)
+	conn, err := net.DialTimeout("tcp", address, timeout)
+	if err != nil {
+		log.Fatalf("Connection failed: %+v", err)
+	}
+
+	for {
+		response, err := bufio.NewReader(conn).ReadString('\n')
+
+		if err != nil {
+			log.Printf("Failed to read response: %v\n", err)
+			continue
+		}
+
+		fmt.Printf("firmware message: %s", response)
+	}
+}
 
 func main() {
 	programName := os.Args[0]
@@ -22,6 +47,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading emulator: %+v\n", err)
 	}
+
+	time.Sleep(time.Second)
+
+	go uartReader()
 
 	log.Println("Waiting on firmware...")
 	err = cmd.Wait()

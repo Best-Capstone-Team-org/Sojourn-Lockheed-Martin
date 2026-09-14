@@ -12,8 +12,8 @@ import (
 
 const qemuSystemArmEnvVar = "QEMU_SYSTEM_ARM_BIN"
 
-const uartTCPAddr = "127.0.0.1"
-const uartTCPPort = 5599
+const UartTCPAddr = "127.0.0.1"
+const UartTCPPort = 5599
 
 func Load(firmwareFilePath string) (*exec.Cmd, error) {
 	log.Printf("Loading %s\n", firmwareFilePath)
@@ -36,7 +36,7 @@ func Load(firmwareFilePath string) (*exec.Cmd, error) {
 		"-M", "mps2-an386",
 		"-nographic",
 		"-kernel", firmwareFilePath,
-		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=off", uartTCPAddr, uartTCPPort)}
+		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=off", UartTCPAddr, UartTCPPort)}
 
 	log.Printf("Starting qemu: %s %s\n",
 		qemuSystemARMBinary, strings.Join(qemuArgs, " "))
