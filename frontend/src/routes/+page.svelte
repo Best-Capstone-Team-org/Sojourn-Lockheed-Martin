@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { apiWebSocket } from "$lib/api";
+	import Box from "$lib/components/Box/Box.svelte";
 
 	const ws = apiWebSocket("command-ws");
 	let ready = $state(false);
@@ -18,6 +19,10 @@
 		}
 	});
 </script>
+
+<Box>
+	<h1 class="text-center text-2xl">Sojourn</h1>
+</Box>
 
 <h1>Welcome to SvelteKit</h1>
 <p>
