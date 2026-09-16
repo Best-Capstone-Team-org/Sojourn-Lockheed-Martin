@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"sojourn/emulator"
+	"sojourn/server"
 	"time"
 )
 
@@ -39,6 +40,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: %s firmware\n", programName)
 		os.Exit(1)
 	}
+
+	go server.Serve()
 
 	firmwareName := os.Args[1]
 
