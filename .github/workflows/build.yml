@@ -1,0 +1,28 @@
+name: Sojourn
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: sojourn-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sojourn:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # TODO:
+      # run formatter & linter
+      # run typechecker
+      # run tests
+
+      - name: Build image
+        run: docker build --pull -t sojourn:${{ github.sha }} .
