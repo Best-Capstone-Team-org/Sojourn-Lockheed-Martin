@@ -27,7 +27,12 @@ func Serve() {
 func routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	fileServer := http.FileServer(http.Dir("../../frontend/build"))
+	buildDir := os.Getenv("BUILD_DIR")
+	if buildDir == "" {
+		buildDir = "../../frontend/build"
+	}
+	
+	fileServer := http.FileServer(http.Dir(buildDir))
 	mux.Handle("/", fileServer)
 
 	return mux
