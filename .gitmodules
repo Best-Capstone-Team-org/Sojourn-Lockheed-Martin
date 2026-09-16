@@ -1,0 +1,3 @@
+[submodule "deps/sojourn"]
+	path = deps/sojourn
+	url = https://github.com/TAMU-Capstone/sojourn
