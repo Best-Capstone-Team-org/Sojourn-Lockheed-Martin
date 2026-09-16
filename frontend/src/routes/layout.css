@@ -1,1 +1,22 @@
 @import 'tailwindcss';
+
+@font-face {
+	font-family: Chicago;
+	src: url('../lib/assets/fonts/ChicagoFLF.woff2') format('woff2'),
+		url('../lib/assets/fonts/ChicagoFLF.woff') format('woff');
+}
+@font-face {
+	font-family: Monaco;
+	src: url('../lib/assets/fonts/monaco.woff2') format('woff2'), 
+		url('../lib/assets/fonts/monaco.woff') format('woff');
+}
+@font-face {
+	font-family: Chicago_12;
+	src: url('../lib/assets/fonts/ChiKareGo2.woff2') format('woff2'),
+		url('../lib/assets/fonts/ChiKareGo2.woff') format('woff');
+}
+@font-face {
+	font-family: Geneva_9;
+	src: url('../lib/assets/fonts/FindersKeepers.woff2') format('woff2'),
+		url('../lib/assets/fonts/FindersKeepers.woff') format('woff');
+}

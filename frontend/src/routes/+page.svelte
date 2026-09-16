@@ -1,2 +1,7 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+	import Box from '$lib/components/Box/Box.svelte';
+</script>
+
+<Box>
+	<h1 class="text-center text-2xl">Sojourn</h1>
+</Box>
