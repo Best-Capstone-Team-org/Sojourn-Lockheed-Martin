@@ -2,12 +2,19 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
+	"sojourn/app"
+	"sojourn/emulator"
 )
 
 func Serve() {
+	downlinkChan := make(chan []byte)
+
+	go downlinkMessagePrinter(downlinkChan)
+
+	go emulator.LoadAndStartFirmware(os.Args[1], downlinkChan)
+
 	mux := routes()
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -15,12 +22,12 @@ func Serve() {
 	}
 	addr := fmt.Sprintf("0.0.0.0:%s", port)
 
-	log.Printf("Listening and serving on %s... ", addr)
+	app.ServerLogger.Printf("Listening and serving on %s... ", addr)
 
 	err := http.ListenAndServe(addr, mux)
 
 	if err != nil {
-		log.Printf("ListenAndServe error: %+v", err)
+		app.ErrorLogger.Printf("ListenAndServe error: %+v", err)
 	}
 }
 
@@ -31,9 +38,15 @@ func routes() *http.ServeMux {
 	if buildDir == "" {
 		buildDir = "../../frontend/build"
 	}
-	
+
 	fileServer := http.FileServer(http.Dir(buildDir))
 	mux.Handle("/", fileServer)
 
 	return mux
+}
+
+func downlinkMessagePrinter(downlinkChan chan []byte) {
+	for message := range downlinkChan {
+		fmt.Printf("Downlink Mesage: %s", string(message))
+	}
 }
