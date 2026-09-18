@@ -1,0 +1,8 @@
+services:
+  sojourn:
+    build: .
+    container_name: sojourn
+    environment:
+      - BUILD_DIR=/app/frontend
+    ports:
+      - "8080:8080"

@@ -1,13 +1,16 @@
 package emulator
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
-	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sojourn/app"
 	"strings"
+	"time"
 )
 
 const qemuSystemArmEnvVar = "QEMU_SYSTEM_ARM_BIN"
@@ -15,22 +18,61 @@ const qemuSystemArmEnvVar = "QEMU_SYSTEM_ARM_BIN"
 const UartTCPAddr = "127.0.0.1"
 const UartTCPPort = 5599
 
-func Load(firmwareFilePath string) (*exec.Cmd, error) {
-	log.Printf("Loading %s\n", firmwareFilePath)
+func LoadAndStartFirmware(firmwareName string, downlinkChan chan []byte) {
+	cmd, err := load(firmwareName)
+
+	if err != nil {
+		app.ErrorLogger.Fatalf("Error loading emulator: %+v", err)
+	}
+
+	go uartReader(downlinkChan)
+
+	app.LoaderLogger.Println("Waiting on firmware...")
+	err = cmd.Wait()
+
+	if err != nil {
+		app.ErrorLogger.Fatalf("Error waiting for emulator proc: %+v\n", err)
+	}
+}
+
+func uartReader(downlinkChan chan []byte) {
+	address := fmt.Sprintf("%s:%d", UartTCPAddr, UartTCPPort)
+	timeout := 5 * time.Second
+
+	app.LoaderLogger.Printf("Connecting to %s", address)
+	conn, err := net.DialTimeout("tcp", address, timeout)
+	if err != nil {
+		app.ErrorLogger.Fatalf("Connection failed: %+v", err)
+	}
+
+	for {
+		response, err := bufio.NewReader(conn).ReadBytes('\n')
+
+		if err != nil {
+			app.ErrorLogger.Printf("Failed to read response: %v\n", err)
+			continue
+		}
+
+		downlinkChan <- response
+	}
+}
+
+func load(firmwareFilePath string) (*exec.Cmd, error) {
+	app.LoaderLogger.Printf("Loading %s\n", firmwareFilePath)
 
 	if !fileExists(firmwareFilePath) {
 		return nil, errors.New(fmt.Sprintf("firmware binary `%s` not found",
 			firmwareFilePath))
 	}
 
-	log.Printf("Found %s\n", firmwareFilePath)
+	app.LoaderLogger.Printf("Found %s\n", firmwareFilePath)
 
 	qemuSystemARMBinary, err := findQEMUSystemARM()
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("Found qemu binary: %s\n", qemuSystemARMBinary)
+	app.LoaderLogger.Printf("Found qemu binary: %s\n", qemuSystemARMBinary)
 
 	qemuArgs := []string{
 		"-M", "mps2-an386",
@@ -38,12 +80,14 @@ func Load(firmwareFilePath string) (*exec.Cmd, error) {
 		"-kernel", firmwareFilePath,
 		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=off", UartTCPAddr, UartTCPPort)}
 
-	log.Printf("Starting qemu: %s %s\n",
+	app.LoaderLogger.Printf("Starting qemu: %s %s\n",
 		qemuSystemARMBinary, strings.Join(qemuArgs, " "))
 
 	cmd := exec.Command(qemuSystemARMBinary, qemuArgs...)
 
 	err = cmd.Start()
+
+	time.Sleep(time.Second)
 
 	return cmd, err
 }
