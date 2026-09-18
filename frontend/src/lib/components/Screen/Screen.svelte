@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Box from '$lib/components/Box/Box.svelte';
 	import './screen.css';
 
 	let {
@@ -8,6 +9,6 @@
 	}: { children: Snippet; class?: string } = $props();
 </script>
 
-<div class={['screen mx-auto', className]}>
+<Box class={'screen ' + className}>
 	{@render children()}
-</div>
+</Box>
