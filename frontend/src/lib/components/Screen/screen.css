@@ -1,14 +1,5 @@
-:root {
-	--box-shadow: 2px 2px;
-	--element-spacing: 8px;
-	--grouped-element-spacing: 6px;
-}
-
-/* the box */
+/* Striped background effect */
 .screen {
-	border: 2px solid var(--sys-color-green);
-	padding: 10px;
-	box-shadow: var(--sys-color-green) var(--box-shadow);
 	background: repeating-linear-gradient(
         to bottom,
         var(--sys-screen-light-green) 0px,
