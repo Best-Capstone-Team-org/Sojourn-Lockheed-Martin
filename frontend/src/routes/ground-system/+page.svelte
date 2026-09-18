@@ -146,3 +146,5 @@
 
 </Resizable.PaneGroup>
 </div>
+
+</Resizable.PaneGroup>
