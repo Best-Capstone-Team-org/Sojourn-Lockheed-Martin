@@ -5,27 +5,12 @@
 	--box-shadow: 2px 2px;
 	--element-spacing: 8px;
 	--grouped-element-spacing: 6px;
-	--sys-color-white: #ffffff;
-	--sys-color-black: #000000;
-	--sys-color-grey: #a5a5a5;
-	--sys-color-darkgrey: #b6b7b8;
-	--primary: var(--sys-color-white);
-	--secondary: var(--sys-color-black);
-	--tertiary: var(--sys-color-grey);
-	--disabled: var(--sys-color-darkgrey);
 }
 
 /* the box */
 .standard-dialog {
-	border: 2px solid;
+	border: 2px solid var(--sys-color-green);
 	padding: 10px;
-	box-shadow: var(--box-shadow);
-	background-color: var(--primary);
-	font-family: 'Inconsolata', Menlo, Chicago, Geneva;
-}
-
-.standard-dialog h1 {
-	font-family: Chicago;
-	font-size: 1em;
-	margin: 0;
+	box-shadow: var(--sys-color-green) var(--box-shadow);
+	background-color: var(--sys-color-grey);
 }
