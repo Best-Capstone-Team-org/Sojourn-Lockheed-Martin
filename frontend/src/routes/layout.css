@@ -1,5 +1,42 @@
 @import "tailwindcss";
 
+/* Color Pallete NOTE only use these colors! */
+:root {
+	--sys-color-white: #efefef;
+	--sys-color-black: #111111;
+	--sys-color-grey: #afb6b3;
+	--sys-color-green: #283431;
+	--sys-checker-bg-dark-grey: #8e8e8e;
+	--sys-checker-bg-green: #3a483b;
+	--sys-screen-dark-green: #608956;
+	--sys-screen-light-green: #739a62;
+}
+
+/* Old colors from darkmode Mac */
+/* :root {
+	--sys-color-white: #efefef;
+	--sys-color-black: #111111;
+	--sys-checker-1: #1e1e1e;
+	--sys-checker-2: #060a0f;
+} */
+
+/* Classic Mac checker dither, kinda causes strobing when scrolling */
+html,
+body {
+	min-height: 100%;
+	margin: 0;
+	background-color: var(--sys-color-black);
+	background-image: repeating-conic-gradient(var(--sys-checker-bg-dark-grey) 0% 25%, var(--sys-checker-bg-green) 0% 50%);
+	background-size: 4px 4px;
+
+	color: var(--sys-color-green);
+	font-family: Chicago;
+}
+
+h1 {
+	font-size: 1em;
+}
+
 @font-face {
 	font-family: Chicago;
 	src: url('../lib/assets/fonts/ChicagoFLF.woff2') format('woff2'),
