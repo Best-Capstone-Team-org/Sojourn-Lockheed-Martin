@@ -14,5 +14,10 @@ export default defineConfig({
 			},
 			adapter: adapter()
 		})
-	]
+	],
+	ssr: {
+		// paneforge imports svelte-toolbelt `.svelte.js` modules; Vite must compile them
+		// during SSR instead of loading the raw files from node_modules.
+		noExternal: ['svelte-toolbelt', 'runed']
+	}
 });
