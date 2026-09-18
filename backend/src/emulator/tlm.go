@@ -113,7 +113,7 @@ func cr16CCITT(data []byte) uint16 {
 	return crc
 }
 
-func decodeTelemetryFrame(hexStr string) (*TelemetryFrame, error) {
+func DecodeTelemetryFrame(hexStr string) (*TelemetryFrame, error) {
 	data, err := hex.DecodeString(hexStr)
 	if err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func decodeTelemetryFrame(hexStr string) (*TelemetryFrame, error) {
 
 		if cid >= chMAG && cid <= chSTR && clen == 4 {
 
-			sensorvalue := binary.BigEndian.Int32(value)
+			sensorvalue := int32(binary.BigEndian.Uint32(value))
 			frame.Sensors[cid] = sensorvalue
 
 		} else if cid == chCAM && clen == 12 {
@@ -197,7 +197,7 @@ func decodeTelemetryFrame(hexStr string) (*TelemetryFrame, error) {
 				HeaterOn:     value[0],
 				ShedCount:    value[1],
 				PropellantMG: binary.BigEndian.Uint16(value[2:4]),
-				Momentum:     binary.BigEndian.Int16(value[4:6]),
+				Momentum:     int16(binary.BigEndian.Uint16(value[4:6])),
 				RecFillPct:   value[6],
 				Auth:         value[7],
 			}
@@ -252,4 +252,84 @@ func formatSensor(cid byte, v int32) string {
 	}
 }
 
+
+
+func PrintTelemetryFrame(frame *TelemetryFrame) {
+	if !frame.CRCOK {
+		fmt.Printf("[%04d] *** BAD CRC ***\n", frame.Frame)
+		return
+	}
+
+	fmt.Printf(
+		"[%04d] up=%ds | mode=%s | reboots=%d | fault=%s | bus=%.3fV | load=%dmW\n",
+		frame.Frame,
+		frame.UptimeS,
+		frame.Mode,
+		frame.Reboots,
+		frame.LastFault,
+		float64(frame.BusMV)/1000,
+		frame.LoadMW,
+	)
+	sensorOrder := []byte{chMAG, chIMU, chTHM, chPWR, chRAD, chSTR}
+
+	for _, cid := range sensorOrder {
+		if value, exists := frame.Sensors[cid]; exists {
+			fmt.Printf("       %s\n", formatSensor(cid, value))
+		}
+	}
+
+	if frame.Camera != nil {
+		fmt.Printf(
+			"       CAM frame=%d | target=%d | exp=%dms | mean=%d | sat=%d%% | stars=%d\n",
+			frame.Camera.FrameID,
+			frame.Camera.Target,
+			frame.Camera.ExposureMS,
+			frame.Camera.HistMean,
+			frame.Camera.SatPct,
+			frame.Camera.Stars,
+		)
+	}
+
+	if frame.HK != nil {
+		heater := "off"
+		if frame.HK.HeaterOn != 0 {
+			heater = "on"
+		}
+
+		auth := "no"
+		if frame.HK.Auth != 0 {
+			auth = "YES"
+		}
+
+		fmt.Printf(
+			"       HK  heater=%s | prop=%dmg | mom=%d | rec=%d%% | shed=%d | auth=%s\n",
+			heater,
+			frame.HK.PropellantMG,
+			frame.HK.Momentum,
+			frame.HK.RecFillPct,
+			frame.HK.ShedCount,
+			auth,
+		)
+	}
+
+	if frame.Comms != nil {
+		antenna := "HGA"
+
+		if frame.Comms.Antenna == 1 {
+			antenna = "LGA"
+		}
+
+		fmt.Printf(
+			"       LINK %s | budget=%dB | dropped=%d | hga_deploy=%d%%\n",
+			antenna,
+			frame.Comms.Budget,
+			frame.Comms.Dropped,
+			frame.Comms.HGADeployPct,
+		)
+	}
+
+	if frame.AUX != nil {
+		fmt.Printf("       AUX %d\n", *frame.AUX)
+	}
+}
 

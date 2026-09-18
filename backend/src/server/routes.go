@@ -6,6 +6,7 @@ import (
 	"os"
 	"sojourn/app"
 	"sojourn/emulator"
+	"strings"
 )
 
 func Serve() {
@@ -47,6 +48,16 @@ func routes() *http.ServeMux {
 
 func downlinkMessagePrinter(downlinkChan chan []byte) {
 	for message := range downlinkChan {
-		fmt.Printf("Downlink Mesage: %s", string(message))
+		line := strings.TrimSpace(string(message))
+
+		if strings.HasPrefix(line, "TLM ") {
+			frame, err := emulator.DecodeTelemetryFrame(line[4:])
+			if err != nil {
+				fmt.Printf("?? undecodable frame: %v\n", err)
+				continue
+			}
+
+			emulator.PrintTelemetryFrame(frame)
+		}
 	}
 }
