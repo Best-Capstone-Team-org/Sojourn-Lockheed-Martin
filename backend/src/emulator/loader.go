@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sojourn/app"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -36,7 +37,7 @@ func LoadAndStartFirmware(firmwareName string, downlinkChan chan []byte) {
 }
 
 func uartReader(downlinkChan chan []byte) {
-	address := fmt.Sprintf("%s:%d", UartTCPAddr, UartTCPPort)
+	address := net.JoinHostPort(UartTCPAddr, strconv.Itoa(UartTCPPort))
 	timeout := 5 * time.Second
 
 	app.LoaderLogger.Printf("Connecting to %s", address)
