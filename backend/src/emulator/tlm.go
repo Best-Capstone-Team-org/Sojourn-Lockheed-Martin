@@ -25,46 +25,46 @@ const (
 )
 
 type CameraData struct {
-	FrameID    uint16
-	Target     uint16
-	ExposureMS uint16
-	HistMean   uint16
-	SatPct     uint16
-	Stars      uint16
+	FrameID    uint16 `json:"frame"`
+	Target     uint16 `json:"target"`
+	ExposureMS uint16 `json:"exposure"`
+	HistMean   uint16 `json:"hist"`
+	SatPct     uint16 `json:"sat"`
+	Stars      uint16 `json:"stars"`
 }
 
 type HKData struct {
-	HeaterOn     byte
-	ShedCount    byte
-	PropellantMG uint16
-	Momentum     int16
-	RecFillPct   byte
-	Auth         byte
+	HeaterOn     byte   `json:"heaterOn"`
+	ShedCount    byte   `json:"shed"`
+	PropellantMG uint16 `json:"prop"`
+	Momentum     int16  `json:"mom"`
+	RecFillPct   byte   `json:"rec"`
+	Auth         byte   `json:"auth"`
 }
 
 type CommsData struct {
-	Antenna      byte
-	Dropped      byte
-	Budget       uint16
-	XStat        byte
-	HGADeployPct byte
+	Antenna      byte   `json:"antenna"`
+	Dropped      byte   `json:"dropped"`
+	Budget       uint16 `json:"budget"`
+	XStat        byte   `json:"xStat"`
+	HGADeployPct byte   `json:"hgaDeploy"`
 }
 
 type TelemetryFrame struct {
-	CRCOK     bool
-	Frame     uint16
-	UptimeS   uint32
-	Mode      string
-	Reboots   byte
-	LastFault string
-	BusMV     uint16
-	LoadMW    uint16
-	Sensors   map[byte]int32
-	Camera    *CameraData
-	HK        *HKData
-	Comms     *CommsData
-	AUX       *uint16
-	Unknown   map[string]string
+	CRCOK     bool              `json:"crcOK"`
+	Frame     uint16            `json:"frame"`
+	UptimeS   uint32            `json:"uptime"`
+	Mode      string            `json:"mode"`
+	Reboots   byte              `json:"reboots"`
+	LastFault string            `json:"lastFault"`
+	BusMV     uint16            `json:"bus"`
+	LoadMW    uint16            `json:"load"`
+	Sensors   map[byte]int32    `json:"sensors"`
+	Camera    *CameraData       `json:"camera"`
+	HK        *HKData           `json:"hk"`
+	Comms     *CommsData        `json:"comms"`
+	AUX       *uint16           `json:"AUX"`
+	Unknown   map[string]string `json:"unknown"`
 }
 
 func modeName(v byte) string {
@@ -252,8 +252,6 @@ func formatSensor(cid byte, v int32) string {
 	}
 }
 
-
-
 func PrintTelemetryFrame(frame *TelemetryFrame) {
 	if !frame.CRCOK {
 		fmt.Printf("[%04d] *** BAD CRC ***\n", frame.Frame)
@@ -332,4 +330,3 @@ func PrintTelemetryFrame(frame *TelemetryFrame) {
 		fmt.Printf("       AUX %d\n", *frame.AUX)
 	}
 }
-
