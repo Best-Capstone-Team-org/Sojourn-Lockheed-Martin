@@ -72,6 +72,7 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc(apiPrefix+"/save", s.save)
 	mux.HandleFunc(apiPrefix+"/results", s.results)
 	mux.HandleFunc(apiPrefix+"/upload-patch", s.uploadPatch)
+	mux.HandleFunc(apiPrefix+"/command-ws", s.commandWS)
 
 	return mux
 }
@@ -159,13 +160,29 @@ var upgrader = websocket.Upgrader{
 }
 
 func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
-	_, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		app.ErrorLogger.Printf("Error upgrading to WS: %+v", err)
 		s.clientError(w, http.StatusUpgradeRequired)
 		return
 	}
-	// TODO:
+
+	defer conn.Close()
+
+	for {
+		messageType, message, err := conn.ReadMessage()
+		if err != nil {
+			app.ErrorLogger.Printf("Error reading WS message: %+v", err)
+			return
+		}
+
+		reply := string(message) + " and more"
+
+		if err := conn.WriteMessage(messageType, []byte(reply)); err != nil {
+			app.ErrorLogger.Printf("Error writing WS message: %+v", err)
+			return
+		}
+	}
 }
 
 func (s *server) checkRequestMethod(r *http.Request, method string, w http.ResponseWriter) bool {
