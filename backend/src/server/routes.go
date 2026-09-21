@@ -6,6 +6,7 @@ import (
 	"os"
 	"sojourn/app"
 	"sojourn/emulator"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -43,11 +44,11 @@ func Serve() {
 	}
 }
 
-func downlinkMessagePrinter(downlinkChan chan []byte) {
-	for message := range downlinkChan {
-		fmt.Printf("Downlink Mesage: %s", string(message))
-	}
-}
+// func downlinkMessagePrinter(downlinkChan chan []byte) {
+// 	for message := range downlinkChan {
+// 		fmt.Printf("Downlink Mesage: %s", string(message))
+// 	}
+// }
 
 func (s *server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
@@ -75,6 +76,21 @@ func (s *server) routes() *http.ServeMux {
 	return mux
 }
 
+func downlinkMessagePrinter(downlinkChan chan []byte) {
+	for message := range downlinkChan {
+		line := strings.TrimSpace(string(message))
+
+		if strings.HasPrefix(line, "TLM ") {
+			frame, err := emulator.DecodeTelemetryFrame(line[4:])
+			if err != nil {
+				app.ErrorLogger.Printf("Failed to decode telemetry frame: %v", err)
+				continue
+			}
+
+			emulator.PrintTelemetryFrame(frame)
+		}
+	}
+}
 func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 	if !s.checkRequestMethod(r, http.MethodGet, w) {
 		return
