@@ -56,7 +56,7 @@ export interface CommandUplink {
 export type CommandDownlink =
 	| {
 			type: "telemetry";
-			tml: string;
+			tlm: string;
 			telemetry: Telemetry;
 	  }
 	| {
