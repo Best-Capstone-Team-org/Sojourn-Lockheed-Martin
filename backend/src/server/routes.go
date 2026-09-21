@@ -89,6 +89,8 @@ func downlinkMessagePrinter(downlinkChan chan []byte) {
 
 			emulator.PrintTelemetryFrame(frame)
 		}
+	}
+}
 func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 	if !s.checkRequestMethod(r, http.MethodGet, w) {
 		return
