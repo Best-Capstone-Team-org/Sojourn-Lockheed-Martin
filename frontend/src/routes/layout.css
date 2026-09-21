@@ -10,11 +10,17 @@
 	--sys-color-white: #efefef;
 	--sys-color-black: #111111;
 	--sys-color-grey: #afb6b3;
+	--sys-color-medium-grey: #6b706e;
 	--sys-color-green: #283431;
 	--sys-checker-bg-dark-grey: #8e8e8e;
 	--sys-checker-bg-green: #3a483b;
 	--sys-screen-dark-green: #608956;
 	--sys-screen-light-green: #739a62;
+	--sys-alert-yellow: #f5be0b;
+	--sys-alert-red: #f50b0b;
+	--sys-alert-green: #0bf50b;
+
+	/* Schadcn stuff */
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.153 0.006 107.1);
 	--card: oklch(1 0 0);

@@ -1,0 +1,17 @@
+.diagnostic {
+    background-color: var(--sys-color-medium-grey);
+    border-left: 6px solid var(--sys-alert-yellow);
+    padding: 1rem;
+}
+
+.medium-grey {
+    background-color: var(--sys-color-medium-grey);
+}
+
+.alert-yellow {
+    background-color: var(--sys-alert-yellow);
+}
+
+.alert-green {
+    background-color: var(--sys-alert-green);
+}

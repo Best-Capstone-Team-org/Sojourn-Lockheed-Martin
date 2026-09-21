@@ -10,7 +10,6 @@
 /* the box */
 .standard-dialog {
 	border: 2px solid var(--sys-color-green);
-	padding: 10px;
 	box-shadow: var(--sys-color-green) var(--box-shadow);
 	background-color: var(--sys-color-grey);
 }
