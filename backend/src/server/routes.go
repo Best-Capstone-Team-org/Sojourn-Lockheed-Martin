@@ -6,7 +6,17 @@ import (
 	"os"
 	"sojourn/app"
 	"sojourn/emulator"
+
+	"github.com/gorilla/websocket"
 )
+
+type server struct {
+	// TODO: contain gamestate object from a different package probably
+}
+
+func newServer() *server {
+	return &server{}
+}
 
 func Serve() {
 	downlinkChan := make(chan []byte)
@@ -15,7 +25,9 @@ func Serve() {
 
 	go emulator.LoadAndStartFirmware(os.Args[1], downlinkChan)
 
-	mux := routes()
+	server := newServer()
+
+	mux := server.routes()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -31,7 +43,13 @@ func Serve() {
 	}
 }
 
-func routes() *http.ServeMux {
+func downlinkMessagePrinter(downlinkChan chan []byte) {
+	for message := range downlinkChan {
+		fmt.Printf("Downlink Mesage: %s", string(message))
+	}
+}
+
+func (s *server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	buildDir := os.Getenv("BUILD_DIR")
@@ -42,11 +60,107 @@ func routes() *http.ServeMux {
 	fileServer := http.FileServer(http.Dir(buildDir))
 	mux.Handle("/", fileServer)
 
+	apiPrefix := "/api"
+
+	mux.HandleFunc(apiPrefix+"/scenarios", s.scenarios)
+	mux.HandleFunc(apiPrefix+"/scenario", s.scenario)
+	mux.HandleFunc(apiPrefix+"/select-scenario", s.selectScenario)
+	mux.HandleFunc(apiPrefix+"/new-scenario", s.newScenario)
+	mux.HandleFunc(apiPrefix+"/saves", s.saves)
+	mux.HandleFunc(apiPrefix+"/load-save", s.loadSave)
+	mux.HandleFunc(apiPrefix+"/save", s.save)
+	mux.HandleFunc(apiPrefix+"/results", s.results)
+	mux.HandleFunc(apiPrefix+"/upload-patch", s.uploadPatch)
+
 	return mux
 }
 
-func downlinkMessagePrinter(downlinkChan chan []byte) {
-	for message := range downlinkChan {
-		fmt.Printf("Downlink Mesage: %s", string(message))
+func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodGet, w) {
+		return
 	}
+	// TODO:
+}
+
+func (s *server) scenario(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodGet, w) {
+		return
+	}
+	// TODO:
+}
+
+func (s *server) selectScenario(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodPut, w) {
+		return
+	}
+	// TODO:
+}
+
+func (s *server) newScenario(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodPost, w) {
+		return
+	}
+	// TODO:
+}
+
+func (s *server) saves(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodGet, w) {
+		return
+	}
+	// TODO:
+}
+
+func (s *server) loadSave(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodPut, w) {
+		return
+	}
+	// TODO:
+}
+
+func (s *server) save(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodPut, w) {
+		return
+	}
+	// TODO:
+}
+
+func (s *server) results(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodGet, w) {
+		return
+	}
+	// TODO:
+}
+
+func (s *server) uploadPatch(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodPost, w) {
+		return
+	}
+	// TODO:
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
+	_, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		app.ErrorLogger.Printf("Error upgrading to WS: %+v", err)
+		s.clientError(w, http.StatusUpgradeRequired)
+		return
+	}
+	// TODO:
+}
+
+func (s *server) checkRequestMethod(r *http.Request, method string, w http.ResponseWriter) bool {
+	if r.Method != method {
+		w.Header().Set("Allow", method)
+		s.clientError(w, http.StatusMethodNotAllowed)
+		return false
+	}
+	return true
+}
+
+func (s *server) clientError(w http.ResponseWriter, status int) {
+	http.Error(w, http.StatusText(status), status)
 }
