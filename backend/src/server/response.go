@@ -1,6 +1,9 @@
 package server
 
-import "sojourn/game"
+import (
+	"sojourn/emulator"
+	"sojourn/game"
+)
 
 type scenariosResponse []struct {
 	Id          int    `json:"id"`
@@ -63,8 +66,9 @@ type uploadPatch struct {
 // Websocket responses
 
 type telemetryDownlink struct {
-	Type string `json:"type"`
-	// TODO:
+	Type      string                   `json:"type"`
+	TLM       string                   `json:"TLM"`
+	Telemetry *emulator.TelemetryFrame `json:"telemetry"`
 }
 
 type stateDownlink struct {
