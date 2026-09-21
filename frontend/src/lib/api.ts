@@ -56,7 +56,6 @@ export interface CommandUplink {
 export type CommandDownlink =
 	| {
 			type: "telemetry";
-			tlm: string;
 			telemetry: Telemetry;
 	  }
 	| {
@@ -84,47 +83,8 @@ export interface Message {
 }
 
 export interface Telemetry {
-	crcOK: boolean;
-	frame: number;
-	uptime: number; // in seconds
-	mode: string;
-	reboots: number;
-	lastFault: string;
-	bus: number; // in MV
-	load: number; // in MW
-
-	camera?: Camera;
-	hk?: HK;
-	comms?: Comms;
-	AUX?: number;
-
-	unknown: Record<string, string>;
-}
-
-export interface Camera {
-	frame: number;
-	target: number;
-	exposure: number; // in ms
-	mean: number;
-	sat: number;
-	stars: number;
-}
-
-export interface HK {
-	heaterOn: number;
-	shed: number;
-	prop: number; // propellant in mg
-	mom: number; // momentum
-	rec: number; // in percent
-	auth: number;
-}
-
-export interface Comms {
-	antenna: string;
-	budget: number; // in B
-	dropped: number;
-	xStat: number;
-	hgaDeploy: number; // in percent
+	// TODO
+	todo: string;
 }
 
 export interface Objective {

@@ -13,10 +13,6 @@ import (
 
 type server struct {
 	// TODO: contain gamestate object from a different package probably
-
-	conn *websocket.Conn
-
-	downlinkChan chan []byte
 }
 
 func newServer() *server {
@@ -24,6 +20,12 @@ func newServer() *server {
 }
 
 func Serve() {
+	downlinkChan := make(chan []byte)
+
+	go downlinkMessagePrinter(downlinkChan)
+
+	go emulator.LoadAndStartFirmware(os.Args[1], downlinkChan)
+
 	server := newServer()
 
 	mux := server.routes()
@@ -41,6 +43,12 @@ func Serve() {
 		app.ErrorLogger.Printf("ListenAndServe error: %+v", err)
 	}
 }
+
+// func downlinkMessagePrinter(downlinkChan chan []byte) {
+// 	for message := range downlinkChan {
+// 		fmt.Printf("Downlink Mesage: %s", string(message))
+// 	}
+// }
 
 func (s *server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
@@ -69,6 +77,21 @@ func (s *server) routes() *http.ServeMux {
 	return mux
 }
 
+func downlinkMessagePrinter(downlinkChan chan []byte) {
+	for message := range downlinkChan {
+		line := strings.TrimSpace(string(message))
+
+		if strings.HasPrefix(line, "TLM ") {
+			frame, err := emulator.DecodeTelemetryFrame(line[4:])
+			if err != nil {
+				app.ErrorLogger.Printf("Failed to decode telemetry frame: %v", err)
+				continue
+			}
+
+			emulator.PrintTelemetryFrame(frame)
+		}
+	}
+}
 func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 	if !s.checkRequestMethod(r, http.MethodGet, w) {
 		return
@@ -144,57 +167,21 @@ func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.conn = conn
-	s.downlinkChan = make(chan []byte)
+	defer conn.Close()
 
-	go emulator.LoadAndStartFirmware(os.Args[1], s.downlinkChan)
-
-	go s.downlinkPump()
-	go s.uplinkPump()
-}
-
-func (s *server) downlinkPump() {
-	app.ServerLogger.Println("Starting downlink pump")
-
-	for downlinkMessage := range s.downlinkChan {
-		line := strings.TrimSpace(string(downlinkMessage))
-
-		if strings.HasPrefix(line, "TLM ") {
-			frame, err := emulator.DecodeTelemetryFrame(line[4:])
-			if err != nil {
-				app.ErrorLogger.Printf("Failed to decode telemetry frame: %v", err)
-				continue
-			}
-
-			emulator.PrintTelemetryFrame(frame)
-
-			t := telemetryDownlink{
-				Type:      "telemetry",
-				TLM:       line,
-				Telemetry: frame,
-			}
-
-			err = s.conn.WriteJSON(t)
-
-			if err != nil {
-				app.ServerLogger.Printf("Error wriring JSON, probably WS connection closed: %+v\n", err)
-				break
-			}
-		}
-	}
-
-	app.ServerLogger.Println("Closing downlink pump")
-}
-
-func (s *server) uplinkPump() {
 	for {
-		_, message, err := s.conn.ReadMessage()
+		messageType, message, err := conn.ReadMessage()
 		if err != nil {
 			app.ErrorLogger.Printf("Error reading WS message: %+v", err)
-			continue
+			return
 		}
 
-		app.ServerLogger.Printf("Uplink message received: %s\n", message)
+		reply := string(message) + " and more"
+
+		if err := conn.WriteMessage(messageType, []byte(reply)); err != nil {
+			app.ErrorLogger.Printf("Error writing WS message: %+v", err)
+			return
+		}
 	}
 }
 
