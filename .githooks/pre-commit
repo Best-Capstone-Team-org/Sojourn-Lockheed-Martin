@@ -1,0 +1,48 @@
+#!/bin/sh
+# Formats and lints staged files. Enable with:
+#   git config core.hooksPath .githooks
+# Skip once with `git commit --no-verify`.
+set -e
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+staged() {
+	git diff --cached --name-only --diff-filter=ACMR -z -- "$@"
+}
+
+# Files staged but also modified in the working tree. Formatting rewrites the
+# whole file, so re-staging one of these would sweep in unstaged edits. We
+# format them but leave the extra changes for the author to stage.
+partial=$(git diff --name-only -z --diff-filter=ACMR | tr '\0' '\n')
+
+restage() {
+	while IFS= read -r file; do
+		[ -n "$file" ] || continue
+		if printf "%s\n" "$partial" | grep -qxF "$file"; then
+			echo "  ! $file has unstaged changes; formatting not re-staged"
+		else
+			git add -- "$file"
+		fi
+	done
+}
+
+if staged "frontend" | grep -qz .; then
+	echo "pre-commit: frontend"
+	staged "frontend" | (cd frontend && xargs -0 sh -c '
+		set -e
+		files=$(printf "%s\n" "$@" | sed "s|^frontend/||")
+		# shellcheck disable=SC2086
+		npx --no-install prettier --write --ignore-unknown $files
+		# shellcheck disable=SC2086
+		npx --no-install eslint --no-warn-ignored $files
+	' sh)
+	staged "frontend" | tr '\0' '\n' | restage
+fi
+
+if staged "*.go" | grep -qz .; then
+	echo "pre-commit: backend"
+	staged "*.go" | xargs -0 gofmt -w
+	(cd backend/src && go vet ./...)
+	staged "*.go" | tr '\0' '\n' | restage
+fi

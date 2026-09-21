@@ -23,3 +23,8 @@ ORG_NAME=Best-Capstone-Team-org
 RUNNER_GROUP=Infrastructure
 RUNNER_WORKDIR=/tmp/runner
 LABELS=self-hosted
+```
+
+## Pre-Commit Hook
+
+Formatting and linting run on staged files before each commit, matching what CI checks. Run `git config core.hooksPath .githooks` to enable it and bypass it with `git commit --no-verify`.
