@@ -4,10 +4,10 @@
 	const ws = apiWebSocket("command-ws");
 	let ready = $state(false);
 	let resp = $state("");
-	
+
 	ws.onopen = (ev) => {
 		ready = true;
-	}; 
+	};
 	ws.onmessage = (ev) => {
 		resp += `${ev.data}\n`;
 	};
