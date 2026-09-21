@@ -44,11 +44,11 @@ func Serve() {
 	}
 }
 
-func downlinkMessagePrinter(downlinkChan chan []byte) {
-	for message := range downlinkChan {
-		fmt.Printf("Downlink Mesage: %s", string(message))
-	}
-}
+// func downlinkMessagePrinter(downlinkChan chan []byte) {
+// 	for message := range downlinkChan {
+// 		fmt.Printf("Downlink Mesage: %s", string(message))
+// 	}
+// }
 
 func (s *server) routes() *http.ServeMux {
 	mux := http.NewServeMux()
