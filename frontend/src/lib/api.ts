@@ -1,14 +1,16 @@
+export const API_ENDPOINT = "localhost:8080";
+export const API_PREFIX = "api";
+
 export async function apiFetch(
-	input: string | URL | Request,
+	endpoint: string,
 	init?: RequestInit
 ): Promise<Response> {
-	// TODO add prefix for backend
-	return fetch(input, init);
+	return fetch(`${API_ENDPOINT}/${API_PREFIX}/${endpoint}`, init);
 }
 
-// TODO create function for making websocket
-// just pass functions to register
-// need open, close, and message
+export function apiWebSocket(endpoint: string) {
+	return new WebSocket(`ws://${API_ENDPOINT}/${API_PREFIX}/${endpoint}`);
+}
 
 export type ScenariosResponse = Scenario[];
 
@@ -20,7 +22,7 @@ export interface ScenarioResponse {
 		name: string;
 	}[];
 	objectives: {
-		name: 'string';
+		name: "string";
 		// TODO
 	}[];
 	constraints: Constraints;
@@ -52,11 +54,11 @@ export interface CommandUplink {
 
 export type CommandDownlink =
 	| {
-			type: 'telemetry';
+			type: "telemetry";
 			telemetry: Telemetry;
 	  }
 	| {
-			type: 'state';
+			type: "state";
 			objectives: Objective[];
 			constraints: Constraints;
 	  };
@@ -85,11 +87,7 @@ export interface Telemetry {
 
 export interface Objective {
 	name: string;
-	status: 'complete' | 'failed' | 'active' | 'locked';
+	status: "complete" | "failed" | "active" | "locked";
 }
 
-export interface Constraints {
-	read: number;
-	write: number;
-	frame: number;
-}
+export type Constraints = Record<string, number>;
