@@ -53,7 +53,7 @@ func downlinkMessagePrinter(downlinkChan chan []byte) {
 		if strings.HasPrefix(line, "TLM ") {
 			frame, err := emulator.DecodeTelemetryFrame(line[4:])
 			if err != nil {
-				fmt.Printf("?? undecodable frame: %v\n", err)
+				app.ErrorLogger.Printf("Failed to decode telemetry frame: %v", err)
 				continue
 			}
 
