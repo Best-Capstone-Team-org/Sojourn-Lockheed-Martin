@@ -40,6 +40,7 @@ export type SaveResponse = Message;
 
 export interface ResultsResponse {
 	// TODO
+	todo: string;
 }
 
 export type UploadPatchResponse = Message;
@@ -83,6 +84,7 @@ export interface Message {
 
 export interface Telemetry {
 	// TODO
+	todo: string;
 }
 
 export interface Objective {

@@ -5,7 +5,7 @@
 	let ready = $state(false);
 	let resp = $state("");
 
-	ws.onopen = (ev) => {
+	ws.onopen = () => {
 		ready = true;
 	};
 	ws.onmessage = (ev) => {
