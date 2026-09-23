@@ -71,6 +71,11 @@ type telemetryDownlink struct {
 	Telemetry *emulator.TelemetryFrame `json:"telemetry"`
 }
 
+type commandResponseDownlink struct {
+	Type     string `json:"type"`
+	Response string `json:"response"`
+}
+
 type stateDownlink struct {
 	Type       string `json:"type"`
 	Objectives []struct {
