@@ -31,6 +31,42 @@
             diagnostic: "This is the diagnostic for mission four. There are lots of important details here for the player to read."
         }
     ];
+
+    import { apiWebSocket } from "$lib/api";
+	import { onMount } from "svelte";
+
+	let ws = $state<WebSocket | undefined>(undefined);
+	let ready = $state(false);
+	let resp = $state("");
+
+	onMount(() => {
+		if (!ws) {
+			ws = apiWebSocket("command-ws");
+
+			ws.onopen = () => {
+				ready = true;
+			};
+			ws.onmessage = (ev) => {
+				resp += `${ev.data}\n`;
+			};
+		}
+	});
+
+	$effect(() => {
+		if (ready && ws) {
+			ws.send("hello world");
+		}
+	});
+
+    // sending commands
+    let command = $state("");
+
+    const sendCommand = () => {
+        if (ready && ws) {
+            ws.send(command);
+            command = "";
+        }
+    };
 </script>
 
 <!-- <div class="flex justify-center items-center h-screen flex-col gap-0">
@@ -89,8 +125,8 @@
                             <!-- Downlink -->
                             <Resizable.Pane defaultSize={60}>
 
-                                <div class="flex h-full items-center justify-center p-6">
-                                    <span class="font-semibold">Downlink</span>
+                                <div class="flex flex-col-reverse h-full p-2">
+                                    <p>{resp}</p>
                                 </div>
 
                             </Resizable.Pane>
@@ -111,6 +147,13 @@
                                             spellcheck="false" 
                                             autocapitalize="off"
                                             placeholder="Enter command"
+                                            bind:value={command}
+                                            
+                                            onkeydown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    sendCommand();
+                                                }
+                                            }}
                                         />
                                 </div>
 
@@ -118,8 +161,6 @@
                                 <div class="flex tems-center h-full justify-center p-6 bg-green-500">
                                     <span class="font-semibold">Terminal</span>
                                 </div>
-
-                                
 
                             </Resizable.Pane>
 
@@ -146,5 +187,3 @@
 
 </Resizable.PaneGroup>
 </div>
-
-</Resizable.PaneGroup>
