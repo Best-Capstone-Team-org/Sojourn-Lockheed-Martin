@@ -1,15 +1,22 @@
 <script lang="ts">
-	import Box from "$lib/components/Box/Box.svelte";
 	import Screen from "$lib/components/Screen/Screen.svelte";
+	import MissionStatus from "$lib/components/ground-system/MissionStatus.svelte";
+	import Telemetry from "$lib/components/ground-system/Telemetry.svelte";
+	import Downlink from "$lib/components/ground-system/Downlink.svelte";
+	import ReadOut from "$lib/components/ground-system/ReadOut.svelte";
 	import * as Resizable from "$lib/components/ui/resizable/index.js";
-	import { MissionStatus } from "$lib/enums";
-	import MissionDetail from "$lib/components/MissionDetail/MissionDetail.svelte";
+	import type { MissionDetailType } from "$lib/types";
+	import { MissionStatusEnum } from "$lib/enums";
+	import { apiWebSocket } from "$lib/api";
+	import { onMount } from "svelte";
 
-	const missionDetails = [
+	// dummy data for the mission status
+	// TODO remove once we get actual data
+	const missionDetails: MissionDetailType[] = [
 		{
 			id: 1,
 			title: "Mission 1",
-			status: MissionStatus.INVALID,
+			status: MissionStatusEnum.INVALID,
 			description:
 				"This is the description for mission one. There are lots of important details here for the player to read.",
 			diagnostic:
@@ -18,7 +25,7 @@
 		{
 			id: 2,
 			title: "Mission 2",
-			status: MissionStatus.LOCKED,
+			status: MissionStatusEnum.LOCKED,
 			description:
 				"This is the description for mission two. There are lots of important details here for the player to read.",
 			diagnostic:
@@ -27,7 +34,7 @@
 		{
 			id: 3,
 			title: "Mission 3",
-			status: MissionStatus.ACTIVE,
+			status: MissionStatusEnum.ACTIVE,
 			description:
 				"This is the description for mission three. There are lost of important details here for the player to read.",
 			diagnostic:
@@ -36,17 +43,15 @@
 		{
 			id: 4,
 			title: "Mission 4",
-			status: MissionStatus.COMPLETE,
+			status: MissionStatusEnum.COMPLETE,
 			description:
 				"This is the description for mission four. There are lots of important details here for the player to read.",
 			diagnostic:
 				"This is the diagnostic for mission four. There are lots of important details here for the player to read.",
-		},
+		}
 	];
 
-	import { apiWebSocket } from "$lib/api";
-	import { onMount } from "svelte";
-
+	// websocket connection
 	let ws = $state<WebSocket | undefined>(undefined);
 	let ready = $state(false);
 	let resp = $state("");
@@ -81,12 +86,6 @@
 	};
 </script>
 
-<!-- <div class="flex justify-center items-center h-screen flex-col gap-0">
-	<Screen class="w-50 h-50 flex items-center justify-center">
-		<h1 class="text-center text-2xl">Sojourn</h1>
-	</Screen>
-</div> -->
-
 <div class="h-screen w-screen overflow-hidden">
 	<Resizable.PaneGroup
 		direction="horizontal"
@@ -94,21 +93,7 @@
 	>
 		<!-- Mission Status -->
 		<Resizable.Pane defaultSize={30}>
-			<div class="flex h-full min-h-0 flex-col bg-red-500">
-				<Box class="w-full shrink-0 p-2">
-					<span class="font-semibold">Mission Details</span>
-				</Box>
-				<div class="min-h-0 flex-1 overflow-y-auto">
-					{#each missionDetails as missionDetail (missionDetail.id)}
-						<MissionDetail
-							title={missionDetail.title}
-							status={missionDetail.status}
-							description={missionDetail.description}
-							diagnostic={missionDetail.diagnostic}
-						/>
-					{/each}
-				</div>
-			</div>
+			<MissionStatus missionDetails={missionDetails} />
 		</Resizable.Pane>
 
 		<Resizable.Handle />
@@ -118,9 +103,7 @@
 			<Resizable.PaneGroup direction="vertical">
 				<!-- Telemetry -->
 				<Resizable.Pane defaultSize={15}>
-					<Screen class="flex h-full items-center justify-center p-6">
-						<span class="font-semibold">Dishes</span>
-					</Screen>
+					<Telemetry />
 				</Resizable.Pane>
 
 				<Resizable.Handle />
@@ -134,11 +117,7 @@
 								<Resizable.PaneGroup direction="vertical">
 									<!-- Downlink -->
 									<Resizable.Pane defaultSize={60}>
-										<div
-											class="flex h-full flex-col-reverse p-2"
-										>
-											<p>{resp}</p>
-										</div>
+										<Downlink resp={resp} />
 									</Resizable.Pane>
 
 									<Resizable.Handle />
@@ -187,11 +166,7 @@
 
 						<!-- Read Out -->
 						<Resizable.Pane defaultSize={25}>
-							<div
-								class="flex h-full items-center justify-center p-6"
-							>
-								<span class="font-semibold">Read Out</span>
-							</div>
+							<ReadOut />
 						</Resizable.Pane>
 					</Resizable.PaneGroup>
 				</Resizable.Pane>
