@@ -7,6 +7,7 @@
 
 	const missionDetails = [
 		{
+			id: 1,
 			title: "Mission 1",
 			status: MissionStatus.INVALID,
 			description:
@@ -15,6 +16,7 @@
 				"This is the diagnostic for mission one. There are lots of important details here for the player to read.",
 		},
 		{
+			id: 2,
 			title: "Mission 2",
 			status: MissionStatus.LOCKED,
 			description:
@@ -23,6 +25,7 @@
 				"This is the diagnostic for mission two. There are lots of important details here for the player to read.",
 		},
 		{
+			id: 3,
 			title: "Mission 3",
 			status: MissionStatus.ACTIVE,
 			description:
@@ -31,6 +34,7 @@
 				"This is the diagnostic for mission three. There are lots of important details here for the player to read.",
 		},
 		{
+			id: 4,
 			title: "Mission 4",
 			status: MissionStatus.COMPLETE,
 			description:
@@ -95,7 +99,7 @@
 					<span class="font-semibold">Mission Details</span>
 				</Box>
 				<div class="min-h-0 flex-1 overflow-y-auto">
-					{#each missionDetails as missionDetail}
+					{#each missionDetails as missionDetail (missionDetail.id)}
 						<MissionDetail
 							title={missionDetail.title}
 							status={missionDetail.status}
