@@ -69,12 +69,6 @@
 		}
 	});
 
-	$effect(() => {
-		if (ready && ws) {
-			ws.send("hello world");
-		}
-	});
-
 	// sending commands
 	let command = $state("");
 
