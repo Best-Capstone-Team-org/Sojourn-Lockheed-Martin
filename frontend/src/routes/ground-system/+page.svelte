@@ -48,7 +48,7 @@
 				"This is the description for mission four. There are lots of important details here for the player to read.",
 			diagnostic:
 				"This is the diagnostic for mission four. There are lots of important details here for the player to read.",
-		}
+		},
 	];
 
 	// websocket connection
@@ -93,7 +93,7 @@
 	>
 		<!-- Mission Status -->
 		<Resizable.Pane defaultSize={30}>
-			<MissionStatus missionDetails={missionDetails} />
+			<MissionStatus {missionDetails} />
 		</Resizable.Pane>
 
 		<Resizable.Handle />
@@ -117,7 +117,7 @@
 								<Resizable.PaneGroup direction="vertical">
 									<!-- Downlink -->
 									<Resizable.Pane defaultSize={60}>
-										<Downlink resp={resp} />
+										<Downlink {resp} />
 									</Resizable.Pane>
 
 									<Resizable.Handle />

@@ -7,6 +7,11 @@
 	}: { children: Snippet; class?: string } = $props();
 </script>
 
-<div class={["border-2 border-sys-green border-solid mx-auto shadow-[2px_2px_0px_0px] shadow-sys-green bg-sys-grey", className]}>
+<div
+	class={[
+		"mx-auto border-2 border-solid border-sys-green bg-sys-grey shadow-[2px_2px_0px_0px] shadow-sys-green",
+		className,
+	]}
+>
 	{@render children()}
 </div>

@@ -1,7 +1,7 @@
 <script lang="ts">
-    let { resp }: { resp: string } = $props();
+	let { resp }: { resp: string } = $props();
 </script>
 
 <div class="flex h-full flex-col-reverse p-2">
-    <p>{resp}</p>
+	<p>{resp}</p>
 </div>
