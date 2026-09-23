@@ -1,10 +1,10 @@
 /* Striped background effect */
 .screen {
 	background: repeating-linear-gradient(
-        to bottom,
-        var(--sys-screen-light-green) 0px,
-        var(--sys-screen-light-green) 2px,
-        var(--sys-screen-dark-green) 2px,
-        var(--sys-screen-dark-green) 4px
-    );
+		to bottom,
+		var(--sys-screen-light-green) 0px,
+		var(--sys-screen-light-green) 2px,
+		var(--sys-screen-dark-green) 2px,
+		var(--sys-screen-dark-green) 4px
+	);
 }

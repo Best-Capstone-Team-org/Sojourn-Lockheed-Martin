@@ -10,7 +10,6 @@
 }
 
 .standard-dialog.standard-button:hover {
-	box-shadow:
-		inset -2px -2px 0 var(--sys-color-white);
+	box-shadow: inset -2px -2px 0 var(--sys-color-white);
 	background-color: var(--sys-checker-bg-dark-grey);
 }
