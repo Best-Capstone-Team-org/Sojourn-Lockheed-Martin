@@ -60,6 +60,10 @@ export type CommandDownlink =
 			telemetry: Telemetry;
 	  }
 	| {
+			type: "commandResponse";
+			response: string;
+	  }
+	| {
 			type: "state";
 			objectives: Objective[];
 			constraints: Constraints;
