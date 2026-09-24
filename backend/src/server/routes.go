@@ -14,9 +14,10 @@ import (
 type server struct {
 	// TODO: contain gamestate object from a different package probably
 
-	conn *websocket.Conn
+	wsConn *websocket.Conn
 
 	downlinkChan chan []byte
+	uplinkChan   chan []byte
 }
 
 func newServer() *server {
@@ -144,10 +145,11 @@ func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.conn = conn
+	s.wsConn = conn
 	s.downlinkChan = make(chan []byte)
+	s.uplinkChan = make(chan []byte)
 
-	go emulator.LoadAndStartFirmware(os.Args[1], s.downlinkChan)
+	go emulator.LoadAndStartFirmware(os.Args[1], s.downlinkChan, s.uplinkChan)
 
 	go s.downlinkPump()
 	go s.uplinkPump()
@@ -158,6 +160,8 @@ func (s *server) downlinkPump() {
 
 	for downlinkMessage := range s.downlinkChan {
 		line := strings.TrimSpace(string(downlinkMessage))
+
+		var err error
 
 		if strings.HasPrefix(line, "TLM ") {
 			frame, err := emulator.DecodeTelemetryFrame(line[4:])
@@ -174,12 +178,21 @@ func (s *server) downlinkPump() {
 				Telemetry: frame,
 			}
 
-			err = s.conn.WriteJSON(t)
+			err = s.wsConn.WriteJSON(t)
+		} else {
+			app.ServerLogger.Printf("Command Response: `%s`\n", line)
 
-			if err != nil {
-				app.ServerLogger.Printf("Error wriring JSON, probably WS connection closed: %+v\n", err)
-				break
+			r := commandResponseDownlink{
+				Type:     "commandResponse",
+				Response: line,
 			}
+
+			err = s.wsConn.WriteJSON(r)
+		}
+
+		if err != nil {
+			app.ServerLogger.Printf("Error writing JSON, probably WS connection closed: %+v\n", err)
+			break
 		}
 	}
 
@@ -188,13 +201,15 @@ func (s *server) downlinkPump() {
 
 func (s *server) uplinkPump() {
 	for {
-		_, message, err := s.conn.ReadMessage()
+		_, uplinkMessage, err := s.wsConn.ReadMessage()
 		if err != nil {
 			app.ErrorLogger.Printf("Error reading WS message: %+v", err)
 			continue
 		}
 
-		app.ServerLogger.Printf("Uplink message received: %s\n", message)
+		app.ServerLogger.Printf("Uplink message received: `%s`\n", uplinkMessage)
+
+		s.uplinkChan <- uplinkMessage
 	}
 }
 

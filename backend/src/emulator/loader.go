@@ -19,24 +19,17 @@ const qemuSystemArmEnvVar = "QEMU_SYSTEM_ARM_BIN"
 const UartTCPAddr = "127.0.0.1"
 const UartTCPPort = 5599
 
-func LoadAndStartFirmware(firmwareName string, downlinkChan chan []byte) {
+func LoadAndStartFirmware(
+	firmwareName string,
+	downlinkChan chan []byte,
+	uplinkChan chan []byte,
+) {
 	cmd, err := load(firmwareName)
 
 	if err != nil {
 		app.ErrorLogger.Fatalf("Error loading emulator: %+v", err)
 	}
 
-	go uartReader(downlinkChan)
-
-	app.LoaderLogger.Println("Waiting on firmware...")
-	err = cmd.Wait()
-
-	if err != nil {
-		app.ErrorLogger.Fatalf("Error waiting for emulator proc: %+v\n", err)
-	}
-}
-
-func uartReader(downlinkChan chan []byte) {
 	address := net.JoinHostPort(UartTCPAddr, strconv.Itoa(UartTCPPort))
 	timeout := 5 * time.Second
 
@@ -46,8 +39,21 @@ func uartReader(downlinkChan chan []byte) {
 		app.ErrorLogger.Fatalf("Connection failed: %+v", err)
 	}
 
+	go uartReader(conn, downlinkChan)
+	go uartWriter(conn, uplinkChan)
+
+	app.LoaderLogger.Println("Waiting on firmware...")
+	err = cmd.Wait()
+
+	if err != nil {
+		app.ErrorLogger.Fatalf("Error waiting for emulator proc: %+v\n", err)
+	}
+}
+
+func uartReader(conn net.Conn, downlinkChan chan []byte) {
+	r := bufio.NewReader(conn)
 	for {
-		response, err := bufio.NewReader(conn).ReadBytes('\n')
+		response, err := r.ReadBytes('\n')
 
 		if err != nil {
 			app.ErrorLogger.Printf("Failed to read response: %v\n", err)
@@ -55,6 +61,18 @@ func uartReader(downlinkChan chan []byte) {
 		}
 
 		downlinkChan <- response
+	}
+}
+
+func uartWriter(conn net.Conn, uplinkChan chan []byte) {
+	for uplinkMessage := range uplinkChan {
+		s := strings.TrimSpace(string(uplinkMessage)) + " "
+
+		nn, err := fmt.Fprintf(conn, "%s*%04X\n", s, crc16(s))
+		if err != nil {
+			app.ErrorLogger.Printf("Error writing to uart connection: %v (wrote %d bytes)",
+				err, nn)
+		}
 	}
 }
 
@@ -120,4 +138,22 @@ func fileExists(fileName string) bool {
 
 func getPATH() []string {
 	return strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
+}
+
+func crc16(s string) uint16 {
+	crc := uint16(0xFFFF)
+
+	for i := 0; i < len(s); i++ {
+		crc ^= uint16(s[i]) << 8
+
+		for j := 0; j < 8; j++ {
+			if crc&0x8000 != 0 {
+				crc = (crc << 1) ^ 0x1021
+			} else {
+				crc <<= 1
+			}
+		}
+	}
+
+	return crc
 }
