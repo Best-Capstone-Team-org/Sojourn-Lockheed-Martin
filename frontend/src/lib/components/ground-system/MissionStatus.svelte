@@ -6,7 +6,7 @@
 	let { missionDetails }: { missionDetails: MissionDetailType[] } = $props();
 </script>
 
-<div class="flex h-full min-h-0 flex-col bg-red-500">
+<div class="flex h-full min-h-0 flex-col">
 	<Box class="w-full shrink-0 p-2">
 		<span class="font-semibold">Mission Details</span>
 	</Box>
