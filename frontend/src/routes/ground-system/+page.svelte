@@ -56,7 +56,7 @@
 	let ws = $state<WebSocket | undefined>(undefined);
 	let ready = $state(false);
 
-	let tlmHex = $state("");
+	let tlmHex = $state<string[]>([]);
 	let telemetry = $state();
 
 	onMount(() => {
@@ -71,7 +71,7 @@
 				const msg = JSON.parse(ev.data);
 				const hex = msg.TLM.split(" ")[1];
 
-				tlmHex += `${hex}\n`;
+				tlmHex.push(hex);
 				telemetry = msg;
 			};
 		}

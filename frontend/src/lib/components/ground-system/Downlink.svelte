@@ -1,7 +1,9 @@
 <script lang="ts">
-	let { tlmHex }: { tlmHex: string } = $props();
+	let { tlmHex }: { tlmHex: string[] } = $props();
 </script>
 
 <div class="flex h-full flex-col-reverse p-2">
-	<p class="text-sm">{tlmHex}</p>
+	{#each tlmHex as hex}
+		<p class="text-sm">{hex}</p>
+	{/each}
 </div>
