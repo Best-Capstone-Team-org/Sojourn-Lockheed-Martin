@@ -25,6 +25,23 @@
 	--font-geneva-9: "Geneva_9", sans-serif;
 }
 
+@utility noise-bg {
+	position: relative;
+	isolation: isolate;
+
+	&::before {
+		content: "";
+		pointer-events: none;
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20600%20600%27%3E%3Cfilter%20id=%27a%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%27.65%27%20numOctaves=%273%27%20stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect%20width=%27100%25%27%20height=%27100%25%27%20filter=%27url%28%23a%29%27/%3E%3C/svg%3E");
+		background-size: 182px;
+		background-repeat: repeat;
+		opacity: 0.4;
+	}
+}
+
 :root {
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.153 0.006 107.1);
