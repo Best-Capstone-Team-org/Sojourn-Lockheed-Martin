@@ -1,13 +1,18 @@
 <script lang="ts">
 	import Screen from "$lib/components/Screen/Screen.svelte";
 	import MissionStatus from "$lib/components/ground-system/MissionStatus.svelte";
-	import Telemetry from "$lib/components/ground-system/Telemetry.svelte";
+	import TelemetryConsole from "$lib/components/ground-system/TelemetryConsole.svelte";
 	import Downlink from "$lib/components/ground-system/Downlink.svelte";
 	import ReadOut from "$lib/components/ground-system/ReadOut.svelte";
+	import Terminal from "$lib/components/ground-system/Terminal.svelte";
 	import * as Resizable from "$lib/components/ui/resizable/index.js";
 	import type { MissionDetailType } from "$lib/types";
 	import { MissionStatusEnum } from "$lib/enums";
-	import { apiWebSocket } from "$lib/api";
+	import {
+		apiWebSocket,
+		type Telemetry,
+		type CommandDownlink,
+	} from "$lib/api";
 	import { onMount } from "svelte";
 
 	// dummy data for the mission status
@@ -54,7 +59,12 @@
 	// websocket connection
 	let ws = $state<WebSocket | undefined>(undefined);
 	let ready = $state(false);
-	let resp = $state("");
+
+	// NOTE might not need this but it's good for debug print
+	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
+
+	let tlm = $state<string[]>([]);
+	let readOutTlm = $state<Telemetry>();
 
 	onMount(() => {
 		if (!ws) {
@@ -63,21 +73,27 @@
 			ws.onopen = () => {
 				ready = true;
 			};
+
 			ws.onmessage = (ev) => {
-				resp += `${ev.data}\n`;
+				commandDownlink = JSON.parse(ev.data) as CommandDownlink;
+
+				switch (commandDownlink.type) {
+					case "telemetry":
+						tlm.push(commandDownlink.TLM);
+						readOutTlm = commandDownlink.telemetry;
+						break;
+
+					case "commandResponse":
+						tlm.push(commandDownlink.response);
+						break;
+
+					case "state":
+						// TODO handle state
+						break;
+				}
 			};
 		}
 	});
-
-	// sending commands
-	let command = $state("");
-
-	const sendCommand = () => {
-		if (ready && ws) {
-			ws.send(command);
-			command = "";
-		}
-	};
 </script>
 
 <div class="h-screen w-screen overflow-hidden">
@@ -97,7 +113,7 @@
 			<Resizable.PaneGroup direction="vertical">
 				<!-- Telemetry -->
 				<Resizable.Pane defaultSize={15}>
-					<Telemetry />
+					<TelemetryConsole />
 				</Resizable.Pane>
 
 				<Resizable.Handle />
@@ -111,46 +127,17 @@
 								<Resizable.PaneGroup direction="vertical">
 									<!-- Downlink -->
 									<Resizable.Pane defaultSize={60}>
-										<Downlink {resp} />
+										<Downlink {tlm} />
 									</Resizable.Pane>
 
 									<Resizable.Handle />
 
 									<!-- Terminal -->
-									<Resizable.Pane
-										defaultSize={40}
-										class="flex h-full flex-col-reverse overflow-y-hidden"
-									>
-										<!-- Terminal History -->
-										<div
-											class="flex w-full items-center justify-center border-t p-2 font-semibold"
-										>
-											<span class="w-5"> > </span>
-											<input
-												type="text"
-												class="w-full border-none outline-none"
-												autocomplete="off"
-												autocorrect="off"
-												spellcheck="false"
-												autocapitalize="off"
-												placeholder="Enter command"
-												bind:value={command}
-												onkeydown={(e) => {
-													if (e.key === "Enter") {
-														sendCommand();
-													}
-												}}
-											/>
-										</div>
-
-										<!-- Terminal Input -->
-										<div
-											class="tems-center flex h-full justify-center bg-green-500 p-6"
-										>
-											<span class="font-semibold"
-												>Terminal</span
-											>
-										</div>
+									<Resizable.Pane defaultSize={40}>
+										<Terminal
+											{ws}
+											{ready}
+										/>
 									</Resizable.Pane>
 								</Resizable.PaneGroup>
 							</Screen>
@@ -160,7 +147,7 @@
 
 						<!-- Read Out -->
 						<Resizable.Pane defaultSize={25}>
-							<ReadOut />
+							<ReadOut {readOutTlm} />
 						</Resizable.Pane>
 					</Resizable.PaneGroup>
 				</Resizable.Pane>

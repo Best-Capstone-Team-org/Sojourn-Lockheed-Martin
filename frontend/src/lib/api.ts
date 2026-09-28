@@ -56,7 +56,7 @@ export interface CommandUplink {
 export type CommandDownlink =
 	| {
 			type: "telemetry";
-			tlm: string;
+			TLM: string;
 			telemetry: Telemetry;
 	  }
 	| {
@@ -96,6 +96,7 @@ export interface Telemetry {
 	lastFault: string;
 	bus: number; // in MV
 	load: number; // in MW
+	sensors: Record<number, number>;
 
 	camera?: Camera;
 	hk?: HK;

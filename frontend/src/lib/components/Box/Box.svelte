@@ -9,7 +9,7 @@
 
 <div
 	class={[
-		"mx-auto border-2 border-solid border-sys-green bg-sys-grey shadow-[2px_2px_0px_0px] shadow-sys-green",
+		"noise-bg mx-auto border-2 border-solid border-sys-green bg-sys-grey shadow-[2px_2px_0px_0px] shadow-sys-green",
 		className,
 	]}
 >
