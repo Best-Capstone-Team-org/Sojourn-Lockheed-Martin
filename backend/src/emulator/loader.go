@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -11,19 +12,26 @@ import (
 	"sojourn/app"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 const qemuSystemArmEnvVar = "QEMU_SYSTEM_ARM_BIN"
 
 const UartTCPAddr = "127.0.0.1"
-const UartTCPPort = 5599
+const UartTCPPort = 10000
+
+var globalFirmwareLock sync.Mutex
 
 func LoadAndStartFirmware(
 	firmwareName string,
 	downlinkChan chan []byte,
 	uplinkChan chan []byte,
+	done chan struct{},
 ) {
+	globalFirmwareLock.Lock()
+	defer globalFirmwareLock.Unlock()
+
 	cmd, err := load(firmwareName)
 
 	if err != nil {
@@ -43,10 +51,26 @@ func LoadAndStartFirmware(
 	go uartWriter(conn, uplinkChan)
 
 	app.LoaderLogger.Println("Waiting on firmware...")
-	err = cmd.Wait()
 
-	if err != nil {
-		app.ErrorLogger.Fatalf("Error waiting for emulator proc: %+v\n", err)
+	cmdDone := make(chan error, 1)
+
+	go func() {
+		cmdDone <- cmd.Wait()
+	}()
+
+	select {
+	case err := <-cmdDone:
+		if err != nil {
+			app.ErrorLogger.Printf("Firmware process failed: %v", err)
+		}
+
+	case <-done:
+		if cmd.Process != nil {
+			app.LoaderLogger.Printf("Killing firmware")
+			cmd.Process.Kill()
+		}
+
+		<-cmdDone
 	}
 }
 
@@ -56,12 +80,20 @@ func uartReader(conn net.Conn, downlinkChan chan []byte) {
 		response, err := r.ReadBytes('\n')
 
 		if err != nil {
-			app.ErrorLogger.Printf("Failed to read response: %v\n", err)
-			continue
+			if errors.Is(err, io.EOF) {
+				app.LoaderLogger.Printf("UART TCP connection closed")
+			} else {
+				app.ErrorLogger.Printf("Failed to read response: %v\n", err)
+			}
+			break
 		}
 
 		downlinkChan <- response
 	}
+
+	close(downlinkChan)
+
+	app.LoaderLogger.Printf("Exiting uart reader")
 }
 
 func uartWriter(conn net.Conn, uplinkChan chan []byte) {
@@ -74,6 +106,8 @@ func uartWriter(conn net.Conn, uplinkChan chan []byte) {
 				err, nn)
 		}
 	}
+
+	app.LoaderLogger.Println("Exiting uart writer")
 }
 
 func load(firmwareFilePath string) (*exec.Cmd, error) {

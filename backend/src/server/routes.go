@@ -18,6 +18,8 @@ type server struct {
 
 	downlinkChan chan []byte
 	uplinkChan   chan []byte
+
+	firmwareDone chan struct{}
 }
 
 func newServer() *server {
@@ -149,7 +151,9 @@ func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
 	s.downlinkChan = make(chan []byte)
 	s.uplinkChan = make(chan []byte)
 
-	go emulator.LoadAndStartFirmware(os.Args[1], s.downlinkChan, s.uplinkChan)
+	s.firmwareDone = make(chan struct{})
+
+	go emulator.LoadAndStartFirmware(os.Args[1], s.downlinkChan, s.uplinkChan, s.firmwareDone)
 
 	go s.downlinkPump()
 	go s.uplinkPump()
@@ -196,13 +200,22 @@ func (s *server) downlinkPump() {
 		}
 	}
 
-	app.ServerLogger.Println("Closing downlink pump")
+	app.ServerLogger.Println("Exiting downlink pump")
 }
 
 func (s *server) uplinkPump() {
 	for {
 		_, uplinkMessage, err := s.wsConn.ReadMessage()
 		if err != nil {
+			if websocket.IsCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseGoingAway,
+				websocket.CloseAbnormalClosure,
+			) {
+				app.ServerLogger.Printf("Client closed websocket: %+v", err)
+				break
+			}
+
 			app.ErrorLogger.Printf("Error reading WS message: %+v", err)
 			continue
 		}
@@ -211,6 +224,13 @@ func (s *server) uplinkPump() {
 
 		s.uplinkChan <- uplinkMessage
 	}
+
+	close(s.uplinkChan)
+
+	// Tell emulator thread to kill firmware
+	close(s.firmwareDone)
+
+	app.ServerLogger.Println("Exiting uplink pump")
 }
 
 func (s *server) checkRequestMethod(r *http.Request, method string, w http.ResponseWriter) bool {
