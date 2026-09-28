@@ -82,7 +82,7 @@
 						tlm.push(commandDownlink.TLM);
 						readOutTlm = commandDownlink.telemetry;
 						break;
-						
+
 					case "commandResponse":
 						tlm.push(commandDownlink.response);
 						break;

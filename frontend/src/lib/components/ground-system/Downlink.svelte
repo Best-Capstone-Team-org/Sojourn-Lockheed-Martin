@@ -6,6 +6,6 @@
 
 <TerminalScroll class="p-2">
 	{#each tlm as hex, index (index)}
-		<p class="break-all pb-2 text-sm">{hex}</p>
+		<p class="pb-2 text-sm break-all">{hex}</p>
 	{/each}
 </TerminalScroll>
