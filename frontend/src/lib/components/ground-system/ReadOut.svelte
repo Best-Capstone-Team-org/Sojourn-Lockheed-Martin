@@ -3,9 +3,9 @@
 	import ReadOutSection from "$lib/components/ground-system/ReadOutSection.svelte";
 	import type { Telemetry } from "$lib/api";
 
-	let { telemetry }: { telemetry: Telemetry | undefined } = $props();
+	let { readOutTlm }: { readOutTlm: Telemetry | undefined } = $props();
 
-	const frame = $derived(telemetry);
+	const frame = $derived(readOutTlm);
 	const sensors = $derived(frame?.sensors);
 	const hk = $derived(frame?.hk);
 </script>

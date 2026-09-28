@@ -1,9 +1,11 @@
 <script lang="ts">
-	let { tlmHex }: { tlmHex: string[] } = $props();
+	import TerminalScroll from "../TerminalScroll/TerminalScroll.svelte";
+
+	let { tlm }: { tlm: string[] } = $props();
 </script>
 
-<div class="flex h-full flex-col-reverse p-2">
-	{#each tlmHex as hex (hex)}
-		<p class="text-sm">{hex}</p>
+<TerminalScroll class="p-2">
+	{#each tlm as hex, index (index)}
+		<p class="break-all pb-2 text-sm">{hex}</p>
 	{/each}
-</div>
+</TerminalScroll>

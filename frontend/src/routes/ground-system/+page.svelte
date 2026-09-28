@@ -63,8 +63,8 @@
 	// NOTE might not need this but it's good for debug print
 	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
 
-	let tlmHex = $state<string[]>([]);
-	let telemetry = $state<Telemetry>();
+	let tlm = $state<string[]>([]);
+	let readOutTlm = $state<Telemetry>();
 
 	onMount(() => {
 		if (!ws) {
@@ -77,10 +77,19 @@
 			ws.onmessage = (ev) => {
 				commandDownlink = JSON.parse(ev.data) as CommandDownlink;
 
-				// handle telemetry
-				if (commandDownlink.type === "telemetry") {
-					tlmHex.push(commandDownlink.TLM);
-					telemetry = commandDownlink.telemetry;
+				switch (commandDownlink.type) {
+					case "telemetry":
+						tlm.push(commandDownlink.TLM);
+						readOutTlm = commandDownlink.telemetry;
+						break;
+						
+					case "commandResponse":
+						tlm.push(commandDownlink.response);
+						break;
+
+					case "state":
+						// TODO handle state
+						break;
 				}
 			};
 		}
@@ -118,7 +127,7 @@
 								<Resizable.PaneGroup direction="vertical">
 									<!-- Downlink -->
 									<Resizable.Pane defaultSize={60}>
-										<Downlink {tlmHex} />
+										<Downlink {tlm} />
 									</Resizable.Pane>
 
 									<Resizable.Handle />
@@ -138,7 +147,7 @@
 
 						<!-- Read Out -->
 						<Resizable.Pane defaultSize={25}>
-							<ReadOut {telemetry} />
+							<ReadOut {readOutTlm} />
 						</Resizable.Pane>
 					</Resizable.PaneGroup>
 				</Resizable.Pane>

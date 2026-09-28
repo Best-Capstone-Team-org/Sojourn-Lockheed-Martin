@@ -1,4 +1,6 @@
 <script lang="ts">
+	import TerminalScroll from "../TerminalScroll/TerminalScroll.svelte";
+
 	let {
 		ws,
 		ready,
@@ -8,10 +10,12 @@
 	} = $props();
 
 	let command = $state("");
+	let history = $state<string[]>([]);
 
 	const sendCommand = () => {
 		if (ready && ws) {
 			ws.send(command);
+			history.push(command);
 			command = "";
 		}
 	};
@@ -30,7 +34,7 @@
 			autocorrect="off"
 			spellcheck="false"
 			autocapitalize="off"
-			placeholder="Enter command"
+			placeholder="Enter Command"
 			bind:value={command}
 			onkeydown={(e) => {
 				if (e.key === "Enter") {
@@ -41,7 +45,9 @@
 	</div>
 
 	<!-- Terminal History -->
-	<div class="flex h-full items-center justify-center p-6">
-		<span class="font-semibold">Terminal</span>
-	</div>
+	<TerminalScroll class="p-2">
+		{#each history as command, index (index)}
+			<p class="break-all pb-2 text-sm">{command}</p>
+		{/each}
+	</TerminalScroll>
 </div>
