@@ -21,38 +21,38 @@
 		{
 			id: 1,
 			title: "Mission 1",
-			status: MissionStatusEnum.INVALID,
+			status: MissionStatusEnum.COMPLETE,
 			description:
 				"This is the description for mission one. There are lots of important details here for the player to read.",
-			diagnostic:
-				"This is the diagnostic for mission one. There are lots of important details here for the player to read.",
 		},
 		{
 			id: 2,
 			title: "Mission 2",
-			status: MissionStatusEnum.LOCKED,
+			status: MissionStatusEnum.ACTIVE,
 			description:
 				"This is the description for mission two. There are lots of important details here for the player to read.",
 			diagnostic:
 				"This is the diagnostic for mission two. There are lots of important details here for the player to read.",
 		},
+
 		{
 			id: 3,
 			title: "Mission 3",
 			status: MissionStatusEnum.ACTIVE,
 			description:
-				"This is the description for mission three. There are lost of important details here for the player to read.",
-			diagnostic:
-				"This is the diagnostic for mission three. There are lots of important details here for the player to read.",
+				"This is the description for mission three. There are lots of important details here for the player to read.",
 		},
 		{
 			id: 4,
 			title: "Mission 4",
-			status: MissionStatusEnum.COMPLETE,
-			description:
-				"This is the description for mission four. There are lots of important details here for the player to read.",
-			diagnostic:
-				"This is the diagnostic for mission four. There are lots of important details here for the player to read.",
+			status: MissionStatusEnum.LOCKED,
+			description: "",
+		},
+		{
+			id: 5,
+			title: "Mission 5",
+			status: MissionStatusEnum.LOCKED,
+			description: "",
 		},
 	];
 
@@ -99,7 +99,7 @@
 <div class="h-screen w-screen overflow-hidden">
 	<Resizable.PaneGroup
 		direction="horizontal"
-		class="h-full w-full rounded-lg border text-white"
+		class="h-full w-full"
 	>
 		<!-- Mission Status -->
 		<Resizable.Pane defaultSize={30}>
@@ -123,7 +123,10 @@
 					<Resizable.PaneGroup direction="horizontal">
 						<!-- Console -->
 						<Resizable.Pane defaultSize={75}>
-							<Screen class="h-full">
+							<Screen
+								class="h-full"
+								bezelClass="h-full"
+							>
 								<Resizable.PaneGroup direction="vertical">
 									<!-- Downlink -->
 									<Resizable.Pane defaultSize={60}>
@@ -155,3 +158,20 @@
 		</Resizable.Pane>
 	</Resizable.PaneGroup>
 </div>
+
+<style>
+	/* 
+		hide resize handles 
+		will reduce the discoverability for the style
+		TODO: we need to find a good solution 
+	*/
+	div :global([data-slot="resizable-handle"]) {
+		background-color: transparent;
+		width: 0;
+	}
+
+	div :global([data-slot="resizable-handle"][data-direction="vertical"]) {
+		width: 100%;
+		height: 0;
+	}
+</style>

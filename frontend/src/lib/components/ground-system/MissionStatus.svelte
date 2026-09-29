@@ -8,7 +8,7 @@
 
 <div class="flex h-full min-h-0 flex-col">
 	<Box class="w-full shrink-0 p-2">
-		<span class="font-semibold">Mission Details</span>
+		<span class="text-xl font-bold">Mission Details</span>
 	</Box>
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		{#each missionDetails as missionDetail (missionDetail.id)}

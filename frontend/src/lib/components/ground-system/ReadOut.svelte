@@ -12,7 +12,7 @@
 
 <div class="flex h-full flex-col">
 	<Box class="w-full p-2">
-		<span class="font-semibold">Read Out</span>
+		<span class="text-xl font-bold">Read Out</span>
 		<!-- {JSON.stringify(telemetry)} -->
 	</Box>
 	<ReadOutSection

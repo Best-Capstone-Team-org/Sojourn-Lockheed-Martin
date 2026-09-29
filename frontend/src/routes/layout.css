@@ -5,24 +5,42 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* system colors and fonts */
 @theme {
 	--color-sys-white: #efefef;
 	--color-sys-black: #111111;
 	--color-sys-grey: #afb6b3;
 	--color-sys-medium-grey: #6b706e;
 	--color-sys-green: #283431;
-	--color-sys-checker-bg-dark-grey: #8e8e8e;
-	--color-sys-checker-bg-green: #3a483b;
 	--color-sys-screen-dark-green: #608956;
 	--color-sys-screen-light-green: #739a62;
 	--color-sys-alert-yellow: #f5be0b;
 	--color-sys-alert-red: #f50b0b;
 	--color-sys-alert-green: #0bf50b;
+	--color-sys-text-light: #efefef;
+	--color-sys-text-dark: #333;
+
+	--color-sys-shadow-top: #101010;
+	--color-sys-shadow-left: #1c1c1c;
+	--color-sys-shadow-bottom: #5c5c5c;
+	--color-sys-shadow-right: #464646;
 
 	--font-chicago: "Chicago", sans-serif;
 	--font-monaco: "Monaco", monospace;
 	--font-chicago-12: "Chicago_12", sans-serif;
 	--font-geneva-9: "Geneva_9", sans-serif;
+}
+
+/* shadows */
+@theme {
+	--shadow-bevel:
+		inset 0 1px 0 rgb(255 255 255 / 0.4),
+		inset 1px 0 0 rgb(255 255 255 / 0.15), inset 0 -1px 0 rgb(0 0 0 / 0.35),
+		inset -1px 0 0 rgb(0 0 0 / 0.2);
+	--shadow-crt:
+		inset 0 3px 6px rgb(0 0 0 / 0.75), inset 3px 0 6px rgb(0 0 0 / 0.55),
+		inset 0 0 18px rgb(0 0 0 / 0.5);
+	--inset-shadow-recess: inset 0 1px 2px rgb(0 0 0 / 0.5);
 }
 
 @utility noise-bg {
@@ -100,6 +118,36 @@
 	src:
 		url("../lib/assets/fonts/FindersKeepers.woff2") format("woff2"),
 		url("../lib/assets/fonts/FindersKeepers.woff") format("woff");
+}
+
+.electrolize-regular {
+	font-family: "Electrolize", sans-serif;
+	font-weight: 400;
+	font-style: normal;
+}
+
+.quantico-regular {
+	font-family: "Quantico", sans-serif;
+	font-weight: 400;
+	font-style: normal;
+}
+
+.quantico-bold {
+	font-family: "Quantico", sans-serif;
+	font-weight: 700;
+	font-style: normal;
+}
+
+.quantico-regular-italic {
+	font-family: "Quantico", sans-serif;
+	font-weight: 400;
+	font-style: italic;
+}
+
+.quantico-bold-italic {
+	font-family: "Quantico", sans-serif;
+	font-weight: 700;
+	font-style: italic;
 }
 
 .dark {
