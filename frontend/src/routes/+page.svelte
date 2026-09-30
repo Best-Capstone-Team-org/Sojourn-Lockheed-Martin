@@ -1,11 +1,20 @@
 <script lang="ts">
-	import Box from "$lib/components/Box/Box.svelte";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import titleScreen from "$lib/assets/title_screen.png";
+	import Button from "$lib/components/Button/Button.svelte";
 </script>
 
-<Box class="w-100 p-2">
-	<h1>Welcome to SvelteKit</h1>
-	<p>
-		Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read
-		the documentation
-	</p>
-</Box>
+<main class="relative h-screen w-screen">
+	<img
+		src={titleScreen}
+		alt="Sojourn"
+		class="h-full w-full object-cover"
+	/>
+	<Button
+		onclick={() => goto(resolve("/level-select"))}
+		class="absolute top-[50%] left-[20%] w-[20vw] p-[1vw] text-center text-[1.5vw] leading-[1.5vw] text-white"
+	>
+		Start
+	</Button>
+</main>
