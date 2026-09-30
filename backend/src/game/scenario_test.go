@@ -423,3 +423,273 @@ func TestLoadScenarioUnsupportedFormat(t *testing.T) {
 		t.Fatal("expected error for unsupported format, got nil")
 	}
 }
+
+func TestInitializeObjectiveStatesActive(t *testing.T) {
+	objectives := []Objective{
+		{
+			ID: "objective-1",
+		},
+	}
+
+	states := initializeObjectiveStates(objectives)
+
+	state := states["objective-1"]
+
+	if state == nil {
+		t.Fatal("expected objective state to exist")
+	}
+
+	if state.Status != ObjectiveStatusActive {
+		t.Errorf(
+			"expected objective to be active, got %s",
+			state.Status,
+		)
+	}
+}
+
+func TestInitializeObjectiveStatesLocked(t *testing.T) {
+	objectives := []Objective{
+		{
+			ID:       "objective-1",
+			Requires: []string{"previous-objective"},
+		},
+	}
+
+	states := initializeObjectiveStates(objectives)
+
+	state := states["objective-1"]
+
+	if state == nil {
+		t.Fatal("expected objective state to exist")
+	}
+
+	if state.Status != ObjectiveStatusLocked {
+		t.Errorf(
+			"expected objective to be locked, got %s",
+			state.Status,
+		)
+	}
+}
+
+func TestUpdateObjectiveStatesUnlocksObjective(t *testing.T) {
+	s := &Scenario{
+		Objectives: []Objective{
+			{
+				ID: "objective-1",
+			},
+			{
+				ID:       "objective-2",
+				Requires: []string{"objective-1"},
+			},
+		},
+		ObjectiveStates: map[string]*ObjectiveState{
+			"objective-1": {
+				Status: ObjectiveStatusComplete,
+			},
+			"objective-2": {
+				Status: ObjectiveStatusLocked,
+			},
+		},
+	}
+
+	s.updateObjectiveStates()
+
+	if s.ObjectiveStates["objective-2"].Status != ObjectiveStatusActive {
+		t.Errorf(
+			"expected objective-2 to be active, got %s",
+			s.ObjectiveStates["objective-2"].Status,
+		)
+	}
+}
+
+func TestUpdateObjectiveStatesStaysLocked(t *testing.T) {
+	s := &Scenario{
+		Objectives: []Objective{
+			{
+				ID: "objective-1",
+			},
+			{
+				ID:       "objective-2",
+				Requires: []string{"objective-1"},
+			},
+		},
+		ObjectiveStates: map[string]*ObjectiveState{
+			"objective-1": {
+				Status: ObjectiveStatusActive,
+			},
+			"objective-2": {
+				Status: ObjectiveStatusLocked,
+			},
+		},
+	}
+
+	s.updateObjectiveStates()
+
+	if s.ObjectiveStates["objective-2"].Status != ObjectiveStatusLocked {
+		t.Errorf(
+			"expected objective-2 to stay locked, got %s",
+			s.ObjectiveStates["objective-2"].Status,
+		)
+	}
+}
+
+func TestUpdateObjectiveStatesMultipleRequirements(t *testing.T) {
+	s := &Scenario{
+		Objectives: []Objective{
+			{
+				ID: "objective-1",
+			},
+			{
+				ID: "objective-2",
+			},
+			{
+				ID:       "objective-3",
+				Requires: []string{"objective-1", "objective-2"},
+			},
+		},
+		ObjectiveStates: map[string]*ObjectiveState{
+			"objective-1": {
+				Status: ObjectiveStatusComplete,
+			},
+			"objective-2": {
+				Status: ObjectiveStatusActive,
+			},
+			"objective-3": {
+				Status: ObjectiveStatusLocked,
+			},
+		},
+	}
+
+	s.updateObjectiveStates()
+
+	if s.ObjectiveStates["objective-3"].Status != ObjectiveStatusLocked {
+		t.Errorf(
+			"expected objective-3 to stay locked, got %s",
+			s.ObjectiveStates["objective-3"].Status,
+		)
+	}
+}
+
+func TestUpdateObjectiveStatesDoesNotChangeComplete(t *testing.T) {
+	s := &Scenario{
+		Objectives: []Objective{
+			{
+				ID: "objective-1",
+			},
+		},
+		ObjectiveStates: map[string]*ObjectiveState{
+			"objective-1": {
+				Status: ObjectiveStatusComplete,
+			},
+		},
+	}
+
+	s.updateObjectiveStates()
+
+	if s.ObjectiveStates["objective-1"].Status != ObjectiveStatusComplete {
+		t.Errorf(
+			"expected objective-1 to stay complete, got %s",
+			s.ObjectiveStates["objective-1"].Status,
+		)
+	}
+}
+func TestUpdateObjectiveStatesMultipleRequirementsComplete(t *testing.T) {
+	s := &Scenario{
+		Objectives: []Objective{
+			{
+				ID: "objective-1",
+			},
+			{
+				ID: "objective-2",
+			},
+			{
+				ID:       "objective-3",
+				Requires: []string{"objective-1", "objective-2"},
+			},
+		},
+		ObjectiveStates: map[string]*ObjectiveState{
+			"objective-1": {
+				Status: ObjectiveStatusComplete,
+			},
+			"objective-2": {
+				Status: ObjectiveStatusComplete,
+			},
+			"objective-3": {
+				Status: ObjectiveStatusLocked,
+			},
+		},
+	}
+
+	s.updateObjectiveStates()
+
+	if s.ObjectiveStates["objective-3"].Status != ObjectiveStatusActive {
+		t.Errorf(
+			"expected objective-3 to be active, got %s",
+			s.ObjectiveStates["objective-3"].Status,
+		)
+	}
+}
+
+func TestGetObjectiveState(t *testing.T) {
+	s := &Scenario{
+		ObjectiveStates: map[string]*ObjectiveState{
+			"objective-1": {
+				Status: ObjectiveStatusActive,
+			},
+		},
+	}
+
+	state, ok := s.GetObjectiveState("objective-1")
+
+	if !ok {
+		t.Fatal("expected objective state to exist")
+	}
+
+	if state.Status != ObjectiveStatusActive {
+		t.Errorf(
+			"expected objective to be active, got %s",
+			state.Status,
+		)
+	}
+}
+
+func TestGetObjectiveStateUnknown(t *testing.T) {
+	s := &Scenario{
+		ObjectiveStates: map[string]*ObjectiveState{},
+	}
+
+	_, ok := s.GetObjectiveState("does-not-exist")
+
+	if ok {
+		t.Error("expected unknown objective to not have a state")
+	}
+}
+
+func TestNumericValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    any
+		expected float64
+		ok       bool
+	}{
+		{"int", int(5), 5, true},
+		{"int32", int32(10), 10, true},
+		{"uint16", uint16(20), 20, true},
+		{"float64", float64(2.5), 2.5, true},
+		{"string", "NOMINAL", 0, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, ok := numericValue(test.input)
+
+			if ok != test.ok {
+				t.Errorf("expected ok=%v, got %v", test.ok, ok)
+			}
+
+			if got != test.expected {
+				t.Errorf("expected %v, got %v", test.expected, got)
+			}
+		})
+	}
+}

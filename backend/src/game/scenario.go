@@ -18,12 +18,13 @@ type ObjectivesFile struct {
 //Scenarios have manifest.json, objectives.json, setup.json, symbols.json, memmap.json
 
 type Scenario struct {
-	Dir        string
-	Manifest   Manifest
-	Objectives []Objective
-	Setup      *Setup
-	Symbols    SymbolsFile
-	MemMap     MemMapFile
+	Dir             string
+	Manifest        Manifest
+	Objectives      []Objective
+	Setup           *Setup
+	Symbols         SymbolsFile
+	MemMap          MemMapFile
+	ObjectiveStates map[string]*ObjectiveState
 }
 
 type Objective struct {
@@ -254,14 +255,17 @@ func LoadScenario(dir string) (*Scenario, error) {
 		return nil, fmt.Errorf("unsupported memmap format: %d", memMapFile.Format)
 	}
 
+	//set objective states based on requirements
+	objectiveStates := initializeObjectiveStates(objectivesFile.Objectives)
 	//assemble the scenario
 	return &Scenario{
-		Dir:        dir,
-		Manifest:   manifest,
-		Objectives: objectivesFile.Objectives,
-		Setup:      setup,
-		MemMap:     memMapFile,
-		Symbols:    symbolsFile,
+		Dir:             dir,
+		Manifest:        manifest,
+		Objectives:      objectivesFile.Objectives,
+		Setup:           setup,
+		MemMap:          memMapFile,
+		Symbols:         symbolsFile,
+		ObjectiveStates: objectiveStates,
 	}, nil
 }
 
@@ -321,7 +325,8 @@ func (s *Scenario) ResolveAddress(ref AddressRef) (uint64, error) {
 	return base, nil
 }
 
-// TODO: RUNTIME OBJECTIVE STATE ("complete", "failed", "active", "locked")
+//RUNTIME OBJECTIVE STATE ("complete", "failed", "active", "locked")
+//Note: this section only handles "locked" and "active", "complete" and "failed" handled later
 type ObjectiveStatus string
 
 const (
@@ -331,5 +336,98 @@ const (
 	ObjectiveStatusLocked   ObjectiveStatus = "locked"
 )
 
+type ObjectiveState struct {
+	Status ObjectiveStatus
+}
+
+
+//create the starting runtime state for every objective in the scenario
+func initializeObjectiveStates(objectives []Objective) map[string]*ObjectiveState {
+	states := make(map[string]*ObjectiveState)
+
+	for _, objective := range objectives {
+		status := ObjectiveStatusActive
+
+		if len(objective.Requires) > 0 {
+			status = ObjectiveStatusLocked
+		}
+
+		states[objective.ID] = &ObjectiveState{
+			Status: status,
+		}
+	}
+
+	return states
+}
+
+
+//check if all requirements for an objective are complete
+func (s *Scenario) requirementsComplete(objective Objective) bool {
+	for _, requiredID := range objective.Requires {
+		state, ok := s.ObjectiveStates[requiredID]
+
+		if !ok || state.Status != ObjectiveStatusComplete {
+			return false
+		}
+	}
+
+	return true
+}
+//update which states are now unlocked
+func (s *Scenario) updateObjectiveStates() {
+		for _, objective := range s.Objectives {
+		state, ok := s.ObjectiveStates[objective.ID]
+
+		if !ok {
+			continue
+		}
+
+		if state.Status != ObjectiveStatusLocked {
+			continue //we don't have to unlock objectives that are already active or complete
+		}
+
+		if s.requirementsComplete(objective) {
+			state.Status = ObjectiveStatusActive
+		}
+	}
+}
+
+//return the current objective state
+func (s *Scenario) GetObjectiveState(id string) (*ObjectiveState, bool) {
+	state, ok := s.ObjectiveStates[id]
+	return state, ok
+}
 //TODO: PREDICATE EVALUATION
+
+//normalize types due to json unmarshalling returning everything as float64
+func numericValue(value any) (float64, bool) {
+	switch v := value.(type) {
+	case float64:
+		return v, true
+	case int:
+		return float64(v), true
+	case int8:
+		return float64(v), true
+	case int16:
+		return float64(v), true
+	case int32:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	case uint:
+		return float64(v), true
+	case uint8:
+		return float64(v), true
+	case uint16:
+		return float64(v), true
+	case uint32:
+		return float64(v), true
+	case uint64:
+		return float64(v), true
+	case float32:
+		return float64(v), true
+	default:
+		return 0, false
+	}
+}
 //TODO: OBJECTIVE EVALUATION
