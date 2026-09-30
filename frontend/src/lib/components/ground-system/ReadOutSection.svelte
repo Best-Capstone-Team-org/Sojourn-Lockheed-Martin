@@ -19,7 +19,9 @@
 
 <Box class="w-full p-2">
 	<span class="font-semibold">{title}</span>
-	<br />
+	<hr
+		class="my-1 border-t border-black/35 shadow-[0_1px_0_rgba(255,255,255,0.4)]"
+	/>
 	{#each items as item (item.label)}
 		<div class="flex justify-between">
 			<span>{item.label}</span>

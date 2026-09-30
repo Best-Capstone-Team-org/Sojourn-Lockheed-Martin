@@ -45,9 +45,9 @@
 	</div>
 
 	<!-- Terminal History -->
-	<TerminalScroll class="p-2">
+	<TerminalScroll class="p-3">
 		{#each history as command, index (index)}
-			<p class="pb-2 text-sm break-all">{command}</p>
+			<p class="pb-1 text-sm break-all">{command}</p>
 		{/each}
 	</TerminalScroll>
 </div>
