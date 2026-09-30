@@ -10,7 +10,7 @@ type State struct {
 
 	scenario *Scenario
 
-	availableScenarios map[ScenarioId]*Scenario
+	availableScenarios map[string]*Scenario
 }
 
 type Phase int
@@ -35,7 +35,7 @@ func (s *State) LoadScenarios(levelsDir string) error {
 	return nil
 }
 
-func (s *State) SelectScenario(scenarioId int) error {
+func (s *State) SelectScenario(scenarioId string) error {
 	if s.phase != PhaseLevelSelect {
 		return unexpectedPhase("selecting a scenario")
 	}
