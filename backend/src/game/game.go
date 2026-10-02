@@ -51,7 +51,7 @@ func (s *State) Start() error {
 	if s.phase != PhaseReady {
 		return unexpectedPhase("starting game")
 	}
-	
+
 	// TODO:
 
 	s.phase = PhaseInProgress
@@ -63,7 +63,7 @@ func (s *State) UploadPatchedBinary(patchedBinaryPath string) error {
 	if s.phase != PhaseInProgress {
 		return unexpectedPhase("uploading patched binary")
 	}
-	
+
 	// TODO:
 
 	return nil
