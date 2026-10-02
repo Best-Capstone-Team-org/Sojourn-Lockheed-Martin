@@ -1,4 +1,4 @@
-package introspect
+package emulator
 
 import (
 	"bufio"
@@ -14,79 +14,79 @@ import (
 
 const timeout = 5 * time.Second
 
-type GDB struct {
+type Introspect struct {
 	conn       net.Conn
 	r          *bufio.Reader
 	packetSize int
 	halted     bool
 }
 
-func Connect(addr string) (*GDB, error) {
+func Connect(addr string) (*Introspect, error) {
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
 		return nil, err
 	}
 
-	gdb := &GDB{
+	in := &Introspect{
 		conn:       conn,
 		r:          bufio.NewReader(conn),
 		packetSize: 1024,
 		halted:     true,
 	}
 
-	if err := gdb.setPacketSize(); err != nil {
+	if err := in.setPacketSize(); err != nil {
 		return nil, err
 	}
 
 	// attaching halts service
-	if err := gdb.Resume(); err != nil {
-		gdb.conn.Close()
+	if err := in.Resume(); err != nil {
+		in.conn.Close()
 		return nil, err
 	}
 
-	return gdb, nil
+	return in, nil
 }
 
-func (gdb *GDB) Close() error {
-	gdb.send("D")
-	return gdb.conn.Close()
+func (in *Introspect) Close() error {
+	in.send("D")
+	return in.conn.Close()
 }
 
-func (gdb *GDB) Halt() error {
-	if gdb.halted {
+func (in *Introspect) Halt() error {
+	if in.halted {
 		return nil
 	}
 
-	if err := gdb.sendBytes([]byte{0x03}); err != nil {
+	if err := in.sendBytes([]byte{0x03}); err != nil {
 		return err
 	}
-	if _, err := gdb.receive(); err != nil {
+	if _, err := in.receive(); err != nil {
 		return err
 	}
 
-	gdb.halted = true
+	in.halted = true
 	return nil
 }
 
-func (gdb *GDB) Resume() error {
-	if !gdb.halted {
+func (in *Introspect) Resume() error {
+	if !in.halted {
 		return nil
 	}
 
-	if err := gdb.send("c"); err != nil {
+	if err := in.send("c"); err != nil {
 		return err
 	}
 
-	gdb.halted = false
+	in.halted = false
 	return nil
 }
 
-func (gdb *GDB) Read(addr uint32, length int) ([]byte, error) {
-	if !gdb.halted {
+func (in *Introspect) Read(addr uint32, length int) ([]byte, error) {
+	if !in.halted {
 		return nil, errors.New("read while not halted")
 	}
 
-	chunk := (gdb.packetSize - 4) / 2
+	chunk := (in.packetSize - 4) / 2
 	result := make([]byte, 0, length)
 
 	for len(result) < length {
@@ -94,7 +94,7 @@ func (gdb *GDB) Read(addr uint32, length int) ([]byte, error) {
 		n := min(chunk, length-len(result))
 
 		msg := fmt.Sprintf("m%x,%x", at, n)
-		resp, err := gdb.sendAndReceive(msg)
+		resp, err := in.sendAndReceive(msg)
 		if err != nil {
 			return nil, err
 		}
@@ -118,8 +118,8 @@ func (gdb *GDB) Read(addr uint32, length int) ([]byte, error) {
 	return result, nil
 }
 
-func (gdb *GDB) setPacketSize() error {
-	resp, err := gdb.sendAndReceive("qSupported")
+func (in *Introspect) setPacketSize() error {
+	resp, err := in.sendAndReceive("qSupported")
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (gdb *GDB) setPacketSize() error {
 
 		size, err := strconv.ParseInt(sizeStr, 16, 32)
 		if err == nil {
-			gdb.packetSize = int(size)
+			in.packetSize = int(size)
 			return nil
 		}
 	}
@@ -142,44 +142,44 @@ func (gdb *GDB) setPacketSize() error {
 	return nil
 }
 
-func (gdb *GDB) sendAndReceive(data string) (string, error) {
-	if err := gdb.send(data); err != nil {
+func (in *Introspect) sendAndReceive(data string) (string, error) {
+	if err := in.send(data); err != nil {
 		return "", err
 	}
-	return gdb.receive()
+	return in.receive()
 }
 
-func (gdb *GDB) send(data string) error {
+func (in *Introspect) send(data string) error {
 	msg := fmt.Sprintf("$%s#%02x", data, checksum(data))
-	return gdb.sendBytes([]byte(msg))
+	return in.sendBytes([]byte(msg))
 }
 
-func (gdb *GDB) sendBytes(bytes []byte) error {
-	gdb.conn.SetWriteDeadline(time.Now().Add(timeout))
+func (in *Introspect) sendBytes(bytes []byte) error {
+	in.conn.SetWriteDeadline(time.Now().Add(timeout))
 
-	if _, err := gdb.conn.Write(bytes); err != nil {
+	if _, err := in.conn.Write(bytes); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (gdb *GDB) receive() (string, error) {
-	gdb.conn.SetReadDeadline(time.Now().Add(timeout))
+func (in *Introspect) receive() (string, error) {
+	in.conn.SetReadDeadline(time.Now().Add(timeout))
 
-	_, err := gdb.r.ReadString('$')
+	_, err := in.r.ReadString('$')
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("reading receive: %s", err))
 	}
 
-	body, err := gdb.r.ReadString('#')
+	body, err := in.r.ReadString('#')
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("reading body: %s", err))
 	}
 	body = body[:len(body)-1]
 
 	var sum [2]byte
-	if _, err := io.ReadFull(gdb.r, sum[:]); err != nil {
+	if _, err := io.ReadFull(in.r, sum[:]); err != nil {
 		return "", errors.New(fmt.Sprintf("reading checksum: %s", err))
 	}
 
@@ -188,7 +188,7 @@ func (gdb *GDB) receive() (string, error) {
 		return "", errors.New("validating checksum")
 	}
 
-	if err := gdb.sendBytes([]byte("+")); err != nil {
+	if err := in.sendBytes([]byte("+")); err != nil {
 		return "", err
 	}
 

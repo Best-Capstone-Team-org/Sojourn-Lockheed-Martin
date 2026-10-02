@@ -10,13 +10,12 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"sojourn/emulator"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"sojourn/introspect"
 )
 
 // ---- fake GDB stub ----
@@ -260,9 +259,9 @@ func rleEncode(data string) string {
 
 // ---- helpers ----
 
-func connect(t *testing.T, s *stub) *introspect.GDB {
+func connect(t *testing.T, s *stub) *emulator.Introspect {
 	t.Helper()
-	g, err := introspect.Connect(s.addr)
+	g, err := emulator.Connect(s.addr)
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
@@ -270,7 +269,7 @@ func connect(t *testing.T, s *stub) *introspect.GDB {
 	return g
 }
 
-func halt(t *testing.T, g *introspect.GDB) {
+func halt(t *testing.T, g *emulator.Introspect) {
 	t.Helper()
 	if err := g.Halt(); err != nil {
 		t.Fatalf("Halt: %v", err)
@@ -451,7 +450,7 @@ func TestLostConnectionFails(t *testing.T) {
 	// The stub hangs up right after qSupported. Connect may or may not notice
 	// (the "c" it sends has no reply), but no later read may produce data.
 	s := newStub(t, stubConfig{fault: faultCloseAfterAttach})
-	g, err := introspect.Connect(s.addr)
+	g, err := emulator.Connect(s.addr)
 	if err != nil {
 		if g != nil {
 			t.Fatal("Connect returned a connection alongside its error")
@@ -496,7 +495,7 @@ func TestConnectWithNothingListeningFails(t *testing.T) {
 	addr := ln.Addr().String()
 	ln.Close()
 
-	g, err := introspect.Connect(addr)
+	g, err := emulator.Connect(addr)
 	if err == nil {
 		g.Close()
 		t.Fatal("expected Connect to fail")
@@ -536,9 +535,9 @@ func TestAgainstQEMU(t *testing.T) {
 	}
 	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait() })
 
-	var g *introspect.GDB
+	var g *emulator.Introspect
 	for deadline := time.Now().Add(5 * time.Second); ; {
-		if g, err = introspect.Connect(addr); err == nil {
+		if g, err = emulator.Connect(addr); err == nil {
 			break
 		}
 		if time.Now().After(deadline) {
