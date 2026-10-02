@@ -20,4 +20,3 @@ Sojourn is a reverse-engineering game platform that places players in the role o
 
 - Run `docker compose up` in the root of the repository
 - Visit `localhost:8080`
-    - While navigation is still being worked on, you can manually visit `localhost:8080/ground-system.html`
