@@ -20,7 +20,8 @@
 			{#each levels as level (level)}
 				<Button
 					onclick={() => goto(resolve("/ground-system"))}
-					class="w-full p-[1vw] text-center text-[1.5vw] leading-[1.5vw] text-white"
+					wellClass="text-center text-[1.5vw] leading-[1.5vw]"
+					buttonClass="w-full p-[1vw] text-white"
 				>
 					Level {level}
 				</Button>
