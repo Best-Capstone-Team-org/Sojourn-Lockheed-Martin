@@ -4,10 +4,11 @@
 	import Button from "$lib/components/Button/Button.svelte";
 </script>
 
-<main class="flex h-screen w-screen items-center justify-center bg-[#293134]">
+<main class="flex h-screen w-screen items-center justify-center">
 	<Button
 		onclick={() => goto(resolve("/ground-system"))}
-		class="p-[1vw] text-center text-[1.5vw] leading-[1.5vw] text-white"
+		wellClass="text-center text-[1.5vw] leading-[1.5vw]"
+		buttonClass="px-6 py-3"
 	>
 		ground system
 	</Button>
