@@ -21,6 +21,8 @@ const qemuSystemArmEnvVar = "QEMU_SYSTEM_ARM_BIN"
 const UartTCPAddr = "127.0.0.1"
 const UartTCPPort = 10000
 
+const uartConnectTimeout = 5 * time.Second
+
 var globalFirmwareLock sync.Mutex
 
 func LoadAndStartFirmware(
@@ -38,12 +40,18 @@ func LoadAndStartFirmware(
 		app.ErrorLogger.Fatalf("Error loading emulator: %+v", err)
 	}
 
+	cmdDone := make(chan error, 1)
+
+	go func() {
+		cmdDone <- cmd.Wait()
+	}()
+
 	address := net.JoinHostPort(UartTCPAddr, strconv.Itoa(UartTCPPort))
-	timeout := 5 * time.Second
 
 	app.LoaderLogger.Printf("Connecting to %s", address)
-	conn, err := net.DialTimeout("tcp", address, timeout)
+	conn, err := dialUART(address, uartConnectTimeout, cmdDone)
 	if err != nil {
+		cmd.Process.Kill()
 		app.ErrorLogger.Fatalf("Connection failed: %+v", err)
 	}
 
@@ -51,12 +59,6 @@ func LoadAndStartFirmware(
 	go uartWriter(conn, uplinkChan)
 
 	app.LoaderLogger.Println("Waiting on firmware...")
-
-	cmdDone := make(chan error, 1)
-
-	go func() {
-		cmdDone <- cmd.Wait()
-	}()
 
 	select {
 	case err := <-cmdDone:
@@ -71,6 +73,31 @@ func LoadAndStartFirmware(
 		}
 
 		<-cmdDone
+	}
+}
+
+func dialUART(address string, timeout time.Duration, cmdDone <-chan error) (net.Conn, error) {
+	deadline := time.Now().Add(timeout)
+	backoff := 10 * time.Millisecond
+
+	for {
+		conn, err := net.DialTimeout("tcp", address, time.Until(deadline))
+		if err == nil {
+			return conn, nil
+		}
+
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return nil, fmt.Errorf("timed out after %s: %w", timeout, err)
+		}
+
+		select {
+		case exitErr := <-cmdDone:
+			return nil, fmt.Errorf("qemu exited before UART was ready: %v", exitErr)
+		case <-time.After(min(backoff, remaining)):
+		}
+
+		backoff = min(backoff*2, 250*time.Millisecond)
 	}
 }
 
@@ -131,7 +158,7 @@ func load(firmwareFilePath string) (*exec.Cmd, error) {
 		"-M", "mps2-an386",
 		"-nographic",
 		"-kernel", firmwareFilePath,
-		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=off", UartTCPAddr, UartTCPPort)}
+		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=on", UartTCPAddr, UartTCPPort)}
 
 	app.LoaderLogger.Printf("Starting qemu: %s %s\n",
 		qemuSystemARMBinary, strings.Join(qemuArgs, " "))
@@ -139,8 +166,6 @@ func load(firmwareFilePath string) (*exec.Cmd, error) {
 	cmd := exec.Command(qemuSystemARMBinary, qemuArgs...)
 
 	err = cmd.Start()
-
-	time.Sleep(time.Second)
 
 	return cmd, err
 }
