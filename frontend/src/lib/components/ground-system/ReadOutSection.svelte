@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Box from "$lib/components/Box/Box.svelte";
+	import Button from "../Button/Button.svelte";
 
 	let {
 		title,
@@ -8,8 +9,9 @@
 		title: string;
 		items: {
 			label: string;
-			value: string | number | null | undefined;
+			value?: string | number | null;
 			unit?: string;
+			button?: () => void;
 		}[];
 	} = $props();
 
@@ -25,7 +27,12 @@
 	{#each items as item (item.label)}
 		<div class="flex justify-between">
 			<span>{item.label}</span>
-			{#if isMissing(item.value)}
+			{#if item.button}
+				<Button
+					class="px-2"
+					onclick={item.button}>Toggle</Button
+				>
+			{:else if isMissing(item.value)}
 				<span class="text-sys-alert-red">absent</span>
 			{:else}
 				<span>{item.value}{item.unit ? ` ${item.unit}` : ""}</span>
