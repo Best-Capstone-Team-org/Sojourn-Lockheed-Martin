@@ -27,9 +27,7 @@
 <div class="flex h-full flex-col">
 	<Box class="flex w-full items-center justify-between p-2">
 		<span class="text-xl font-bold">Read Out</span>
-		<Led
-			bind:this={led}
-		/>
+		<Led bind:this={led} />
 	</Box>
 	<ReadOutSection
 		title="Frame Header"

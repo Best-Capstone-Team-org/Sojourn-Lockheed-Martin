@@ -28,7 +28,10 @@
 		<div class="flex justify-between">
 			<span>{item.label}</span>
 			{#if item.button}
-				<Button class="px-2" onclick={item.button}>Toggle</Button>
+				<Button
+					class="px-2"
+					onclick={item.button}>Toggle</Button
+				>
 			{:else if isMissing(item.value)}
 				<span class="text-sys-alert-red">absent</span>
 			{:else}
