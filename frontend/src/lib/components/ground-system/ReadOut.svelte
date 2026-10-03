@@ -2,18 +2,34 @@
 	import Box from "$lib/components/Box/Box.svelte";
 	import ReadOutSection from "$lib/components/ground-system/ReadOutSection.svelte";
 	import type { Telemetry } from "$lib/api";
+	import { options } from "./Options.svelte";
+	import Led from "./Led.svelte";
 
 	let { readOutTlm }: { readOutTlm: Telemetry | undefined } = $props();
 
 	const frame = $derived(readOutTlm);
 	const sensors = $derived(frame?.sensors);
 	const hk = $derived(frame?.hk);
+
+	function toggleTelemetry() {
+		options.telemetry = !options.telemetry;
+	}
+
+	let led: Led;
+
+	$effect(() => {
+		if (readOutTlm) {
+			led.blink();
+		}
+	});
 </script>
 
 <div class="flex h-full flex-col">
-	<Box class="w-full p-2">
+	<Box class="flex w-full items-center justify-between p-2">
 		<span class="text-xl font-bold">Read Out</span>
-		<!-- {JSON.stringify(telemetry)} -->
+		<Led
+			bind:this={led}
+		/>
 	</Box>
 	<ReadOutSection
 		title="Frame Header"
@@ -53,6 +69,15 @@
 			{ label: "Momentum", value: hk?.mom },
 			{ label: "Recorder", value: hk?.rec, unit: "%" },
 			{ label: "Shed Events", value: hk?.shed },
+		]}
+	/>
+	<ReadOutSection
+		title="Options"
+		items={[
+			{
+				label: "Telemetry",
+				button: toggleTelemetry,
+			},
 		]}
 	/>
 </div>
