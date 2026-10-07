@@ -18,239 +18,156 @@ import (
 
 type ObjectivesFile struct {
 	Objectives []Objective `json:"objectives"`
-
-	Format int `json:"format"`
+	Format     int         `json:"format"`
 }
 
-//Scenarios have manifest.json, objectives.json, setup.json, symbols.json, memmap.json
-
+// Scenarios have manifest.json, objectives.json, setup.json, symbols.json, memmap.json
 type Scenario struct {
-	Dir string
-
-	Manifest Manifest
-
-	Objectives []Objective
-
-	Setup *Setup
-
-	Symbols SymbolsFile
-
-	MemMap MemMapFile
-
+	Dir             string
+	Manifest        Manifest
+	Objectives      []Objective
+	Setup           *Setup
+	Symbols         SymbolsFile
+	MemMap          MemMapFile
 	ObjectiveStates map[string]*ObjectiveState
 }
 
 type Objective struct {
-	ID string `json:"id"`
-
-	Title string `json:"title"`
-
-	Brief string `json:"brief"`
-
-	Requires []string `json:"requires,omitempty"` //objectives that must be completed before this one is unlocked
-
-	Points int `json:"points,omitempty"`
-
-	Success Predicate `json:"success"`
-
-	Fail *Predicate `json:"fail,omitempty"` //optional if the objective has a failure condition
-
-	Partial []Partial `json:"partial,omitempty"`
-
-	Retractable bool `json:"retractable,omitempty"` //defaults to false, if true, completion can be undone if success becomes false
-
-	Hints []Hint `json:"hints,omitempty"`
+	ID          string     `json:"id"`
+	Title       string     `json:"title"`
+	Brief       string     `json:"brief"`
+	Requires    []string   `json:"requires,omitempty"` //objectives that must be completed before this one is unlocked
+	Points      int        `json:"points,omitempty"`
+	Success     Predicate  `json:"success"`
+	Fail        *Predicate `json:"fail,omitempty"` //optional if the objective has a failure condition
+	Partial     []Partial  `json:"partial,omitempty"`
+	Retractable bool       `json:"retractable,omitempty"` //defaults to false, if true, completion can be undone if success becomes false
+	Hints       []Hint     `json:"hints,omitempty"`
 }
 
 type Predicate struct {
-	Op string `json:"op"` //What question to ask
-
-	Of json.RawMessage `json:"of,omitempty"` //possibility of and, or, and not in the conditions
-
-	Path string `json:"path,omitempty"`
-
-	Cmp string `json:"cmp,omitempty"` //comparison operator
-
-	Value any `json:"value,omitempty"`
-
-	Mask int `json:"mask,omitempty"` //Which bits to compare
-
-	Frames int `json:"frames,omitempty"` //predicates that are true for a number of frames
-
-	ID string `json:"id,omitempty"`
-
-	Match string `json:"match,omitempty"`
-
-	Regex bool `json:"regex,omitempty"`
+	Op     string          `json:"op"`           //What question to ask
+	Of     json.RawMessage `json:"of,omitempty"` //possibility of and, or, and not in the conditions
+	Path   string          `json:"path,omitempty"`
+	Cmp    string          `json:"cmp,omitempty"` //comparison operator
+	Value  any             `json:"value,omitempty"`
+	Mask   int             `json:"mask,omitempty"`   //Which bits to compare
+	Frames int             `json:"frames,omitempty"` //predicates that are true for a number of frames
+	ID     string          `json:"id,omitempty"`
+	Match  string          `json:"match,omitempty"`
+	Regex  bool            `json:"regex,omitempty"`
 
 	// Next three will connect with introspection channel
-
-	At *AddressRef `json:"at,omitempty"`
-
-	Len int `json:"len,omitempty"` //length in bytes of data to read
-
-	Width int `json:"width,omitempty"` //how many bytes make up the integer we are examining
+	At    *AddressRef `json:"at,omitempty"`
+	Len   int         `json:"len,omitempty"`   //length in bytes of data to read
+	Width int         `json:"width,omitempty"` //how many bytes make up the integer we are examining
 
 	//Next three have scenario ask question about what player has done
-
-	Verb string `json:"verb,omitempty"`
-
-	Result string `json:"result,omitempty"`
-
+	Verb     string `json:"verb,omitempty"`
+	Result   string `json:"result,omitempty"`
 	Resource string `json:"resource,omitempty"` // which budget we're checking ("writes", "reads")
-
-	Lang  string `json:"lang,omitempty"`
-	Entry string `json:"entry,omitempty"`
+	Lang     string `json:"lang,omitempty"`
+	Entry    string `json:"entry,omitempty"`
 }
 
 type AddressRef struct {
-	Sym string `json:"sym,omitempty"`
-
-	Field string `json:"field,omitempty"` // address of sym + offset of field
-
-	Offset int `json:"offset,omitempty"` // address of sym + offset
-
-	Addr string `json:"addr,omitempty"` // direct address
-
+	Sym    string `json:"sym,omitempty"`
+	Field  string `json:"field,omitempty"`  // address of sym + offset of field
+	Offset int    `json:"offset,omitempty"` // address of sym + offset
+	Addr   string `json:"addr,omitempty"`   // direct address
 }
 
 type Partial struct {
 	When Predicate `json:"when"`
-
-	Text string `json:"text"`
+	Text string    `json:"text"`
 }
 
 type CommandLogEntry struct {
-	Verb string
-
+	Verb   string
 	Result string
-
-	Addr uint32
+	Addr   uint32
 }
 
 type Hint struct {
-	AfterFrames int `json:"after_frames"`
-
-	Text string `json:"text"`
+	AfterFrames int    `json:"after_frames"`
+	Text        string `json:"text"`
 }
 
 type Manifest struct {
-	Format int `json:"format"`
-
-	ID string `json:"id"`
-
-	Title string `json:"title"`
-
-	Revision int `json:"revision"`
-
-	Author string `json:"author,omitempty"`
-
-	Summary string `json:"summary"`
-
-	Difficulty string `json:"difficulty,omitempty"`
-
-	Impure bool `json:"impure,omitempty"`
-
-	Firmware FirmwareConfig `json:"firmware"` //which firmware files belong to this scenario
-
-	Link LinkConfig `json:"link"`
-
-	Console ConsoleConfig `json:"console,omitempty"`
-
-	Briefing string `json:"briefing"` // briefing.md
-
-	Setup string `json:"setup,omitempty"` // setup.json
-
-	Objectives string `json:"objectives"` // objectives.json
-
-	Docs []string `json:"docs,omitempty"`
+	Format     int            `json:"format"`
+	ID         string         `json:"id"`
+	Title      string         `json:"title"`
+	Revision   int            `json:"revision"`
+	Author     string         `json:"author,omitempty"`
+	Summary    string         `json:"summary"`
+	Difficulty string         `json:"difficulty,omitempty"`
+	Impure     bool           `json:"impure,omitempty"`
+	Firmware   FirmwareConfig `json:"firmware"` //which firmware files belong to this scenario
+	Link       LinkConfig     `json:"link"`
+	Console    ConsoleConfig  `json:"console,omitempty"`
+	Briefing   string         `json:"briefing"`        // briefing.md
+	Setup      string         `json:"setup,omitempty"` // setup.json
+	Objectives string         `json:"objectives"`      // objectives.json
+	Docs       []string       `json:"docs,omitempty"`
 }
 
 type FirmwareConfig struct {
-	ROM string `json:"rom"`
-
-	Symbols string `json:"symbols"`
-
-	MemMap string `json:"memmap"` //valid memory regions
-
+	ROM      string `json:"rom"`
+	Symbols  string `json:"symbols"`
+	MemMap   string `json:"memmap"`    //valid memory regions
 	AppCRC32 string `json:"app_crc32"` //is the right firmware being used
-
 }
 
 type BudgetConfig struct {
 	Writes *int `json:"writes,omitempty"`
-
-	Reads *int `json:"reads,omitempty"`
+	Reads  *int `json:"reads,omitempty"`
 }
 
 type LinkConfig struct {
-	UplinkDelayS int `json:"uplink_delay_s"`
-
-	DownlinkDelayS int `json:"downlink_delay_s"`
-
-	RequireChecksum *bool `json:"require_checksum,omitempty"` //whether player commands require checksum, defaults to true
-
-	Budget BudgetConfig `json:"budget,omitempty"`
+	UplinkDelayS    int          `json:"uplink_delay_s"`
+	DownlinkDelayS  int          `json:"downlink_delay_s"`
+	RequireChecksum *bool        `json:"require_checksum,omitempty"` //whether player commands require checksum, defaults to true
+	Budget          BudgetConfig `json:"budget,omitempty"`
 }
 
 type ConsoleConfig struct {
-	Decode []string `json:"decode,omitempty"` //which telemetry channels the console should decode for the player
-
-	DSNComplex string `json:"dsn_complex,omitempty"` //which DSN complex has the link
-
+	Decode     []string `json:"decode,omitempty"`      //which telemetry channels the console should decode for the player
+	DSNComplex string   `json:"dsn_complex,omitempty"` //which DSN complex has the link
 }
 
 type Setup struct {
-	Format int `json:"format"` //Scenario format version
-
-	Writes []SetupWrite `json:"writes"` //things to change before playing the scenario
-
-	SettleFrames int `json:"settle_frames,omitempty"` //how many frames to wait after writes before starting the scenario
-
+	Format       int          `json:"format"`                  //Scenario format version
+	Writes       []SetupWrite `json:"writes"`                  //things to change before playing the scenario
+	SettleFrames int          `json:"settle_frames,omitempty"` //how many frames to wait after writes before starting the scenario
 }
 
 type SetupWrite struct {
-	At AddressRef `json:"at"`
-
-	U8 *uint8 `json:"u8,omitempty"`
-
-	U16 *uint16 `json:"u16,omitempty"`
-
-	U32 *uint32 `json:"u32,omitempty"`
-
-	Hex string `json:"hex,omitempty"`
-
-	Note string `json:"note,omitempty"`
+	At   AddressRef `json:"at"`
+	U8   *uint8     `json:"u8,omitempty"`
+	U16  *uint16    `json:"u16,omitempty"`
+	U32  *uint32    `json:"u32,omitempty"`
+	Hex  string     `json:"hex,omitempty"`
+	Note string     `json:"note,omitempty"`
 }
 
 // bridge between human readable scenario objectives and locations in firmware's memory
-
 type SymbolsFile struct {
-	Format int `json:"format"`
-
-	Symbols map[string]string `json:"symbols"` // symbol name to memory address
-
-	Fields map[string]map[string]int `json:"fields"` //symbol name to fields to offset
-
+	Format  int                       `json:"format"`
+	Symbols map[string]string         `json:"symbols"` // symbol name to memory address
+	Fields  map[string]map[string]int `json:"fields"`  //symbol name to fields to offset
 }
 
 // vlaid memory regions for the firmware
-
 type MemMapFile struct {
-	Format int `json:"format"`
-
+	Format  int            `json:"format"`
 	Regions []MemoryRegion `json:"regions"`
 }
 
 type MemoryRegion struct {
 	Name string `json:"name"`
-
-	Lo string `json:"lo"` // start address
-
-	Hi string `json:"hi"` // end address
-
+	Lo   string `json:"lo"`             // start address
+	Hi   string `json:"hi"`             // end address
 	Poke string `json:"poke,omitempty"` //write behavior
-
 }
 
 const SupportedScenarioFormat = 1 //the only scenario format we support right now
@@ -260,6 +177,7 @@ func validateObjectiveRequirements(objectives []Objective) error {
 	for _, objective := range objectives {
 		ids[objective.ID] = true
 	}
+
 	for _, objective := range objectives {
 		for _, requiredID := range objective.Requires {
 			if !ids[requiredID] {
@@ -275,6 +193,7 @@ func validateObjectiveCycles(objectives []Objective) error {
 	for _, objective := range objectives {
 		requires[objective.ID] = objective.Requires
 	}
+
 	visiting := make(map[string]bool)
 	visited := make(map[string]bool)
 	var visit func(string) error
@@ -295,6 +214,7 @@ func validateObjectiveCycles(objectives []Objective) error {
 		visited[id] = true
 		return nil
 	}
+
 	for _, objective := range objectives {
 		if err := visit(objective.ID); err != nil {
 			return err
@@ -383,6 +303,7 @@ func validateManifestJSON(data []byte, manifest Manifest) error {
 	if strings.TrimSpace(manifest.ID) == "" || strings.TrimSpace(manifest.Title) == "" || strings.TrimSpace(manifest.Summary) == "" || strings.TrimSpace(manifest.Briefing) == "" || strings.TrimSpace(manifest.Objectives) == "" {
 		return fmt.Errorf("manifest contains an empty required string field")
 	}
+
 	var fw map[string]json.RawMessage
 	if err := json.Unmarshal(raw["firmware"], &fw); err != nil {
 		return fmt.Errorf("manifest firmware must be an object: %w", err)
@@ -395,6 +316,7 @@ func validateManifestJSON(data []byte, manifest Manifest) error {
 	if manifest.Firmware.ROM == "" || manifest.Firmware.Symbols == "" || manifest.Firmware.MemMap == "" || manifest.Firmware.AppCRC32 == "" {
 		return fmt.Errorf("manifest firmware contains an empty required string field")
 	}
+
 	var link map[string]json.RawMessage
 	if err := json.Unmarshal(raw["link"], &link); err != nil {
 		return fmt.Errorf("manifest link must be an object: %w", err)
@@ -413,6 +335,7 @@ func validateReferencedFiles(dir string, manifest Manifest) error {
 		paths = append(paths, manifest.Setup)
 	}
 	paths = append(paths, manifest.Docs...)
+
 	for _, rel := range paths {
 		if rel == "" {
 			continue
@@ -459,6 +382,7 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return nil, fmt.Errorf("failed to parse manifest: %w", err)
 	}
+
 	if err := validateManifestJSON(data, manifest); err != nil {
 		return nil, err
 	}
@@ -483,6 +407,7 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 	if objectivesFile.Format != SupportedScenarioFormat {
 		return nil, fmt.Errorf("unsupported objectives format: %d", objectivesFile.Format)
 	}
+
 	if err := validateObjectiveIDs(objectivesFile.Objectives); err != nil {
 		return nil, err
 	}
@@ -575,225 +500,131 @@ func (s *Scenario) ResolveAddress(ref AddressRef) (uint64, error) {
 	}
 
 	// If we are given a direct address
-
 	if ref.Addr != "" {
-
 		addr, err := strconv.ParseUint(ref.Addr, 0, 64)
-
 		if err != nil {
-
 			return 0, fmt.Errorf("invalid address %q: %w", ref.Addr, err)
-
 		}
-
 		return addr, nil
-
 	}
 
 	// Otherwise, we need a symbol
-
 	if ref.Sym == "" {
-
 		return 0, fmt.Errorf("address reference has no addr or sym")
-
 	}
 
 	symbolAddr, ok := s.Symbols.Symbols[ref.Sym]
-
 	if !ok {
-
 		return 0, fmt.Errorf("unknown symbol %q", ref.Sym)
-
 	}
 
 	base, err := strconv.ParseUint(symbolAddr, 0, 64)
-
 	if err != nil {
-
 		return 0, fmt.Errorf("invalid address for symbol %q: %w", ref.Sym, err)
-
 	}
 
 	// Symbol + field case
-
 	if ref.Field != "" {
-
 		fields, ok := s.Symbols.Fields[ref.Sym]
-
 		if !ok {
-
 			return 0, fmt.Errorf("no field information for symbol %q", ref.Sym)
-
 		}
-
 		offset, ok := fields[ref.Field]
-
 		if !ok {
-
 			return 0, fmt.Errorf(
-
 				"unknown field %q for symbol %q",
-
 				ref.Field,
-
 				ref.Sym,
 			)
-
 		}
-
 		return base + uint64(offset), nil
-
 	}
 
 	// Symbol + offset case
-
 	if ref.Offset != 0 {
-
 		return base + uint64(ref.Offset), nil
-
 	}
 
 	// Just the symbol itself
-
 	return base, nil
-
 }
 
 func (s *Scenario) validateMemoryRange(ref AddressRef, length int) error {
-
 	if length <= 0 {
-
 		return fmt.Errorf("memory range length must be greater than 0")
-
 	}
 
 	addr, err := s.ResolveAddress(ref)
-
 	if err != nil {
-
 		return err
-
 	}
 
 	if addr > math.MaxUint32 {
 		return fmt.Errorf("address 0x%X exceeds 32-bit introspection address space", addr)
 	}
-
 	if uint64(length-1) > ^uint64(0)-addr {
-
 		return fmt.Errorf(
-
 			"memory range starting at 0x%X with length %d overflows address space",
-
 			addr,
-
 			length,
 		)
-
 	}
 
 	end := addr + uint64(length) - 1
-
 	for _, region := range s.MemMap.Regions {
-
 		lo, err := strconv.ParseUint(region.Lo, 0, 64)
-
 		if err != nil {
-
 			return fmt.Errorf(
-
 				"invalid lower address %q for memory region %q",
-
 				region.Lo,
-
 				region.Name,
 			)
-
 		}
-
 		hi, err := strconv.ParseUint(region.Hi, 0, 64)
-
 		if err != nil {
-
 			return fmt.Errorf(
-
 				"invalid upper address %q for memory region %q",
-
 				region.Hi,
-
 				region.Name,
 			)
-
 		}
-
 		if addr >= lo && end <= hi {
-
 			return nil
-
 		}
-
 	}
-
 	return fmt.Errorf(
-
 		"memory range 0x%X-0x%X is outside the declared memory map",
-
 		addr,
-
 		end,
 	)
-
 }
 
 func (s *Scenario) validatePredicateAddresses(predicate Predicate) error {
-
 	var length int
-
 	switch predicate.Op {
-
 	case "mem_u8":
-
 		length = 1
-
 	case "mem_u16":
-
 		length = 2
-
 	case "mem_u32":
-
 		length = 4
-
 	case "mem_bits":
-
 		length = predicate.Width
-
 		if length == 0 {
-
 			length = 4
-
 		}
-
 	case "mem", "mem_changed":
-
 		length = predicate.Len
-
 	}
 
 	if length > 0 && predicate.At != nil {
-
 		if err := s.validateMemoryRange(*predicate.At, length); err != nil {
-
 			return fmt.Errorf(
-
 				"invalid address for %q predicate: %w",
-
 				predicate.Op,
-
 				err,
 			)
-
 		}
-
 	}
 
 	if predicate.Op == "script" {
@@ -807,129 +638,78 @@ func (s *Scenario) validatePredicateAddresses(predicate Predicate) error {
 	}
 
 	if predicate.Op == "commanded" && predicate.At != nil {
-
 		if _, err := s.ResolveAddress(*predicate.At); err != nil {
-
 			return fmt.Errorf(
-
 				"invalid address for commanded predicate: %w",
-
 				err,
 			)
-
 		}
-
 	}
 
 	switch predicate.Op {
-
 	case "all", "any":
-
 		var children []Predicate
-
 		if err := json.Unmarshal(predicate.Of, &children); err != nil {
-
 			return err
-
 		}
-
 		for _, child := range children {
-
 			if err := s.validatePredicateAddresses(child); err != nil {
-
 				return err
-
 			}
-
 		}
-
 	case "not", "ever", "sustained", "within":
-
 		var child Predicate
-
 		if err := json.Unmarshal(predicate.Of, &child); err != nil {
-
 			return err
-
 		}
-
 		if err := s.validatePredicateAddresses(child); err != nil {
-
 			return err
-
 		}
-
 	}
-
 	return nil
-
 }
 
 func (s *Scenario) validateObjectiveAddresses() error {
-
 	for _, objective := range s.Objectives {
-
 		if err := s.validatePredicateAddresses(objective.Success); err != nil {
-
 			return fmt.Errorf(
-
 				"invalid success predicate address for objective %q: %w",
-
 				objective.ID,
-
 				err,
 			)
-
 		}
-
 		if objective.Fail != nil {
-
 			if err := s.validatePredicateAddresses(*objective.Fail); err != nil {
-
 				return fmt.Errorf(
-
 					"invalid fail predicate address for objective %q: %w",
-
 					objective.ID,
-
 					err,
 				)
-
 			}
-
 		}
-
 		for _, partial := range objective.Partial {
-
 			if err := s.validatePredicateAddresses(partial.When); err != nil {
-
 				return fmt.Errorf(
-
 					"invalid partial predicate address for objective %q: %w",
-
 					objective.ID,
-
 					err,
 				)
-
 			}
-
 		}
-
 	}
-
 	return nil
-
 }
 
 func (s *Scenario) validateSetupAddresses() error {
 	if s.Setup == nil {
 		return nil
 	}
+
 	for i, write := range s.Setup.Writes {
 		if err := validateAddressRef(write.At); err != nil {
 			return fmt.Errorf("setup write %d has invalid address reference: %w", i, err)
 		}
+
 		count := 0
 		length := 0
 		if write.U8 != nil {
@@ -955,6 +735,7 @@ func (s *Scenario) validateSetupAddresses() error {
 			}
 			length = len(data)
 		}
+
 		if count != 1 {
 			return fmt.Errorf("setup write %d must contain exactly one of u8, u16, u32, or hex", i)
 		}
@@ -973,105 +754,62 @@ type ObjectiveStatus string
 
 const (
 	ObjectiveStatusComplete ObjectiveStatus = "complete"
-
-	ObjectiveStatusFailed ObjectiveStatus = "failed"
-
-	ObjectiveStatusActive ObjectiveStatus = "active"
-
-	ObjectiveStatusLocked ObjectiveStatus = "locked"
+	ObjectiveStatusFailed   ObjectiveStatus = "failed"
+	ObjectiveStatusActive   ObjectiveStatus = "active"
+	ObjectiveStatusLocked   ObjectiveStatus = "locked"
 )
 
 type ObjectiveState struct {
-	Status ObjectiveStatus
-
+	Status     ObjectiveStatus
 	Diagnostic string
 }
 
-//create the starting runtime state for every objective in the scenario
-
+// create the starting runtime state for every objective in the scenario
 func initializeObjectiveStates(objectives []Objective) map[string]*ObjectiveState {
-
 	states := make(map[string]*ObjectiveState)
-
 	for _, objective := range objectives {
-
 		status := ObjectiveStatusActive
-
 		if len(objective.Requires) > 0 {
-
 			status = ObjectiveStatusLocked
-
 		}
-
 		states[objective.ID] = &ObjectiveState{
-
 			Status: status,
 		}
-
 	}
-
 	return states
-
 }
 
-//check if all requirements for an objective are complete
-
+// check if all requirements for an objective are complete
 func (s *Scenario) requirementsComplete(objective Objective) bool {
-
 	for _, requiredID := range objective.Requires {
-
 		state, ok := s.ObjectiveStates[requiredID]
-
 		if !ok || state.Status != ObjectiveStatusComplete {
-
 			return false
-
 		}
-
 	}
-
 	return true
-
 }
 
-//update which states are now unlocked
-
+// update which states are now unlocked
 func (s *Scenario) updateObjectiveStates() {
-
 	for _, objective := range s.Objectives {
-
 		state, ok := s.ObjectiveStates[objective.ID]
-
 		if !ok {
-
 			continue
-
 		}
-
 		if state.Status != ObjectiveStatusLocked {
-
 			continue //we don't have to unlock objectives that are already active or complete
-
 		}
-
 		if s.requirementsComplete(objective) {
-
 			state.Status = ObjectiveStatusActive
-
 		}
-
 	}
-
 }
 
-//return the current objective state
-
+// return the current objective state
 func (s *Scenario) GetObjectiveState(id string) (*ObjectiveState, bool) {
-
 	state, ok := s.ObjectiveStates[id]
-
 	return state, ok
-
 }
 
 //TODO: PREDICATE EVALUATION
@@ -1094,6 +832,7 @@ func validateComparisonValue(cmp string, value any, numericOnly bool) error {
 	if value == nil {
 		return fmt.Errorf("comparison requires 'value'")
 	}
+
 	if cmp == "in" {
 		values, ok := value.([]any)
 		if !ok {
@@ -1108,6 +847,7 @@ func validateComparisonValue(cmp string, value any, numericOnly bool) error {
 		}
 		return nil
 	}
+
 	if _, ok := value.([]any); ok {
 		return fmt.Errorf("comparison operator %q requires a scalar value", cmp)
 	}
@@ -1121,6 +861,7 @@ func validatePredicate(predicate Predicate) error {
 	if !isValidPredicateOp(predicate.Op) {
 		return fmt.Errorf("unknown predicate operation %q", predicate.Op)
 	}
+
 	switch predicate.Op {
 	case "all", "any":
 		if len(predicate.Of) == 0 {
@@ -1135,6 +876,7 @@ func validatePredicate(predicate Predicate) error {
 				return err
 			}
 		}
+
 	case "not", "ever", "sustained", "within":
 		if len(predicate.Of) == 0 {
 			return fmt.Errorf("%s predicate requires 'of'", predicate.Op)
@@ -1149,6 +891,7 @@ func validatePredicate(predicate Predicate) error {
 		if err := validatePredicate(child); err != nil {
 			return err
 		}
+
 	case "tlm":
 		if predicate.Path == "" {
 			return fmt.Errorf("tlm predicate requires 'path'")
@@ -1156,6 +899,7 @@ func validatePredicate(predicate Predicate) error {
 		if err := validateComparisonValue(predicate.Cmp, predicate.Value, false); err != nil {
 			return fmt.Errorf("tlm predicate: %w", err)
 		}
+
 	case "tlm_bits":
 		if predicate.Path == "" {
 			return fmt.Errorf("tlm_bits predicate requires 'path'")
@@ -1163,10 +907,12 @@ func validatePredicate(predicate Predicate) error {
 		if err := validateComparisonValue(predicate.Cmp, predicate.Value, true); err != nil {
 			return fmt.Errorf("tlm_bits predicate: %w", err)
 		}
+
 	case "channel_present", "channel_absent":
 		if predicate.ID == "" {
 			return fmt.Errorf("%s predicate requires 'id'", predicate.Op)
 		}
+
 	case "event":
 		if predicate.Match == "" {
 			return fmt.Errorf("event predicate requires 'match'")
@@ -1176,6 +922,7 @@ func validatePredicate(predicate Predicate) error {
 				return fmt.Errorf("event predicate has invalid regex %q: %w", predicate.Match, err)
 			}
 		}
+
 	case "mem_u8", "mem_u16", "mem_u32":
 		if predicate.At == nil {
 			return fmt.Errorf("%s predicate requires 'at'", predicate.Op)
@@ -1186,6 +933,7 @@ func validatePredicate(predicate Predicate) error {
 		if err := validateComparisonValue(predicate.Cmp, predicate.Value, true); err != nil {
 			return fmt.Errorf("%s predicate: %w", predicate.Op, err)
 		}
+
 	case "mem_bits":
 		if predicate.At == nil {
 			return fmt.Errorf("mem_bits predicate requires 'at'")
@@ -1199,6 +947,7 @@ func validatePredicate(predicate Predicate) error {
 		if err := validateComparisonValue(predicate.Cmp, predicate.Value, true); err != nil {
 			return fmt.Errorf("mem_bits predicate: %w", err)
 		}
+
 	case "mem":
 		if predicate.At == nil {
 			return fmt.Errorf("mem predicate requires 'at'")
@@ -1223,6 +972,7 @@ func validatePredicate(predicate Predicate) error {
 		if len(expected) != predicate.Len {
 			return fmt.Errorf("mem predicate length %d does not match value length %d", predicate.Len, len(expected))
 		}
+
 	case "mem_changed":
 		if predicate.At == nil {
 			return fmt.Errorf("mem_changed predicate requires 'at'")
@@ -1233,12 +983,14 @@ func validatePredicate(predicate Predicate) error {
 		if predicate.Len <= 0 {
 			return fmt.Errorf("mem_changed predicate requires 'len' greater than 0")
 		}
+
 	case "commanded":
 		if predicate.At != nil {
 			if err := validateAddressRef(*predicate.At); err != nil {
 				return err
 			}
 		}
+
 	case "budget":
 		if predicate.Resource == "" {
 			return fmt.Errorf("budget predicate requires 'resource'")
@@ -1246,6 +998,7 @@ func validatePredicate(predicate Predicate) error {
 		if err := validateComparisonValue(predicate.Cmp, predicate.Value, true); err != nil {
 			return fmt.Errorf("budget predicate: %w", err)
 		}
+
 	case "script":
 		if predicate.Lang != "python" {
 			return fmt.Errorf("script predicate requires lang 'python'")
@@ -1291,6 +1044,7 @@ type EvaluationContext struct {
 	Baseline   MemoryReader
 	Events     []string
 	History    []map[string]any
+
 	// HistoryContexts is the full per-frame history needed when temporal combinators
 	// wrap predicates that depend on events, command log, budget, or memory.
 	// If omitted, History remains valid for telemetry-only temporal predicates.
@@ -1300,66 +1054,36 @@ type EvaluationContext struct {
 	ScriptRunner    ScriptRunner
 }
 
-//normalize types due to json unmarshalling returning everything as float64
-
+// normalize types due to json unmarshalling returning everything as float64
 func numericValue(value any) (float64, bool) {
-
 	switch v := value.(type) {
-
 	case float64:
-
 		return v, true
-
 	case int:
-
 		return float64(v), true
-
 	case int8:
-
 		return float64(v), true
-
 	case int16:
-
 		return float64(v), true
-
 	case int32:
-
 		return float64(v), true
-
 	case int64:
-
 		return float64(v), true
-
 	case uint:
-
 		return float64(v), true
-
 	case uint8:
-
 		return float64(v), true
-
 	case uint16:
-
 		return float64(v), true
-
 	case uint32:
-
 		return float64(v), true
-
 	case uint64:
-
 		return float64(v), true
-
 	case float32:
-
 		return float64(v), true
-
 	default:
-
 		return 0, false
-
 	}
-
 }
 
 func sameValueType(a, b any) bool {
@@ -1384,9 +1108,11 @@ func compareValues(actual any, expected any, cmp string) bool {
 		}
 		return false
 	}
+
 	if !sameValueType(actual, expected) {
 		return false
 	}
+
 	a, an := numericValue(actual)
 	e, en := numericValue(expected)
 	if an && en {
@@ -1407,6 +1133,7 @@ func compareValues(actual any, expected any, cmp string) bool {
 			return false
 		}
 	}
+
 	switch cmp {
 	case "eq":
 		return reflect.DeepEqual(actual, expected)
@@ -1418,151 +1145,90 @@ func compareValues(actual any, expected any, cmp string) bool {
 }
 
 func getTelemetryValue(ctx *EvaluationContext, path string) (any, bool) {
-
 	current := any(ctx.Telemetry)
-
 	for _, part := range strings.Split(path, ".") {
-
 		object, ok := current.(map[string]any)
-
 		if !ok {
-
 			return nil, false
-
 		}
-
 		current, ok = object[part]
-
 		if !ok {
-
 			return nil, false
-
 		}
-
 	}
-
 	return current, true
-
 }
 
 func telemetryChannelPresent(ctx *EvaluationContext, id string) bool {
-
 	channels, ok := ctx.Telemetry["channels"].(map[string]any)
-
 	if !ok {
-
 		return false
-
 	}
-
 	_, exists := channels[id]
-
 	return exists
-
 }
 
 func (s *Scenario) getIntrospectionValue(ctx *EvaluationContext, predicate Predicate) ([]byte, string) {
-
 	if ctx.Introspect == nil {
-
 		return nil, "Introspect not available"
-
 	}
-
 	if predicate.At == nil {
-
 		return nil, "Predicate missing 'at' field for introspect operation"
-
 	}
 
 	addr, err := s.ResolveAddress(*predicate.At)
-
 	if err != nil {
-
 		return nil, fmt.Sprintf("Failed to resolve address: %v", err)
-
 	}
 
 	data, err := ctx.Introspect.Read(uint32(addr), predicate.Len)
-
 	if err != nil {
-
 		return nil, fmt.Sprintf("Failed to read memory: %v", err)
-
 	}
-
 	return data, ""
-
 }
 
 func introspectionBytesToValues(data []byte, width int) (any, string) {
-
 	if len(data) < width {
-
 		return nil, fmt.Sprintf("Data length %d is less than expected width %d", len(data), width)
-
 	}
 
 	switch width {
-
 	case 1:
-
 		return uint8(data[0]), ""
-
 	case 2:
-
 		return uint16(data[0]) | uint16(data[1])<<8, ""
-
 	case 4:
-
 		return uint32(data[0]) | uint32(data[1])<<8 | uint32(data[2])<<16 | uint32(data[3])<<24, ""
-
 	default:
-
 		return nil, fmt.Sprintf("Unsupported width %d for introspection", width)
-
 	}
-
 }
 
 func applyMask(value any, mask int) (any, string) {
-
 	if mask == 0 {
-
 		return value, ""
-
 	}
 
 	switch v := value.(type) {
-
 	case uint8:
-
 		return v & uint8(mask), ""
-
 	case uint16:
-
 		return v & uint16(mask), ""
-
 	case uint32:
-
 		return v & uint32(mask), ""
-
 	case uint64:
-
 		return v & uint64(mask), ""
-
 	default:
-
 		return nil, fmt.Sprintf("Unsupported type %T for mask application", value)
-
 	}
-
 }
 
 func predicateNeedsFullHistory(p Predicate) bool {
 	switch p.Op {
 	case "event", "commanded", "budget", "mem_u8", "mem_u16", "mem_u32", "mem_bits", "mem", "mem_changed", "script":
 		return true
+
 	case "all", "any":
 		var children []Predicate
 		if json.Unmarshal(p.Of, &children) != nil {
@@ -1573,6 +1239,7 @@ func predicateNeedsFullHistory(p Predicate) bool {
 				return true
 			}
 		}
+
 	case "not", "ever", "sustained", "within":
 		var child Predicate
 		if json.Unmarshal(p.Of, &child) != nil {
@@ -1595,12 +1262,14 @@ func historicalContext(ctx *EvaluationContext, index int, child Predicate) (*Eva
 		if index < 0 || index >= len(ctx.HistoryContexts) {
 			return nil, "historical context index out of range"
 		}
+
 		snap := ctx.HistoryContexts[index]
 		h := *ctx
 		h.Telemetry = snap.Telemetry
 		h.Events = snap.Events
 		h.Log = snap.Log
 		h.Budget = snap.Budget
+
 		if snap.Introspect != nil {
 			h.Introspect = snap.Introspect
 		}
@@ -1615,6 +1284,7 @@ func historicalContext(ctx *EvaluationContext, index int, child Predicate) (*Eva
 		h.HistoryContexts = ctx.HistoryContexts[:index]
 		return &h, ""
 	}
+
 	if predicateNeedsFullHistory(child) {
 		return nil, "temporal predicate requires HistoryContexts for non-telemetry child"
 	}
@@ -1628,303 +1298,163 @@ func historicalContext(ctx *EvaluationContext, index int, child Predicate) (*Eva
 }
 
 func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate) (bool, string) {
-
 	switch predicate.Op {
-
 	case "tlm":
-
 		actual, found := getTelemetryValue(ctx, predicate.Path)
-
 		if !found {
-
 			return false, ""
-
 		}
-
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 
 	case "tlm_bits":
-
 		actual, found := getTelemetryValue(ctx, predicate.Path)
-
 		if !found {
-
 			return false, ""
-
 		}
-
 		masked, errMsg := applyMask(actual, predicate.Mask)
-
 		if errMsg != "" {
-
 			return false, errMsg
-
 		}
-
 		return compareValues(masked, predicate.Value, predicate.Cmp), ""
 
 	case "channel_present":
-
 		return telemetryChannelPresent(ctx, predicate.ID), ""
-
 	case "channel_absent":
-
 		return !telemetryChannelPresent(ctx, predicate.ID), ""
 
 	case "all":
-
 		var predicates []Predicate
-
 		if err := json.Unmarshal(predicate.Of, &predicates); err != nil {
-
 			return false, fmt.Sprintf("Failed to parse 'of' field for 'all' operation: %v", err)
-
 		}
-
 		for _, child := range predicates {
-
 			result, err := s.evaluatePredicate(ctx, child)
-
 			if err != "" {
-
 				return false, err
-
 			}
-
 			if !result {
-
 				return false, ""
-
 			}
-
 		}
-
 		return true, ""
 
 	case "any":
-
 		var predicates []Predicate
-
 		if err := json.Unmarshal(predicate.Of, &predicates); err != nil {
-
 			return false, fmt.Sprintf("Failed to parse 'of' field for 'any' operation: %v", err)
-
 		}
-
 		for _, child := range predicates {
-
 			result, err := s.evaluatePredicate(ctx, child)
-
 			if err != "" {
-
 				return false, err
-
 			}
-
 			if result {
-
 				return true, ""
-
 			}
-
 		}
-
 		return false, ""
 
 	case "not":
-
 		var child Predicate
-
 		if err := json.Unmarshal(predicate.Of, &child); err != nil {
-
 			return false, fmt.Sprintf("Failed to parse 'of' field for 'not' operation: %v", err)
-
 		}
-
 		result, err := s.evaluatePredicate(ctx, child)
-
 		if err != "" {
-
 			return false, err
-
 		}
-
 		return !result, ""
 
 	case "mem_u8":
-
 		if ctx.Introspect == nil {
-
 			return false, "Introspect not available"
-
 		}
-
 		if predicate.At == nil {
-
 			return false, "Predicate missing 'at' field for mem_u8 operation"
-
 		}
-
 		addr, err := s.ResolveAddress(*predicate.At)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
-
 		}
-
 		data, err := ctx.Introspect.Read(uint32(addr), 1)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
-
 		}
-
 		actual, errMsg := introspectionBytesToValues(data, 1)
-
 		if errMsg != "" {
-
 			return false, errMsg
-
 		}
-
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 
 	case "mem_u16":
-
 		if ctx.Introspect == nil {
-
 			return false, "Introspect not available"
-
 		}
-
 		if predicate.At == nil {
-
 			return false, "Predicate missing 'at' field for mem_u16 operation"
-
 		}
-
 		addr, err := s.ResolveAddress(*predicate.At)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
-
 		}
-
 		data, err := ctx.Introspect.Read(uint32(addr), 2)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
-
 		}
-
 		actual, errMsg := introspectionBytesToValues(data, 2)
-
 		if errMsg != "" {
-
 			return false, errMsg
-
 		}
-
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 
 	case "mem_u32":
-
 		if ctx.Introspect == nil {
-
 			return false, "Introspect not available"
-
 		}
-
 		if predicate.At == nil {
-
 			return false, "Predicate missing 'at' field for mem_u32 operation"
-
 		}
-
 		addr, err := s.ResolveAddress(*predicate.At)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
-
 		}
-
 		data, err := ctx.Introspect.Read(uint32(addr), 4)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
-
 		}
-
 		actual, errMsg := introspectionBytesToValues(data, 4)
-
 		if errMsg != "" {
-
 			return false, errMsg
-
 		}
-
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 
 	case "mem_bits":
-
 		if ctx.Introspect == nil {
-
 			return false, "Introspect not available"
-
 		}
-
 		if predicate.At == nil {
-
 			return false, "Predicate missing 'at' field for mem_bits operation"
-
 		}
-
 		width := predicate.Width
-
 		if width == 0 {
-
 			width = 4
-
 		}
-
 		addr, err := s.ResolveAddress(*predicate.At)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
-
 		}
-
 		data, err := ctx.Introspect.Read(uint32(addr), width)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
-
 		}
-
 		actual, errMsg := introspectionBytesToValues(data, width)
-
 		if errMsg != "" {
-
 			return false, errMsg
-
 		}
-
 		actual, errMsg = applyMask(actual, predicate.Mask)
-
 		if errMsg != "" {
-
 			return false, errMsg
-
 		}
-
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 
 	case "mem":
@@ -1945,6 +1475,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 		if len(data) != predicate.Len {
 			return false, fmt.Sprintf("Short memory read: got %d bytes, expected %d", len(data), predicate.Len)
 		}
+
 		expectedHex, ok := predicate.Value.(string)
 		if !ok {
 			return false, "mem predicate value is not a hex string"
@@ -1958,50 +1489,29 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return !equal, ""
 		}
 		return equal, ""
+
 	case "mem_changed":
-
 		if ctx.Introspect == nil {
-
 			return false, "Introspect not available"
-
 		}
-
 		if ctx.Baseline == nil {
-
 			return false, "Baseline memory not available"
-
 		}
-
 		if predicate.At == nil {
-
 			return false, "Predicate missing 'at' field for mem_changed operation"
-
 		}
-
 		addr, err := s.ResolveAddress(*predicate.At)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
-
 		}
-
 		current, err := ctx.Introspect.Read(uint32(addr), predicate.Len)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to read current memory: %v", err)
-
 		}
-
 		baseline, err := ctx.Baseline.Read(uint32(addr), predicate.Len)
-
 		if err != nil {
-
 			return false, fmt.Sprintf("Failed to read baseline memory: %v", err)
-
 		}
-
 		if len(current) != predicate.Len {
 			return false, fmt.Sprintf("Short current memory read: got %d bytes, expected %d", len(current), predicate.Len)
 		}
@@ -2010,53 +1520,30 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 		}
 
 		for i := range current {
-
 			if current[i] != baseline[i] {
-
 				return true, ""
-
 			}
-
 		}
-
 		return false, ""
 
 	case "event":
-
 		if predicate.Regex {
-
 			re, err := regexp.Compile(predicate.Match)
-
 			if err != nil {
-
 				return false, fmt.Sprintf("Invalid event regex %q: %v", predicate.Match, err)
-
 			}
-
 			for _, event := range ctx.Events {
-
 				if re.MatchString(event) {
-
 					return true, ""
-
 				}
-
 			}
-
 			return false, ""
-
 		}
-
 		for _, event := range ctx.Events {
-
 			if strings.Contains(event, predicate.Match) {
-
 				return true, ""
-
 			}
-
 		}
-
 		return false, ""
 
 	case "ever":
@@ -2064,6 +1551,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 		if err := json.Unmarshal(predicate.Of, &child); err != nil {
 			return false, fmt.Sprintf("Failed to parse 'of' field for 'ever' operation: %v", err)
 		}
+
 		for i := 0; i < temporalHistoryLen(ctx); i++ {
 			h, msg := historicalContext(ctx, i, child)
 			if msg != "" {
@@ -2078,6 +1566,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			}
 		}
 		return s.evaluatePredicate(ctx, child)
+
 	case "sustained":
 		var child Predicate
 		if err := json.Unmarshal(predicate.Of, &child); err != nil {
@@ -2086,6 +1575,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 		if predicate.Frames <= 0 {
 			return false, "sustained operation requires frames greater than 0"
 		}
+
 		if temporalHistoryLen(ctx)+1 < predicate.Frames {
 			return false, ""
 		}
@@ -2104,6 +1594,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			}
 		}
 		return s.evaluatePredicate(ctx, child)
+
 	case "within":
 		var child Predicate
 		if err := json.Unmarshal(predicate.Of, &child); err != nil {
@@ -2112,10 +1603,12 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 		if predicate.Frames <= 0 {
 			return false, "within operation requires frames greater than 0"
 		}
+
 		result, msg := s.evaluatePredicate(ctx, child)
 		if msg != "" || result {
 			return result, msg
 		}
+
 		start := temporalHistoryLen(ctx) - (predicate.Frames - 1)
 		if start < 0 {
 			start = 0
@@ -2134,60 +1627,36 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			}
 		}
 		return false, ""
+
 	case "commanded":
-
 		var expectedAddr uint32
-
 		if predicate.At != nil {
-
 			addr, err := s.ResolveAddress(*predicate.At)
-
 			if err != nil {
-
 				return false, fmt.Sprintf("Failed to resolve commanded address: %v", err)
-
 			}
-
 			expectedAddr = uint32(addr)
-
 		}
 
 		for _, entry := range ctx.Log {
-
 			if predicate.Verb != "" && entry.Verb != predicate.Verb {
-
 				continue
-
 			}
-
 			if predicate.At != nil && entry.Addr != expectedAddr {
-
 				continue
-
 			}
-
 			if predicate.Result != "" && !strings.HasPrefix(entry.Result, predicate.Result) {
-
 				continue
-
 			}
-
 			return true, ""
-
 		}
-
 		return false, ""
 
 	case "budget":
-
 		used, found := ctx.Budget[predicate.Resource]
-
 		if !found {
-
 			return false, ""
-
 		}
-
 		return compareValues(used, predicate.Value, predicate.Cmp), ""
 
 	case "script":
@@ -2199,12 +1668,10 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, fmt.Sprintf("Script predicate failed: %v", err)
 		}
 		return result, ""
+
 	default:
-
 		return false, fmt.Sprintf("Unknown predicate operation %q", predicate.Op)
-
 	}
-
 }
 
 //TODO: OBJECTIVE EVALUATION
@@ -2214,6 +1681,7 @@ func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective
 	if !ok {
 		return fmt.Sprintf("Objective state for %q not found", objective.ID)
 	}
+
 	if state.Status == ObjectiveStatusFailed {
 		return ""
 	}
@@ -2223,10 +1691,12 @@ func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective
 	if state.Status == ObjectiveStatusLocked {
 		return ""
 	}
+
 	// Retractable completed objectives re-enter the normal fail -> partial -> success order.
 	if state.Status == ObjectiveStatusComplete && objective.Retractable {
 		state.Status = ObjectiveStatusActive
 	}
+
 	if objective.Fail != nil {
 		failed, msg := s.evaluatePredicate(ctx, *objective.Fail)
 		if msg != "" {
@@ -2238,11 +1708,13 @@ func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective
 			return ""
 		}
 	}
+
 	diagnostic, msg := s.evaluatePartial(ctx, objective)
 	if msg != "" {
 		return fmt.Sprintf("Error evaluating partial predicate for objective %q: %s", objective.ID, msg)
 	}
 	state.Diagnostic = diagnostic
+
 	success, msg := s.evaluatePredicate(ctx, objective.Success)
 	if msg != "" {
 		return fmt.Sprintf("Error evaluating success predicate for objective %q: %s", objective.ID, msg)
@@ -2259,6 +1731,7 @@ func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective
 func (s *Scenario) evaluateObjectives(ctx *EvaluationContext) string {
 	originalStates := s.ObjectiveStates
 	s.ObjectiveStates = copyObjectiveStates(originalStates)
+
 	for _, objective := range s.Objectives {
 		state := s.ObjectiveStates[objective.ID]
 		// Declaration order is meaningful: a later objective may unlock after an earlier
@@ -2275,49 +1748,27 @@ func (s *Scenario) evaluateObjectives(ctx *EvaluationContext) string {
 }
 
 func copyObjectiveStates(states map[string]*ObjectiveState) map[string]*ObjectiveState {
-
 	copied := make(map[string]*ObjectiveState, len(states))
-
 	for id, state := range states {
-
 		if state == nil {
-
 			copied[id] = nil
-
 			continue
-
 		}
-
 		stateCopy := *state
-
 		copied[id] = &stateCopy
-
 	}
-
 	return copied
-
 }
 
 func (s *Scenario) evaluatePartial(ctx *EvaluationContext, objective Objective) (string, string) {
-
 	for _, partial := range objective.Partial {
-
 		result, errMsg := s.evaluatePredicate(ctx, partial.When)
-
 		if errMsg != "" {
-
 			return "", errMsg
-
 		}
-
 		if result {
-
 			return partial.Text, ""
-
 		}
-
 	}
-
 	return "", ""
-
 }
