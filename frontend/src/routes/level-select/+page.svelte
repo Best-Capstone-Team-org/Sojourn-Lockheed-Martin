@@ -16,7 +16,7 @@
 	<div
 		class="absolute top-[25%] left-1/2 flex h-[50%] w-[70vw] -translate-x-1/2 flex-col gap-[1vw] overflow-y-auto"
 	>
-		{#each levels as level}
+		{#each levels as level (level)}
 			<Button
 				onclick={() => goto(resolve("/ground-system"))}
 				class="w-full p-[1vw] text-center text-[1.5vw] leading-[1.5vw] text-white"
