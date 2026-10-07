@@ -11,8 +11,8 @@
 	const sensors = $derived(frame?.sensors);
 	const hk = $derived(frame?.hk);
 
-	function toggleTelemetry() {
-		options.telemetry = !options.telemetry;
+	function toggleTelemetry(state: boolean) {
+		options.telemetry = state;
 	}
 
 	let led: Led;
@@ -74,7 +74,8 @@
 		items={[
 			{
 				label: "Telemetry",
-				button: toggleTelemetry,
+				toggle: toggleTelemetry,
+				checked: options.telemetry,
 			},
 		]}
 	/>
