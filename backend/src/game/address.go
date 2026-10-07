@@ -1,5 +1,4 @@
 package game
-
 import (
 	"encoding/hex"
 	"encoding/json"
@@ -10,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 )
-
 // RESOLVE SCENARIO REFERENCES
 // ResolveAddress resolves AddressRef to address in memory
 func validateAddressRef(ref AddressRef) error {
@@ -28,7 +26,6 @@ func validateAddressRef(ref AddressRef) error {
 	}
 	return nil
 }
-
 func (s *Scenario) ResolveAddress(ref AddressRef) (uint64, error) {
 	if err := validateAddressRef(ref); err != nil {
 		return 0, err
@@ -76,7 +73,6 @@ func (s *Scenario) ResolveAddress(ref AddressRef) (uint64, error) {
 	// Just the symbol itself
 	return base, nil
 }
-
 func (s *Scenario) validateMemoryRange(ref AddressRef, length int) error {
 	if length <= 0 {
 		return fmt.Errorf("memory range length must be greater than 0")
@@ -123,7 +119,6 @@ func (s *Scenario) validateMemoryRange(ref AddressRef, length int) error {
 		end,
 	)
 }
-
 func (s *Scenario) validatePredicateAddresses(predicate Predicate) error {
 	var length int
 	switch predicate.Op {
@@ -189,7 +184,6 @@ func (s *Scenario) validatePredicateAddresses(predicate Predicate) error {
 	}
 	return nil
 }
-
 func (s *Scenario) validateObjectiveAddresses() error {
 	for _, objective := range s.Objectives {
 		if err := s.validatePredicateAddresses(objective.Success); err != nil {
@@ -220,7 +214,6 @@ func (s *Scenario) validateObjectiveAddresses() error {
 	}
 	return nil
 }
-
 func (s *Scenario) validateSetupAddresses() error {
 	if s.Setup == nil {
 		return nil

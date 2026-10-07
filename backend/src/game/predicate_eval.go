@@ -1,5 +1,4 @@
 package game
-
 import (
 	"bytes"
 	"encoding/hex"
@@ -8,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 )
-
 func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate) (bool, string) {
 	switch predicate.Op {
 	case "tlm":
@@ -359,7 +357,6 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 		return false, fmt.Sprintf("Unknown predicate operation %q", predicate.Op)
 	}
 }
-
 // TODO: OBJECTIVE EVALUATION
 func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective) string {
 	state, ok := s.ObjectiveStates[objective.ID]
@@ -407,7 +404,6 @@ func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective
 	}
 	return ""
 }
-
 func (s *Scenario) evaluateObjectives(ctx *EvaluationContext) string {
 	originalStates := s.ObjectiveStates
 	s.ObjectiveStates = copyObjectiveStates(originalStates)
@@ -425,7 +421,6 @@ func (s *Scenario) evaluateObjectives(ctx *EvaluationContext) string {
 	}
 	return ""
 }
-
 func copyObjectiveStates(states map[string]*ObjectiveState) map[string]*ObjectiveState {
 	copied := make(map[string]*ObjectiveState, len(states))
 	for id, state := range states {
@@ -438,7 +433,6 @@ func copyObjectiveStates(states map[string]*ObjectiveState) map[string]*Objectiv
 	}
 	return copied
 }
-
 func (s *Scenario) evaluatePartial(ctx *EvaluationContext, objective Objective) (string, string) {
 	for _, partial := range objective.Partial {
 		result, errMsg := s.evaluatePredicate(ctx, partial.When)

@@ -1,5 +1,4 @@
 package game
-
 import (
 	"encoding/hex"
 	"encoding/json"
@@ -9,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 )
-
 func validateComparison(cmp string) error {
 	switch cmp {
 	case "eq", "ne", "lt", "lte", "gt", "gte", "in":
@@ -18,7 +16,6 @@ func validateComparison(cmp string) error {
 		return fmt.Errorf("unknown comparison operator %q", cmp)
 	}
 }
-
 func isValidPredicateOp(op string) bool {
 	switch op {
 	case "tlm", "tlm_bits", "channel_present", "channel_absent", "event", "mem_u8", "mem_u16", "mem_u32", "mem_bits", "mem", "mem_changed", "commanded", "budget", "all", "any", "not", "ever", "sustained", "within", "script":
@@ -27,7 +24,6 @@ func isValidPredicateOp(op string) bool {
 		return false
 	}
 }
-
 func isJSONNumber(v any) bool { _, ok := numericValue(v); return ok }
 func validateComparisonValue(cmp string, value any, numericOnly bool) error {
 	if err := validateComparison(cmp); err != nil {
@@ -58,7 +54,6 @@ func validateComparisonValue(cmp string, value any, numericOnly bool) error {
 	}
 	return nil
 }
-
 func validatePredicate(predicate Predicate) error {
 	if !isValidPredicateOp(predicate.Op) {
 		return fmt.Errorf("unknown predicate operation %q", predicate.Op)
@@ -209,11 +204,9 @@ func validatePredicate(predicate Predicate) error {
 	}
 	return nil
 }
-
 type MemoryReader interface {
 	Read(addr uint32, length int) ([]byte, error)
 }
-
 type EvaluationSnapshot struct {
 	Telemetry  map[string]any
 	Events     []string
@@ -222,11 +215,9 @@ type EvaluationSnapshot struct {
 	Introspect MemoryReader
 	Baseline   MemoryReader
 }
-
 type ScriptRunner interface {
 	EvaluateScript(lang, entry string, ctx *EvaluationContext) (bool, error)
 }
-
 type EvaluationContext struct {
 	Telemetry  map[string]any
 	Introspect MemoryReader
@@ -241,7 +232,6 @@ type EvaluationContext struct {
 	Budget          map[string]int
 	ScriptRunner    ScriptRunner
 }
-
 // normalize types due to json unmarshalling returning everything as float64
 func numericValue(value any) (float64, bool) {
 	switch v := value.(type) {
@@ -273,7 +263,6 @@ func numericValue(value any) (float64, bool) {
 		return 0, false
 	}
 }
-
 func sameValueType(a, b any) bool {
 	_, an := numericValue(a)
 	_, bn := numericValue(b)
@@ -282,7 +271,6 @@ func sameValueType(a, b any) bool {
 	}
 	return reflect.TypeOf(a) == reflect.TypeOf(b)
 }
-
 func compareValues(actual any, expected any, cmp string) bool {
 	if cmp == "in" {
 		values, ok := expected.([]any)
@@ -328,7 +316,6 @@ func compareValues(actual any, expected any, cmp string) bool {
 		return false
 	}
 }
-
 func getTelemetryValue(ctx *EvaluationContext, path string) (any, bool) {
 	current := any(ctx.Telemetry)
 	for _, part := range strings.Split(path, ".") {
@@ -343,7 +330,6 @@ func getTelemetryValue(ctx *EvaluationContext, path string) (any, bool) {
 	}
 	return current, true
 }
-
 func telemetryChannelPresent(ctx *EvaluationContext, id string) bool {
 	channels, ok := ctx.Telemetry["channels"].(map[string]any)
 	if !ok {
@@ -352,7 +338,6 @@ func telemetryChannelPresent(ctx *EvaluationContext, id string) bool {
 	_, exists := channels[id]
 	return exists
 }
-
 func (s *Scenario) getIntrospectionValue(ctx *EvaluationContext, predicate Predicate) ([]byte, string) {
 	if ctx.Introspect == nil {
 		return nil, "Introspect not available"
@@ -370,7 +355,6 @@ func (s *Scenario) getIntrospectionValue(ctx *EvaluationContext, predicate Predi
 	}
 	return data, ""
 }
-
 func introspectionBytesToValues(data []byte, width int) (any, string) {
 	if len(data) < width {
 		return nil, fmt.Sprintf("Data length %d is less than expected width %d", len(data), width)
@@ -386,7 +370,6 @@ func introspectionBytesToValues(data []byte, width int) (any, string) {
 		return nil, fmt.Sprintf("Unsupported width %d for introspection", width)
 	}
 }
-
 func applyMask(value any, mask int) (any, string) {
 	if mask == 0 {
 		return value, ""
@@ -404,7 +387,6 @@ func applyMask(value any, mask int) (any, string) {
 		return nil, fmt.Sprintf("Unsupported type %T for mask application", value)
 	}
 }
-
 func predicateNeedsFullHistory(p Predicate) bool {
 	switch p.Op {
 	case "event", "commanded", "budget", "mem_u8", "mem_u16", "mem_u32", "mem_bits", "mem", "mem_changed", "script":
@@ -428,14 +410,12 @@ func predicateNeedsFullHistory(p Predicate) bool {
 	}
 	return false
 }
-
 func temporalHistoryLen(ctx *EvaluationContext) int {
 	if len(ctx.HistoryContexts) > 0 {
 		return len(ctx.HistoryContexts)
 	}
 	return len(ctx.History)
 }
-
 func historicalContext(ctx *EvaluationContext, index int, child Predicate) (*EvaluationContext, string) {
 	if len(ctx.HistoryContexts) > 0 {
 		if index < 0 || index >= len(ctx.HistoryContexts) {

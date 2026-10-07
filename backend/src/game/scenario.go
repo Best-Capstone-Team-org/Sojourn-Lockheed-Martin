@@ -1,5 +1,4 @@
 package game
-
 import (
 	"encoding/json"
 	"fmt"
@@ -7,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 )
-
 // Scenarios have manifest.json, objectives.json, setup.json, symbols.json, memmap.json
 type Scenario struct {
 	Dir             string
@@ -18,7 +16,6 @@ type Scenario struct {
 	MemMap          MemMapFile
 	ObjectiveStates map[string]*ObjectiveState
 }
-
 func validateObjectiveRequirements(objectives []Objective) error {
 	ids := make(map[string]bool, len(objectives))
 	for _, objective := range objectives {
@@ -33,7 +30,6 @@ func validateObjectiveRequirements(objectives []Objective) error {
 	}
 	return nil
 }
-
 func validateObjectiveCycles(objectives []Objective) error {
 	requires := make(map[string][]string, len(objectives))
 	for _, objective := range objectives {
@@ -66,7 +62,6 @@ func validateObjectiveCycles(objectives []Objective) error {
 	}
 	return nil
 }
-
 func validateObjectiveIDs(objectives []Objective) error {
 	seen := make(map[string]bool, len(objectives))
 	for _, objective := range objectives {
@@ -80,7 +75,6 @@ func validateObjectiveIDs(objectives []Objective) error {
 	}
 	return nil
 }
-
 func validateObjectiveShape(objectives []Objective) error {
 	for _, objective := range objectives {
 		if strings.TrimSpace(objective.Title) == "" {
@@ -121,7 +115,6 @@ func validateObjectivePredicates(objectives []Objective) error {
 	}
 	return nil
 }
-
 func hasJSONKey(raw map[string]json.RawMessage, key string) bool { _, ok := raw[key]; return ok }
 func validateManifestJSON(data []byte, manifest Manifest) error {
 	var raw map[string]json.RawMessage
@@ -159,7 +152,6 @@ func validateManifestJSON(data []byte, manifest Manifest) error {
 	}
 	return nil
 }
-
 func validateReferencedFiles(dir string, manifest Manifest) error {
 	paths := []string{manifest.Briefing, manifest.Objectives, manifest.Firmware.ROM, manifest.Firmware.Symbols, manifest.Firmware.MemMap}
 	if manifest.Setup != "" {
@@ -180,7 +172,6 @@ func validateReferencedFiles(dir string, manifest Manifest) error {
 	}
 	return nil
 }
-
 func validatePurity(dir string, manifest Manifest, pureMode bool) error {
 	info, err := os.Stat(filepath.Join(dir, "checks"))
 	hasChecks := err == nil && info.IsDir()
@@ -198,9 +189,7 @@ func validatePurity(dir string, manifest Manifest, pureMode bool) error {
 	}
 	return nil
 }
-
 func LoadScenario(dir string) (*Scenario, error) { return LoadScenarioWithOptions(dir, true) }
-
 // LoadScenarioWithOptions loads a package. pureMode=true is the normative packaged default.
 func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 	manifestPath := filepath.Join(dir, "manifest.json")
@@ -296,25 +285,21 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 	}
 	return scenario, nil
 }
-
 // RESOLVE SCENARIO REFERENCES
 // ResolveAddress resolves AddressRef to address in memory
 // RUNTIME OBJECTIVE STATE ("complete", "failed", "active", "locked")
 // Note: this section only handles "locked" and "active", "complete" and "failed" handled later
 type ObjectiveStatus string
-
 const (
 	ObjectiveStatusComplete ObjectiveStatus = "complete"
 	ObjectiveStatusFailed   ObjectiveStatus = "failed"
 	ObjectiveStatusActive   ObjectiveStatus = "active"
 	ObjectiveStatusLocked   ObjectiveStatus = "locked"
 )
-
 type ObjectiveState struct {
 	Status     ObjectiveStatus
 	Diagnostic string
 }
-
 // create the starting runtime state for every objective in the scenario
 func initializeObjectiveStates(objectives []Objective) map[string]*ObjectiveState {
 	states := make(map[string]*ObjectiveState)
@@ -329,7 +314,6 @@ func initializeObjectiveStates(objectives []Objective) map[string]*ObjectiveStat
 	}
 	return states
 }
-
 // check if all requirements for an objective are complete
 func (s *Scenario) requirementsComplete(objective Objective) bool {
 	for _, requiredID := range objective.Requires {
@@ -340,7 +324,6 @@ func (s *Scenario) requirementsComplete(objective Objective) bool {
 	}
 	return true
 }
-
 // update which states are now unlocked
 func (s *Scenario) updateObjectiveStates() {
 	for _, objective := range s.Objectives {
@@ -356,7 +339,6 @@ func (s *Scenario) updateObjectiveStates() {
 		}
 	}
 }
-
 // return the current objective state
 func (s *Scenario) GetObjectiveState(id string) (*ObjectiveState, bool) {
 	state, ok := s.ObjectiveStates[id]
