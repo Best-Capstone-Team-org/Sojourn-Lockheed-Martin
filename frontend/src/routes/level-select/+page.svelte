@@ -14,15 +14,17 @@
 		class="h-full w-full object-cover"
 	/>
 	<div
-		class="absolute top-[25%] left-1/2 flex h-[50%] w-[70vw] -translate-x-1/2 flex-col gap-[1vw] overflow-y-auto"
+		class="absolute top-[25%] left-[15vw] h-[50%] w-[70vw] overflow-y-auto"
 	>
-		{#each levels as level (level)}
-			<Button
-				onclick={() => goto(resolve("/ground-system"))}
-				class="w-full p-[1vw] text-center text-[1.5vw] leading-[1.5vw] text-white"
-			>
-				Level {level}
-			</Button>
-		{/each}
+		<div class="flex flex-col gap-[1vw] pr-[1vw]">
+			{#each levels as level (level)}
+				<Button
+					onclick={() => goto(resolve("/ground-system"))}
+					class="w-full p-[1vw] text-center text-[1.5vw] leading-[1.5vw] text-white"
+				>
+					Level {level}
+				</Button>
+			{/each}
+		</div>
 	</div>
 </main>
