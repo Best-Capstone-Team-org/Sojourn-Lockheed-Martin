@@ -30,11 +30,6 @@
 	--color-sys-button-bottom: #191f18;
 	--color-sys-button-right: #4f634c;
 	--color-sys-button-left: #2d382b;
-
-	--font-chicago: "Chicago", sans-serif;
-	--font-monaco: "Monaco", monospace;
-	--font-chicago-12: "Chicago_12", sans-serif;
-	--font-geneva-9: "Geneva_9", sans-serif;
 }
 
 /* shadows */
@@ -104,31 +99,6 @@
 	--sidebar-accent-foreground: oklch(0.228 0.013 107.4);
 	--sidebar-border: oklch(0.93 0.007 106.5);
 	--sidebar-ring: oklch(0.737 0.021 106.9);
-}
-
-@font-face {
-	font-family: Chicago;
-	src:
-		url("@sakun/system.css/dist/ChicagoFLF.woff2") format("woff2"),
-		url("@sakun/system.css/dist/ChicagoFLF.woff") format("woff");
-}
-@font-face {
-	font-family: Monaco;
-	src:
-		url("@sakun/system.css/dist/monaco.woff2") format("woff2"),
-		url("@sakun/system.css/dist/monaco.woff") format("woff");
-}
-@font-face {
-	font-family: Chicago_12;
-	src:
-		url("@sakun/system.css/dist/ChiKareGo2.woff2") format("woff2"),
-		url("@sakun/system.css/dist/ChiKareGo2.woff") format("woff");
-}
-@font-face {
-	font-family: Geneva_9;
-	src:
-		url("@sakun/system.css/dist/FindersKeepers.woff2") format("woff2"),
-		url("@sakun/system.css/dist/FindersKeepers.woff") format("woff");
 }
 
 .electrolize-regular {
