@@ -18,7 +18,7 @@
 	// constants - tune as needed
 	const TEETH = 6;
 	const TOOTH_H = 6; // base height in px
-	const TOOTH_PEAK_H = 4 // peak height in px
+	const TOOTH_PEAK_H = 4; // peak height in px
 
 	// compute tooth geometry
 	const toothW = 100 / TEETH;
@@ -43,7 +43,7 @@
 				`rgb(255 255 255 / 0.2) ${(left + toothW * 0.08).toFixed(3)}%`, // right valley
 				`rgb(255 255 255 / 0.5) ${(crest - toothW * 0.01).toFixed(3)}%`, // right peak
 				`rgb(0 0 0 / 0.1) ${crest.toFixed(3)}%`, // left peak
-				`rgb(0 0 0 / 0.5) ${right.toFixed(3)}%`, // left valley
+				`rgb(0 0 0 / 0.5) ${right.toFixed(3)}%` // left valley
 			);
 		}
 		return `linear-gradient(90deg, ${stops.join(", ")})`;
@@ -57,7 +57,7 @@
 		aria-checked={checked}
 		class={[
 			"relative h-full w-full cursor-pointer rounded",
-			"noise-bg noise-opacity-15 shadow-[inset_0_2px_4px_rgb(0_0_0/0.8),inset_0_0_6px_rgb(0_0_0/0.4)]",
+			"noise-bg shadow-[inset_0_2px_4px_rgb(0_0_0/0.8),inset_0_0_6px_rgb(0_0_0/0.4)] noise-opacity-15",
 			"transition-colors duration-150",
 			checked ? "bg-sys-screen-dark-green" : "bg-sys-medium-grey",
 			trackClass,
@@ -72,13 +72,13 @@
 		<span
 			class={[
 				"absolute -top-1.5 left-0 h-[calc(100%+6px)] w-1/2 overflow-hidden rounded-b",
-				"backface-hidden transition-transform duration-150 ease-in-out",
+				"transition-transform duration-150 ease-in-out backface-hidden",
 				checked ? "translate-x-full" : "translate-x-0",
 			]}
 			aria-hidden="true"
 		>
 			<span
-				class="noise-bg noise-opacity-40 absolute inset-0 rounded-b bg-sys-switch"
+				class="noise-bg absolute inset-0 rounded-b bg-sys-switch noise-opacity-40"
 				style:clip-path={clip}
 				style:--teeth-shading={teethShading}
 			>
@@ -93,7 +93,7 @@
 
 				<!-- bottom -->
 				<span
-					class="noise-bg noise-opacity-20 absolute inset-0 translate-y-6.5 rounded-b bg-sys-switch-bottom"
+					class="noise-bg absolute inset-0 translate-y-6.5 rounded-b bg-sys-switch-bottom noise-opacity-20"
 					style:clip-path={clip}
 					style:--teeth-shading={teethShading}
 				>
