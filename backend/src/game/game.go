@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"sojourn/emulator"
 )
 
 type State struct {
@@ -22,6 +23,8 @@ const (
 	PhaseInProgress
 	PhaseComplete
 )
+
+func (s *State) Phase() Phase { return s.phase }
 
 func (s *State) LoadScenarios(levelsDir string) error {
 	if s.phase != PhaseNone {
@@ -54,6 +57,7 @@ func (s *State) Start() error {
 
 	// TODO:
 
+	s.scenario.resetEvaluation()
 	s.phase = PhaseInProgress
 
 	return nil
@@ -67,6 +71,21 @@ func (s *State) UploadPatchedBinary(patchedBinaryPath string) error {
 	// TODO:
 
 	return nil
+}
+
+func (s *State) Evaluate(frame Frame) error {
+	if s.phase != PhaseInProgress {
+		return unexpectedPhase("evaluating a frame")
+	}
+
+	return s.scenario.Evaluate(frame)
+}
+
+func (s *State) MemoryRanges() ([]emulator.MemoryRange, error) {
+	if s.scenario == nil {
+		return nil, errors.New("no scenario selected")
+	}
+	return s.scenario.MemoryRanges(), nil
 }
 
 func unexpectedPhase(phase string) error {

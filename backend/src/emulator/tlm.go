@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -328,5 +329,88 @@ func PrintTelemetryFrame(frame *TelemetryFrame) {
 
 	if frame.AUX != nil {
 		fmt.Printf("       AUX %d\n", *frame.AUX)
+	}
+}
+
+var sensorNames = map[byte]string{
+	chMAG: "MAG",
+	chIMU: "IMU",
+	chTHM: "THM",
+	chPWR: "PWR",
+	chRAD: "RAD",
+	chSTR: "STR",
+}
+
+// scenarios have different serialization format than frontend
+func (f *TelemetryFrame) AsMap() map[string]any {
+	channels := make(map[string]any)
+
+	for cid, v := range f.Sensors {
+		if name, ok := sensorNames[cid]; ok {
+			channels[name] = v
+		}
+	}
+
+	if f.Camera != nil {
+		channels["CAM"] = map[string]any{
+			"frame_id":    f.Camera.FrameID,
+			"target":      f.Camera.Target,
+			"exposure_ms": f.Camera.ExposureMS,
+			"hist_mean":   f.Camera.HistMean,
+			"sat_pct":     f.Camera.SatPct,
+			"stars":       f.Camera.Stars,
+		}
+	}
+
+	if f.HK != nil {
+		channels["HK"] = map[string]any{
+			"heater_on":     f.HK.HeaterOn,
+			"shed_count":    f.HK.ShedCount,
+			"propellant_mg": f.HK.PropellantMG,
+			"momentum":      f.HK.Momentum,
+			"rec_fill_pct":  f.HK.RecFillPct,
+			"auth":          f.HK.Auth,
+		}
+	}
+
+	if f.Comms != nil {
+		channels["COMMS"] = map[string]any{
+			"antenna":        antennaName(f.Comms.Antenna),
+			"dropped":        f.Comms.Dropped,
+			"budget":         f.Comms.Budget,
+			"xstat":          f.Comms.XStat,
+			"hga_deploy_pct": f.Comms.HGADeployPct,
+		}
+	}
+
+	if f.AUX != nil {
+		channels["AUX"] = fmt.Sprintf("0x%04X", *f.AUX)
+	}
+
+	for name, value := range f.Unknown {
+		channels["0x"+strings.TrimPrefix(name, "CH_")] = strings.ToUpper(value)
+	}
+
+	return map[string]any{
+		"crc_ok":     f.CRCOK,
+		"frame":      f.Frame,
+		"uptime_s":   f.UptimeS,
+		"mode":       f.Mode,
+		"reboots":    f.Reboots,
+		"last_fault": f.LastFault,
+		"bus_mv":     f.BusMV,
+		"load_mw":    f.LoadMW,
+		"channels":   channels,
+	}
+}
+
+func antennaName(v byte) string {
+	switch v {
+	case 0:
+		return "HGA"
+	case 1:
+		return "LGA"
+	default:
+		return fmt.Sprintf("?%d", v)
 	}
 }

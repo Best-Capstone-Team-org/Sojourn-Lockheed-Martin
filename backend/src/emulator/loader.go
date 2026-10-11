@@ -23,6 +23,9 @@ const UartTCPPort = 10000
 
 const uartConnectTimeout = 5 * time.Second
 
+const GDBTCPAddr = "127.0.0.1"
+const GDBTCPPort = 3333
+
 var globalFirmwareLock sync.Mutex
 
 func LoadAndStartFirmware(
@@ -158,7 +161,8 @@ func load(firmwareFilePath string) (*exec.Cmd, error) {
 		"-M", "mps2-an386",
 		"-nographic",
 		"-kernel", firmwareFilePath,
-		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=on", UartTCPAddr, UartTCPPort)}
+		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=on", UartTCPAddr, UartTCPPort),
+		"-gdb", fmt.Sprintf("tcp:%s:%d", GDBTCPAddr, GDBTCPPort)}
 
 	app.LoaderLogger.Printf("Starting qemu: %s %s\n",
 		qemuSystemARMBinary, strings.Join(qemuArgs, " "))
