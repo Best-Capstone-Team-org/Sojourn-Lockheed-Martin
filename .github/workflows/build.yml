@@ -57,7 +57,13 @@ jobs:
           cache-dependency-path: backend/src/go.sum
 
       - name: Check formatting
-        run: gofmt -l .
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
 
       - name: Vet repo
         run: go vet ./...

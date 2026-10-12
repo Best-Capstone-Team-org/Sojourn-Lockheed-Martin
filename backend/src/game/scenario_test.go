@@ -1,4 +1,5 @@
 package game
+
 import (
 	"encoding/json"
 	"fmt"
@@ -6,12 +7,14 @@ import (
 	"path/filepath"
 	"testing"
 )
+
 type fakeMemoryReader struct {
 	data       []byte
 	lastAddr   uint32
 	lastLength int
 }
 type failingMemoryReader struct{}
+
 func (f *failingMemoryReader) Read(addr uint32, length int) ([]byte, error) {
 	return nil, fmt.Errorf("simulated memory read failure")
 }
