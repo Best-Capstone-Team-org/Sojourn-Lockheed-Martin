@@ -62,9 +62,24 @@
 
 	// NOTE might not need this but it's good for debug print
 	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
+	type SatelliteState = "up" | "down" | "noop";
+	let satelliteState = $state<SatelliteState>("noop");
+	let satelliteTimer: ReturnType<typeof setTimeout> | undefined;
 
 	let tlm = $state<string[]>([]);
 	let readOutTlm = $state<Telemetry>();
+
+	const showSatelliteState = (state: SatelliteState) => {
+		satelliteState = state;
+
+		if (satelliteTimer) {
+			clearTimeout(satelliteTimer);
+		}
+
+		satelliteTimer = setTimeout(() => {
+			satelliteState = "noop";
+		}, 5000);
+	};
 
 	onMount(() => {
 		if (!ws) {
@@ -76,6 +91,7 @@
 
 			ws.onmessage = (ev) => {
 				commandDownlink = JSON.parse(ev.data) as CommandDownlink;
+				showSatelliteState("down");
 
 				switch (commandDownlink.type) {
 					case "telemetry":
@@ -113,7 +129,7 @@
 			<Resizable.PaneGroup direction="vertical">
 				<!-- Telemetry -->
 				<Resizable.Pane defaultSize={15}>
-					<TelemetryConsole />
+					<TelemetryConsole satelliteState={satelliteState} />
 				</Resizable.Pane>
 
 				<Resizable.Handle />
@@ -140,6 +156,7 @@
 										<Terminal
 											{ws}
 											{ready}
+											onCommandSent={() => showSatelliteState("up")}
 										/>
 									</Resizable.Pane>
 								</Resizable.PaneGroup>

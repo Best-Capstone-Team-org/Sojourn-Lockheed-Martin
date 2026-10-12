@@ -4,9 +4,11 @@
 	let {
 		ws,
 		ready,
+		onCommandSent,
 	}: {
 		ws: WebSocket | undefined;
 		ready: boolean;
+		onCommandSent: () => void;
 	} = $props();
 
 	let command = $state("");
@@ -15,6 +17,7 @@
 	const sendCommand = () => {
 		if (ready && ws) {
 			ws.send(command);
+			onCommandSent();
 			history.push(command);
 			command = "";
 		}
