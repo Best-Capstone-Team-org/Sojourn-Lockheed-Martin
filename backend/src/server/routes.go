@@ -2,17 +2,21 @@ package server
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"sojourn/app"
 	"sojourn/emulator"
+	"sojourn/game"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/websocket"
 )
 
 type server struct {
-	// TODO: contain gamestate object from a different package probably
+	state  game.State
+	grader *game.Grader
 
 	wsConn *websocket.Conn
 
@@ -23,6 +27,7 @@ type server struct {
 }
 
 func newServer() *server {
+	// TODO: load scenarios into state
 	return &server{}
 }
 
@@ -153,6 +158,8 @@ func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
 
 	s.firmwareDone = make(chan struct{})
 
+	s.grader = game.NewGrader(&s.state, net.JoinHostPort(emulator.GDBTCPAddr, strconv.Itoa(emulator.GDBTCPPort)))
+
 	go emulator.LoadAndStartFirmware(os.Args[1], s.downlinkChan, s.uplinkChan, s.firmwareDone)
 
 	go s.downlinkPump()
@@ -161,6 +168,8 @@ func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) downlinkPump() {
 	app.ServerLogger.Println("Starting downlink pump")
+
+	defer s.grader.Close()
 
 	for downlinkMessage := range s.downlinkChan {
 		line := strings.TrimSpace(string(downlinkMessage))
@@ -175,6 +184,12 @@ func (s *server) downlinkPump() {
 			}
 
 			emulator.PrintTelemetryFrame(frame)
+
+			if err := s.grader.Grade(frame); err != nil {
+				app.ErrorLogger.Printf("Grading: %v", err)
+			}
+
+			// TODO: send state downlink
 
 			t := telemetryDownlink{
 				Type:      "telemetry",
