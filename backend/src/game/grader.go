@@ -17,17 +17,11 @@ func NewGrader(state *State, gdbAddr string) *Grader {
 
 func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
 	if !frame.CRCOK {
-		return nil
-	}
-
-	if g.state.Phase() == PhaseReady {
-		if err := g.state.Start(); err != nil {
-			return fmt.Errorf("starting scenario: %w", err)
-		}
+		return fmt.Errorf("bad crc")
 	}
 
 	if g.state.Phase() != PhaseInProgress {
-		return nil
+		return fmt.Errorf("simulation not in progress")
 	}
 
 	ranges, err := g.state.MemoryRanges()
