@@ -22,8 +22,11 @@ const (
 	PhaseLevelSelect
 	PhaseReady
 	PhaseInProgress
-	PhaseComplete
 )
+
+// launchFirmware starts the scenario's firmware. Tests replace it so Start
+// doesn't boot QEMU.
+var launchFirmware = emulator.LoadAndStartFirmware
 
 func InitState() State {
 	return State{
@@ -81,15 +84,30 @@ func (s *State) SelectScenario(scenarioId string) error {
 	return nil
 }
 
-func (s *State) Start() error {
+func (s *State) Start(downlinkChan chan []byte, uplinkChan chan []byte, done chan struct{}) error {
 	if s.phase != PhaseReady {
 		return unexpectedPhase("starting game")
 	}
 
-	// TODO:
-
 	s.Scenario.resetEvaluation()
 	s.phase = PhaseInProgress
+
+	go launchFirmware(
+		s.Scenario.Manifest.Firmware.ROM,
+		downlinkChan,
+		uplinkChan,
+		done,
+	)
+
+	return nil
+}
+
+func (s *State) Stop() error {
+	if s.phase != PhaseInProgress {
+		return unexpectedPhase("stopping game")
+	}
+
+	s.phase = PhaseLevelSelect
 
 	return nil
 }
