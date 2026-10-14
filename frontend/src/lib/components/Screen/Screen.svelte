@@ -18,7 +18,7 @@
 >
 	<div
 		class={[
-			"overflow-hidden text-sys-text-light shadow-crt",
+			"relative overflow-hidden text-sys-text-light",
 
 			// vignette (top layer) + CRT scanlines
 			"bg-[radial-gradient(transparent_45%,rgb(0_0_0/0.15)_90%,rgb(0_0_0/0.65)_110%),repeating-linear-gradient(var(--color-sys-screen-light-green)_0_2px,var(--color-sys-screen-dark-green)_2px_4px)]",
@@ -27,5 +27,11 @@
 		]}
 	>
 		{@render children()}
+
+		<!-- Edge shadow overlay (paints above children) -->
+		<div
+			class="pointer-events-none absolute inset-0 shadow-crt"
+			aria-hidden="true"
+		></div>
 	</div>
 </div>
