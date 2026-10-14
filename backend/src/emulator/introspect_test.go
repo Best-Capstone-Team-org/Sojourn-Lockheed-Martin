@@ -1,4 +1,4 @@
-package tests
+package emulator_test
 
 import (
 	"bufio"
@@ -10,13 +10,18 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sojourn/emulator"
+	"sojourn/game"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+// The scenario engine evaluates memory predicates against captured snapshots.
+var _ game.MemoryReader = (*emulator.MemorySnapshot)(nil)
 
 // ---- fake GDB stub ----
 //
@@ -503,6 +508,128 @@ func TestConnectWithNothingListeningFails(t *testing.T) {
 	if g != nil {
 		t.Fatal("Connect returned a connection alongside its error")
 	}
+}
+
+// ---- capture ----
+
+func TestCaptureReadsEveryRangeAndResumes(t *testing.T) {
+	s := newStub(t, stubConfig{})
+	s.set(sramBase+0x40, []byte{3})
+	g := connect(t, s)
+
+	snap, err := emulator.NewMemorySnapshot(g, []emulator.MemoryRange{{Addr: sramBase + 0x40, Len: 1}, {Addr: sramBase + 0x100, Len: 2048}})
+	if err != nil {
+		t.Fatalf("NewMemorySnapshot: %v", err)
+	}
+
+	got, err := snap.Read(sramBase+0x40, 1)
+	if err != nil || !bytes.Equal(got, []byte{3}) {
+		t.Fatalf("Read = %x, %v; want 03", got, err)
+	}
+	got, err = snap.Read(sramBase+0x500, 16)
+	if want := s.get(sramBase+0x500, 16); err != nil || !bytes.Equal(got, want) {
+		t.Fatalf("Read = %x, %v; want %x", got, err, want)
+	}
+
+	// Memory changing afterwards does not change the snapshot.
+	s.set(sramBase+0x40, []byte{4})
+	if got, _ := snap.Read(sramBase+0x40, 1); !bytes.Equal(got, []byte{3}) {
+		t.Fatalf("snapshot changed to %x", got)
+	}
+
+	// The guest was resumed: a direct read is refused.
+	data, err := g.Read(sramBase, 4)
+	requireError(t, data, err)
+}
+
+func TestCaptureFailureResumes(t *testing.T) {
+	s := newStub(t, stubConfig{})
+	g := connect(t, s)
+
+	snap, err := emulator.NewMemorySnapshot(g, []emulator.MemoryRange{{Addr: sramBase + sramSize - 2, Len: 4}})
+	if err == nil || snap != nil {
+		t.Fatalf("NewMemorySnapshot = %v, %v; want an error and no snapshot", snap, err)
+	}
+
+	data, err := g.Read(sramBase, 4)
+	requireError(t, data, err)
+}
+
+func TestSnapshotReadOutsideCaptureFails(t *testing.T) {
+	s := newStub(t, stubConfig{})
+	g := connect(t, s)
+
+	snap, err := emulator.NewMemorySnapshot(g, []emulator.MemoryRange{{Addr: sramBase + 0x100, Len: 4}})
+	if err != nil {
+		t.Fatalf("NewMemorySnapshot: %v", err)
+	}
+
+	for _, r := range []emulator.MemoryRange{{Addr: sramBase + 0xFF, Len: 1}, {Addr: sramBase + 0x103, Len: 2}, {Addr: sramBase, Len: 1}} {
+		data, err := snap.Read(r.Addr, r.Len)
+		requireError(t, data, err)
+	}
+}
+
+func TestScenarioGradesCapturedMemory(t *testing.T) {
+	s := newStub(t, stubConfig{})
+	g := connect(t, s)
+
+	scenario := loadScenario(t, `{"id": "mode", "title": "Mode", "brief": "Set the mode.",
+		"success": {"op": "mem_u8", "at": {"addr": "0x20000040"}, "cmp": "eq", "value": 3}}`)
+
+	ranges := scenario.MemoryRanges()
+	for _, tc := range []struct {
+		value byte
+		want  game.ObjectiveStatus
+	}{{0, game.ObjectiveStatusActive}, {3, game.ObjectiveStatusComplete}} {
+		s.set(sramBase+0x40, []byte{tc.value})
+
+		snap, err := emulator.NewMemorySnapshot(g, ranges)
+		if err != nil {
+			t.Fatalf("NewMemorySnapshot: %v", err)
+		}
+		if err := scenario.Evaluate(game.Frame{Memory: snap}); err != nil {
+			t.Fatalf("Step: %v", err)
+		}
+		if state, _ := scenario.GetObjectiveState("mode"); state.Status != tc.want {
+			t.Fatalf("with 0x%02X status = %s, want %s", tc.value, state.Status, tc.want)
+		}
+	}
+}
+
+// loadScenario writes a scenario package with the given objective and loads it.
+func loadScenario(t *testing.T, objective string) *game.Scenario {
+	t.Helper()
+
+	dir := t.TempDir()
+	files := map[string]string{
+		"manifest.json": `{"format": 1, "id": "sojourn.test.introspect", "title": "Introspect", "revision": 1,
+			"author": "Test", "summary": "Grades captured memory.",
+			"firmware": {"rom": "firmware/rom.elf", "symbols": "firmware/symbols.json",
+				"memmap": "firmware/memmap.json", "app_crc32": "0x00000000"},
+			"link": {"uplink_delay_s": 0, "downlink_delay_s": 0},
+			"briefing": "briefing.md", "objectives": "objectives.json"}`,
+		"objectives.json":       `{"format": 1, "objectives": [` + objective + `]}`,
+		"briefing.md":           "# Briefing\n",
+		"firmware/rom.elf":      "",
+		"firmware/symbols.json": `{"format": 1, "symbols": {}}`,
+		"firmware/memmap.json":  `{"format": 1, "regions": [{"name": "SRAM", "lo": "0x20000000", "hi": "0x20010000", "poke": "rw"}]}`,
+	}
+	for name, contents := range files {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	scenario, err := game.LoadScenario(dir)
+	if err != nil {
+		t.Fatalf("LoadScenario: %v", err)
+	}
+	return scenario
 }
 
 // ---- against the real emulator ----

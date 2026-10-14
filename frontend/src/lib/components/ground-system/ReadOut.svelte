@@ -24,59 +24,61 @@
 	});
 </script>
 
-<div class="flex h-full flex-col">
-	<Box class="flex w-full items-center justify-between p-2">
+<div class="flex h-full min-h-0 flex-col overflow-hidden">
+	<Box class="flex w-full shrink-0 items-center justify-between p-2">
 		<span class="text-xl font-bold">Read Out</span>
 		<Led bind:this={led} />
 	</Box>
-	<ReadOutSection
-		title="Frame Header"
-		items={[
-			{ label: "Mode", value: frame?.mode },
-			{ label: "Uptime", value: frame?.uptime, unit: "s" },
-			{ label: "Bus", value: frame?.bus, unit: "V" },
-			{ label: "Load", value: frame?.load, unit: "mW" },
-			{ label: "Reboot", value: frame?.reboots },
-			{ label: "Last Fault", value: frame?.lastFault },
-		]}
-	/>
-	<ReadOutSection
-		title="Instruments"
-		items={[
-			{ label: "Magnetometer", value: sensors?.[0], unit: "nT" },
-			{ label: "Inertial", value: sensors?.[1], unit: "°/s" },
-			{ label: "Thermal", value: sensors?.[2], unit: "°C" },
-			{ label: "Bus Monitor", value: sensors?.[3], unit: "mV" },
-			{ label: "Radiation", value: sensors?.[4], unit: "ct" },
-			{ label: "Star Tracker", value: sensors?.[5], unit: "q" },
-		]}
-	/>
-	<ReadOutSection
-		title="House Keeping"
-		items={[
-			{
-				label: "Heater",
-				value:
-					hk?.heaterOn == null
-						? undefined
-						: hk.heaterOn
-							? "On"
-							: "Off",
-			},
-			{ label: "Propellant", value: hk?.prop, unit: "mg" },
-			{ label: "Momentum", value: hk?.mom },
-			{ label: "Recorder", value: hk?.rec, unit: "%" },
-			{ label: "Shed Events", value: hk?.shed },
-		]}
-	/>
-	<ReadOutSection
-		title="Options"
-		items={[
-			{
-				label: "Telemetry",
-				toggle: toggleTelemetry,
-				checked: options.telemetry,
-			},
-		]}
-	/>
+	<div class="min-h-0 flex-1 overflow-y-auto">
+		<ReadOutSection
+			title="Frame Header"
+			items={[
+				{ label: "Mode", value: frame?.mode },
+				{ label: "Uptime", value: frame?.uptime, unit: "s" },
+				{ label: "Bus", value: frame?.bus, unit: "V" },
+				{ label: "Load", value: frame?.load, unit: "mW" },
+				{ label: "Reboot", value: frame?.reboots },
+				{ label: "Last Fault", value: frame?.lastFault },
+			]}
+		/>
+		<ReadOutSection
+			title="Instruments"
+			items={[
+				{ label: "Magnetometer", value: sensors?.[0], unit: "nT" },
+				{ label: "Inertial", value: sensors?.[1], unit: "°/s" },
+				{ label: "Thermal", value: sensors?.[2], unit: "°C" },
+				{ label: "Bus Monitor", value: sensors?.[3], unit: "mV" },
+				{ label: "Radiation", value: sensors?.[4], unit: "ct" },
+				{ label: "Star Tracker", value: sensors?.[5], unit: "q" },
+			]}
+		/>
+		<ReadOutSection
+			title="House Keeping"
+			items={[
+				{
+					label: "Heater",
+					value:
+						hk?.heaterOn == null
+							? undefined
+							: hk.heaterOn
+								? "On"
+								: "Off",
+				},
+				{ label: "Propellant", value: hk?.prop, unit: "mg" },
+				{ label: "Momentum", value: hk?.mom },
+				{ label: "Recorder", value: hk?.rec, unit: "%" },
+				{ label: "Shed Events", value: hk?.shed },
+			]}
+		/>
+		<ReadOutSection
+			title="Options"
+			items={[
+				{
+					label: "Telemetry",
+					toggle: toggleTelemetry,
+					checked: options.telemetry,
+				},
+			]}
+		/>
+	</div>
 </div>

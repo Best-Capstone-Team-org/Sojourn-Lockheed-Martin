@@ -1,4 +1,4 @@
-package tests
+package emulator
 
 import (
 	"bufio"
@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"sojourn/app"
-	"sojourn/emulator"
 )
 
 // The loader starts QEMU through the QEMU_SYSTEM_ARM_BIN env var. These tests
@@ -48,7 +47,7 @@ func TestMain(m *testing.M) {
 		// Unset the marker so the fake QEMU it spawns doesn't run the loader too.
 		os.Unsetenv(loaderFatalEnv)
 		app.InitLoggers()
-		emulator.LoadAndStartFirmware(name, make(chan []byte), make(chan []byte), make(chan struct{}))
+		LoadAndStartFirmware(name, make(chan []byte), make(chan []byte), make(chan struct{}))
 		os.Exit(0)
 	}
 
@@ -165,7 +164,7 @@ func startLoader(t *testing.T, mode string) *loaderRun {
 
 	go func() {
 		defer close(r.returned)
-		emulator.LoadAndStartFirmware(firmware, r.downlink, r.uplink, r.done)
+		LoadAndStartFirmware(firmware, r.downlink, r.uplink, r.done)
 	}()
 
 	t.Cleanup(func() {
@@ -287,7 +286,7 @@ func TestLoaderStartsQEMUWithExpectedArgs(t *testing.T) {
 		t.Errorf("-kernel = %q, want the firmware path", got)
 	}
 
-	wantSerial := fmt.Sprintf("tcp:%s:%d,server=on,wait=on", emulator.UartTCPAddr, emulator.UartTCPPort)
+	wantSerial := fmt.Sprintf("tcp:%s:%d,server=on,wait=on", uartTCPAddr, uartTCPPort)
 	if got := flagValue("-serial"); got != wantSerial {
 		t.Errorf("-serial = %q, want %q", got, wantSerial)
 	}
@@ -392,7 +391,7 @@ func TestLoaderSerializesFirmwareInstances(t *testing.T) {
 
 	go func() {
 		defer close(second.returned)
-		emulator.LoadAndStartFirmware(firmware, second.downlink, second.uplink, second.done)
+		LoadAndStartFirmware(firmware, second.downlink, second.uplink, second.done)
 	}()
 	t.Cleanup(func() {
 		second.stop()
@@ -525,7 +524,7 @@ func TestLoaderFindsQEMUOnPATH(t *testing.T) {
 	}
 	go func() {
 		defer close(r.returned)
-		emulator.LoadAndStartFirmware(firmware, r.downlink, r.uplink, r.done)
+		LoadAndStartFirmware(firmware, r.downlink, r.uplink, r.done)
 	}()
 	t.Cleanup(func() {
 		r.stop()
@@ -557,7 +556,7 @@ func TestLoaderRealQEMU(t *testing.T) {
 	}
 	go func() {
 		defer close(r.returned)
-		emulator.LoadAndStartFirmware(firmware, r.downlink, r.uplink, r.done)
+		LoadAndStartFirmware(firmware, r.downlink, r.uplink, r.done)
 	}()
 
 	got := r.recv(t)
@@ -565,7 +564,7 @@ func TestLoaderRealQEMU(t *testing.T) {
 		t.Errorf("downlink %q is not newline terminated", got)
 	}
 	if line := strings.TrimSpace(got); strings.HasPrefix(line, "TLM ") {
-		if _, err := emulator.DecodeTelemetryFrame(line[4:]); err != nil {
+		if _, err := DecodeTelemetryFrame(line[4:]); err != nil {
 			t.Errorf("failed to decode telemetry frame %q: %v", line, err)
 		}
 	}

@@ -17,6 +17,7 @@ type Scenario struct {
 	Symbols         SymbolsFile
 	MemMap          MemMapFile
 	ObjectiveStates map[string]*ObjectiveState
+	evaluation      Evaluation
 }
 
 func validateObjectiveRequirements(objectives []Objective) error {
@@ -350,7 +351,15 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 		return nil, fmt.Errorf("unsupported memmap format: %d", memMapFile.Format)
 	}
 
-	scenario := &Scenario{Dir: dir, Manifest: manifest, Objectives: objectivesFile.Objectives, Setup: setup, Symbols: symbolsFile, MemMap: memMapFile, ObjectiveStates: initializeObjectiveStates(objectivesFile.Objectives)}
+	scenario := &Scenario{
+		Dir:             dir,
+		Manifest:        manifest,
+		Objectives:      objectivesFile.Objectives,
+		Setup:           setup,
+		Symbols:         symbolsFile,
+		MemMap:          memMapFile,
+		ObjectiveStates: initializeObjectiveStates(objectivesFile.Objectives),
+	}
 
 	if err := scenario.validateObjectiveAddresses(); err != nil {
 		return nil, err
@@ -359,6 +368,12 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 	if err := scenario.validateSetupAddresses(); err != nil {
 		return nil, err
 	}
+
+	evaluation, err := newEvaluation(scenario)
+	if err != nil {
+		return nil, err
+	}
+	scenario.evaluation = evaluation
 
 	return scenario, nil
 }
