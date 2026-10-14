@@ -1,14 +1,12 @@
 <script lang="ts">
 	import Screen from "$lib/components/Screen/Screen.svelte";
 	import satelliteDownlink from "$lib/assets/satelite_down.webp";
-	import satelliteNoop from "$lib/assets/satelite_noop.webp";
 	import satelliteUplink from "$lib/assets/satelite_up.webp";
+	import satelliteNoop from "$lib/assets/satelite_noop.webp";
+	import { type CommandDownlink } from "$lib/api";
 
-	let {
-		satelliteState,
-	}: {
-		satelliteState: "up" | "down" | "noop";
-	} = $props();
+	let { commandDownlink }: { commandDownlink: CommandDownlink | undefined } =
+		$props();
 </script>
 
 <Screen
@@ -17,21 +15,12 @@
 >
 	<div class="flex h-full w-full flex-col items-center justify-center">
 		<img
-			src={
-				satelliteState === "up"
-					? satelliteUplink
-					: satelliteState === "down"
-						? satelliteDownlink
-						: satelliteNoop
-			}
+			src={commandDownlink?.type === "commandResponse" ? satelliteDownlink : satelliteNoop}
 			alt={
-				satelliteState === "up"
-					? "Satellite transmitting uplink"
-					: satelliteState === "down"
-						? "Satellite transmitting downlink"
-						: "Satellite idle"
+				commandDownlink?.type === "commandResponse"
+					? "Satellite transmitting downlink"
+					: "Satellite idle"
 			}
-			class="h-3/4 w-auto max-w-full object-contain"
 		/>
 		<span class="font-semibold">Telemetry</span>
 	</div>
