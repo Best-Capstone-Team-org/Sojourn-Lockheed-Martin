@@ -125,7 +125,10 @@
 					defaultSize={15}
 					minSize={10}
 				>
-					<TelemetryConsole commandDownlink={commandDownlink} commandUplink={commandUplink} />
+					<TelemetryConsole
+						{commandDownlink}
+						{commandUplink}
+					/>
 				</Resizable.Pane>
 
 				<Resizable.Handle />

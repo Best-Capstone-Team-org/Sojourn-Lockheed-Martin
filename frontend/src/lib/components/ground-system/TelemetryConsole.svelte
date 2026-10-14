@@ -5,8 +5,13 @@
 	import satelliteNoop from "$lib/assets/satelite_noop.webp";
 	import { type CommandDownlink, type CommandUplink } from "$lib/api";
 
-	let { commandDownlink, commandUplink }: { commandDownlink: CommandDownlink | undefined; commandUplink: CommandUplink | undefined } =
-		$props();
+	let {
+		commandDownlink,
+		commandUplink,
+	}: {
+		commandDownlink: CommandDownlink | undefined;
+		commandUplink: CommandUplink | undefined;
+	} = $props();
 </script>
 
 <Screen
@@ -15,14 +20,16 @@
 >
 	<div class="flex w-full flex-col items-center justify-center">
 		<img
-			src={commandDownlink?.type === "commandResponse" ? satelliteDownlink : commandUplink !== undefined ? satelliteUplink : satelliteNoop}
-			alt={
-				commandDownlink?.type === "commandResponse"
-					? "Satellite transmitting downlink"
-					: commandUplink !== undefined
+			src={commandDownlink?.type === "commandResponse"
+				? satelliteDownlink
+				: commandUplink !== undefined
+					? satelliteUplink
+					: satelliteNoop}
+			alt={commandDownlink?.type === "commandResponse"
+				? "Satellite transmitting downlink"
+				: commandUplink !== undefined
 					? "Satellite receiving uplink"
-					: "Satellite idle"
-			}
+					: "Satellite idle"}
 			class="h-auto w-1/16 object-contain"
 		/>
 		<span class="font-semibold">Telemetry</span>
