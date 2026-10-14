@@ -5,26 +5,24 @@ import (
 	"sojourn/game"
 )
 
-type scenariosResponse []struct {
-	Id          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+type scenariosResponse []scenarioResponse
+
+type objectiveResponse struct {
+	ID          string               `json:"id"`
+	Name        string               `json:"name"`
+	Description string               `json:"description"`
+	Status      game.ObjectiveStatus `json:"status"`
 }
 
 type scenarioResponse struct {
-	Name        string `json:"id"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Revision    int    `json:"revision"`
+	Author      string `json:"author"`
 	Description string `json:"description"`
+	Difficulty  string `json:"difficulty"`
 
-	Antennas []struct {
-		Id   int    `json:"id"`
-		Name string `json:"name"`
-		// TODO:
-	} `json:"antennas"`
-
-	Objectives []struct {
-		Name string `json:"name"`
-		// TODO:
-	} `json:"objectives"`
+	Objectives []objectiveResponse `json:"objectives"`
 
 	Constraints map[string]int `json:"constraints"`
 }

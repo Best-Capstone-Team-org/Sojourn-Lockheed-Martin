@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,7 +16,7 @@ import (
 )
 
 type server struct {
-	state  game.State
+	gs     game.State
 	grader *game.Grader
 
 	wsConn *websocket.Conn
@@ -27,12 +28,18 @@ type server struct {
 }
 
 func newServer() *server {
-	// TODO: load scenarios into state
-	return &server{}
+	return &server{gs: game.InitState()}
 }
 
 func Serve() {
 	server := newServer()
+
+	scenariosDir := os.Getenv("SCENARIOS_DIR")
+	if scenariosDir == "" {
+		scenariosDir = "../../deps/sojourn/scenarios/"
+	}
+
+	server.gs.LoadScenarios(scenariosDir)
 
 	mux := server.routes()
 	port := os.Getenv("PORT")
@@ -64,7 +71,6 @@ func (s *server) routes() *http.ServeMux {
 	apiPrefix := "/api"
 
 	mux.HandleFunc(apiPrefix+"/scenarios", s.scenarios)
-	mux.HandleFunc(apiPrefix+"/scenario", s.scenario)
 	mux.HandleFunc(apiPrefix+"/select-scenario", s.selectScenario)
 	mux.HandleFunc(apiPrefix+"/new-scenario", s.newScenario)
 	mux.HandleFunc(apiPrefix+"/saves", s.saves)
@@ -81,14 +87,54 @@ func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 	if !s.checkRequestMethod(r, http.MethodGet, w) {
 		return
 	}
-	// TODO:
-}
 
-func (s *server) scenario(w http.ResponseWriter, r *http.Request) {
-	if !s.checkRequestMethod(r, http.MethodGet, w) {
+	response := scenariosResponse{}
+
+	for _, scenario := range s.gs.AvailableScenarios {
+		objectives := []objectiveResponse{}
+		for _, objective := range scenario.Objectives {
+			objectives = append(objectives, objectiveResponse{
+				ID:          objective.ID,
+				Name:        objective.Title,
+				Description: objective.Brief,
+				Status:      scenario.ObjectiveStates[objective.ID].Status,
+			})
+		}
+
+		constraints := map[string]int{}
+
+		writes := scenario.Manifest.Link.Budget.Writes
+		reads := scenario.Manifest.Link.Budget.Reads
+
+		if writes != nil {
+			constraints["writes"] = *writes
+		}
+
+		if reads != nil {
+			constraints["reads"] = *reads
+		}
+
+		sr := scenarioResponse{
+			ID:          scenario.Manifest.ID,
+			Name:        scenario.Manifest.Title,
+			Revision:    scenario.Manifest.Revision,
+			Author:      scenario.Manifest.Author,
+			Description: scenario.Manifest.Summary,
+			Difficulty:  scenario.Manifest.Difficulty,
+
+			Objectives: objectives,
+
+			Constraints: constraints,
+		}
+
+		response = append(response, sr)
+	}
+
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 		return
 	}
-	// TODO:
 }
 
 func (s *server) selectScenario(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +204,7 @@ func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
 
 	s.firmwareDone = make(chan struct{})
 
-	s.grader = game.NewGrader(&s.state, net.JoinHostPort(emulator.GDBTCPAddr, strconv.Itoa(emulator.GDBTCPPort)))
+	s.grader = game.NewGrader(&s.gs, net.JoinHostPort(emulator.GDBTCPAddr, strconv.Itoa(emulator.GDBTCPPort)))
 
 	go emulator.LoadAndStartFirmware(os.Args[1], s.downlinkChan, s.uplinkChan, s.firmwareDone)
 
