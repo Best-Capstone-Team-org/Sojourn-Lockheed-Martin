@@ -61,7 +61,6 @@
 	let ws = $state<WebSocket | undefined>(undefined);
 	let ready = $state(false);
 
-	// NOTE might not need this but it's good for debug print
 	// using it for frontend state (DAVID)
 	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
 	let commandUplink = $state<CommandUplink | undefined>(undefined);
