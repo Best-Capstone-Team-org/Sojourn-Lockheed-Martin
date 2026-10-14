@@ -10,7 +10,7 @@ func TestGraderGradesTelemetry(t *testing.T) {
 		ID:      "safe",
 		Success: Predicate{Op: "tlm", Path: "mode", Cmp: "eq", Value: "SAFE"},
 	})
-	state := &State{phase: PhaseReady, scenario: s}
+	state := &State{phase: PhaseReady, Scenario: s}
 	if err := state.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestGraderGradesTelemetry(t *testing.T) {
 
 func TestGraderWithoutIntrospectionFailsMemoryObjectives(t *testing.T) {
 	s := frameScenario(t, modeIs2)
-	state := &State{phase: PhaseReady, scenario: s}
+	state := &State{phase: PhaseReady, Scenario: s}
 	if err := state.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestGraderRejectsFramesWhenNotInProgress(t *testing.T) {
 		ID:      "safe",
 		Success: Predicate{Op: "tlm", Path: "mode", Cmp: "eq", Value: "SAFE"},
 	})
-	state := &State{phase: PhaseReady, scenario: s}
+	state := &State{phase: PhaseReady, Scenario: s}
 	g := NewGrader(state, "127.0.0.1:1")
 
 	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: true, Mode: "SAFE"}); err == nil {
