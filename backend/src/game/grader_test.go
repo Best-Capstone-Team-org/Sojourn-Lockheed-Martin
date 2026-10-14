@@ -11,9 +11,7 @@ func TestGraderGradesTelemetry(t *testing.T) {
 		Success: Predicate{Op: "tlm", Path: "mode", Cmp: "eq", Value: "SAFE"},
 	})
 	state := &State{phase: PhaseReady, Scenario: s}
-	if err := state.Start(); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
+	startGame(t, state)
 	g := NewGrader(state, "127.0.0.1:0")
 	defer g.Close()
 
@@ -43,9 +41,7 @@ func TestGraderGradesTelemetry(t *testing.T) {
 func TestGraderWithoutIntrospectionFailsMemoryObjectives(t *testing.T) {
 	s := frameScenario(t, modeIs2)
 	state := &State{phase: PhaseReady, Scenario: s}
-	if err := state.Start(); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
+	startGame(t, state)
 
 	// Nothing listens on port 1, so the capture cannot connect.
 	g := NewGrader(state, "127.0.0.1:1")
