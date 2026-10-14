@@ -1,21 +1,41 @@
 <script lang="ts">
-	import Box from "$lib/components/Box/Box.svelte";
-	import LevelDetails from "$lib/components/level-select/LevelDetails.svelte";
+    import Box from "$lib/components/Box/Box.svelte";
+    import LevelDetails from "$lib/components/level-select/LevelDetails.svelte";
+    import { onMount } from "svelte"
+    import { apiFetch, type ScenarioResponse } from "$lib/api";
 
-	const levels = [1, 2, 3, 4, 5, 6, 7, 8];
+
+    let levels: ScenarioResponse[] = $state([]);
+    async function getLevels() {
+        try {
+            const response = await apiFetch("scenarios");
+            if (!response.ok) {
+                throw new Error(`Failed to load scenarios: ${response.status}`);
+            }
+
+            const scenarios: ScenarioResponse[] = await response.json();
+            levels = scenarios;
+        } catch (error) {
+            console.error("Failed to load scenarios", error);
+        }
+    }
+
+    onMount(() => {
+        getLevels();
+    });
 </script>
 
 <main class="box-border min-w-0 px-[10%]">
-	<div class="flex w-full min-w-0 flex-col">
-		<Box class="w-full p-2">
-			<h1 class="text-4xl font-bold">Level Select</h1>
-		</Box>
-		{#each levels as level (level)}
-			<LevelDetails
-				name={`Level ${level}`}
-				description={`This is the ${level} level. ... ... . .. . . . . . .. . . . .. . .. . . .. . . . .. . . .. . . .. . . . .. . . .. . . . . .. . .`}
-				difficulty={(level % 3) + 1}
-			/>
-		{/each}
-	</div>
+    <div class="flex w-full min-w-0 flex-col">
+        <Box class="w-full p-2">
+            <h1 class="text-4xl font-bold">Level Select</h1>
+        </Box>
+        {#each levels as level}
+            <LevelDetails
+                name={`Level ${level.name}`}
+                description={level.description}
+                difficulty={level.difficulty}
+            />
+        {/each}
+    </div>
 </main>
