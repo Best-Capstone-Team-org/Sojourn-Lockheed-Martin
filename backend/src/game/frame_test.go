@@ -213,9 +213,7 @@ func TestStateBaselineIsLastSettleFrame(t *testing.T) {
 	s.Setup = &Setup{SettleFrames: 2}
 	state := &State{phase: PhaseReady, Scenario: s}
 
-	if err := state.Start(); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
+	startGame(t, state)
 
 	// Memory still changing while the firmware settles is not a patch.
 	for i, v := range []byte{1, 2} {

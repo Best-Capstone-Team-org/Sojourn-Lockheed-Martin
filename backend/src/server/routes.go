@@ -11,6 +11,7 @@ import (
 	"sojourn/game"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -24,7 +25,7 @@ type server struct {
 	downlinkChan chan []byte
 	uplinkChan   chan []byte
 
-	firmwareDone chan struct{}
+	gameRunningDone chan struct{}
 }
 
 func newServer() *server {
@@ -39,7 +40,10 @@ func Serve() {
 		scenariosDir = "../../deps/sojourn/scenarios/"
 	}
 
-	server.gs.LoadScenarios(scenariosDir)
+	err := server.gs.LoadScenarios(scenariosDir)
+	if err != nil {
+		app.ErrorLogger.Fatalf("Unable to load scenarios: %v", err)
+	}
 
 	mux := server.routes()
 	port := os.Getenv("PORT")
@@ -50,7 +54,7 @@ func Serve() {
 
 	app.ServerLogger.Printf("Listening and serving on %s... ", addr)
 
-	err := http.ListenAndServe(addr, mux)
+	err = http.ListenAndServe(addr, mux)
 
 	if err != nil {
 		app.ErrorLogger.Printf("ListenAndServe error: %+v", err)
@@ -78,7 +82,6 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc(apiPrefix+"/save", s.save)
 	mux.HandleFunc(apiPrefix+"/results", s.results)
 	mux.HandleFunc(apiPrefix+"/upload-patch", s.uploadPatch)
-	mux.HandleFunc(apiPrefix+"/command-ws", s.commandWS)
 
 	return mux
 }
@@ -137,11 +140,57 @@ func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
 func (s *server) selectScenario(w http.ResponseWriter, r *http.Request) {
 	if !s.checkRequestMethod(r, http.MethodPut, w) {
 		return
 	}
-	// TODO:
+
+	queryParams := r.URL.Query()
+	if !queryParams.Has("scenario-id") {
+		http.Error(w, "scenario-id query parameter not supplied", http.StatusBadRequest)
+		return
+	}
+
+	scenarioId := queryParams.Get("scenario-id")
+
+	err := s.gs.SelectScenario(scenarioId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		app.ErrorLogger.Printf("Error upgrading to WS: %+v", err)
+		s.clientError(w, http.StatusUpgradeRequired)
+		return
+	}
+
+	s.wsConn = conn
+	s.downlinkChan = make(chan []byte)
+	s.uplinkChan = make(chan []byte)
+
+	s.gameRunningDone = make(chan struct{})
+
+	// TODO: move this out of the grader
+	s.grader = game.NewGrader(&s.gs, net.JoinHostPort(emulator.GDBTCPAddr, strconv.Itoa(emulator.GDBTCPPort)))
+
+	err = s.gs.Start(s.downlinkChan, s.uplinkChan, s.gameRunningDone)
+	if err != nil {
+		app.ErrorLogger.Printf("Error starting game: %v", err)
+		closeMessage := websocket.FormatCloseMessage(websocket.CloseInternalServerErr,
+			fmt.Sprintf("Error starting game: %v", err))
+		conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(time.Second))
+		conn.Close()
+		return
+	}
+
+	go s.downlinkPump()
+	go s.uplinkPump()
 }
 
 func (s *server) newScenario(w http.ResponseWriter, r *http.Request) {
@@ -184,32 +233,6 @@ func (s *server) uploadPatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO:
-}
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
-}
-
-func (s *server) commandWS(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		app.ErrorLogger.Printf("Error upgrading to WS: %+v", err)
-		s.clientError(w, http.StatusUpgradeRequired)
-		return
-	}
-
-	s.wsConn = conn
-	s.downlinkChan = make(chan []byte)
-	s.uplinkChan = make(chan []byte)
-
-	s.firmwareDone = make(chan struct{})
-
-	s.grader = game.NewGrader(&s.gs, net.JoinHostPort(emulator.GDBTCPAddr, strconv.Itoa(emulator.GDBTCPPort)))
-
-	go emulator.LoadAndStartFirmware(os.Args[1], s.downlinkChan, s.uplinkChan, s.firmwareDone)
-
-	go s.downlinkPump()
-	go s.uplinkPump()
 }
 
 func (s *server) downlinkPump() {
@@ -289,7 +312,11 @@ func (s *server) uplinkPump() {
 	close(s.uplinkChan)
 
 	// Tell emulator thread to kill firmware
-	close(s.firmwareDone)
+	close(s.gameRunningDone)
+
+	if err := s.gs.Stop(); err != nil {
+		app.ErrorLogger.Println(fmt.Sprintf("Error stopping game: %s", err))
+	}
 
 	app.ServerLogger.Println("Exiting uplink pump")
 }
