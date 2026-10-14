@@ -25,7 +25,7 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col overflow-hidden">
-	<Box class="flex w-full items-center justify-between shrink-0 p-2">
+	<Box class="flex w-full shrink-0 items-center justify-between p-2">
 		<span class="text-xl font-bold">Read Out</span>
 		<Led bind:this={led} />
 	</Box>

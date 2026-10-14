@@ -102,41 +102,62 @@
 		class="h-full w-full"
 	>
 		<!-- Mission Status -->
-		<Resizable.Pane defaultSize={30} minSize={10} >
+		<Resizable.Pane
+			defaultSize={30}
+			minSize={10}
+		>
 			<MissionStatus {missionDetails} />
 		</Resizable.Pane>
 
 		<Resizable.Handle />
 
 		<!-- Control Panel -->
-		<Resizable.Pane defaultSize={70} minSize={20}>
+		<Resizable.Pane
+			defaultSize={70}
+			minSize={20}
+		>
 			<Resizable.PaneGroup direction="vertical">
 				<!-- Telemetry -->
-				<Resizable.Pane defaultSize={15} minSize={10}>
+				<Resizable.Pane
+					defaultSize={15}
+					minSize={10}
+				>
 					<TelemetryConsole />
 				</Resizable.Pane>
 
 				<Resizable.Handle />
 
 				<!-- Control Panel -->
-				<Resizable.Pane defaultSize={85} minSize={10}>
+				<Resizable.Pane
+					defaultSize={85}
+					minSize={10}
+				>
 					<Resizable.PaneGroup direction="horizontal">
 						<!-- Console -->
-						<Resizable.Pane defaultSize={75} minSize={10}>
+						<Resizable.Pane
+							defaultSize={75}
+							minSize={10}
+						>
 							<Screen
 								class="h-full"
 								bezelClass="h-full"
 							>
 								<Resizable.PaneGroup direction="vertical">
 									<!-- Downlink -->
-									<Resizable.Pane defaultSize={60} minSize={10}>
+									<Resizable.Pane
+										defaultSize={60}
+										minSize={10}
+									>
 										<Downlink {tlm} />
 									</Resizable.Pane>
 
 									<Resizable.Handle />
 
 									<!-- Terminal -->
-									<Resizable.Pane defaultSize={40} minSize={10}>
+									<Resizable.Pane
+										defaultSize={40}
+										minSize={10}
+									>
 										<Terminal
 											{ws}
 											{ready}
@@ -149,7 +170,10 @@
 						<Resizable.Handle />
 
 						<!-- Read Out -->
-						<Resizable.Pane defaultSize={25} minSize={10}>
+						<Resizable.Pane
+							defaultSize={25}
+							minSize={10}
+						>
 							<ReadOut {readOutTlm} />
 						</Resizable.Pane>
 					</Resizable.PaneGroup>
