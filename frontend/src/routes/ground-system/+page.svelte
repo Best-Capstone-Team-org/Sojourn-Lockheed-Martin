@@ -116,7 +116,7 @@
 			<Resizable.PaneGroup direction="vertical">
 				<!-- Telemetry -->
 				<Resizable.Pane defaultSize={15}>
-					<TelemetryConsole commandDownlink={commandDownlink} />
+					<TelemetryConsole commandDownlink={commandDownlink} commandUplink={commandUplink} />
 				</Resizable.Pane>
 
 				<Resizable.Handle />
