@@ -3,8 +3,25 @@
 	import { resolve } from "$app/paths";
 	import levelSelectScreen from "$lib/assets/level-select-screen.png";
 	import Button from "$lib/components/Button/Button.svelte";
+	import {
+		apiFetch,
+		type ScenarioResponse,
+		type ObjectiveResponse,
+	} from "$lib/api";
+	import { onMount } from "svelte";
 
 	const levels = [1, 2, 3, 4, 5, 6, 7, 8];
+	function getLevels() {
+		apiFetch("scenarios").then((response) => {
+			console.log("Levels: ", response);
+			let scenarios = response as unknown as ScenarioResponse[];
+			console.log("Scenarios: ", scenarios);
+		});
+	}
+
+	onMount(() => {
+		getLevels();
+	});
 </script>
 
 <main class="relative h-screen w-screen">
