@@ -143,8 +143,6 @@
 										<Terminal
 											{ws}
 											{ready}
-											onCommandSent={() => {
-											}}
 										/>
 									</Resizable.Pane>
 								</Resizable.PaneGroup>
