@@ -3,15 +3,16 @@ package game
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sojourn/emulator"
 )
 
 type State struct {
 	phase Phase
 
-	scenario *Scenario
+	Scenario *Scenario
 
-	availableScenarios map[string]*Scenario
+	AvailableScenarios map[string]*Scenario
 }
 
 type Phase int
@@ -24,14 +25,39 @@ const (
 	PhaseComplete
 )
 
+func InitState() State {
+	return State{
+		phase:              PhaseNone,
+		Scenario:           nil,
+		AvailableScenarios: make(map[string]*Scenario),
+	}
+}
+
 func (s *State) Phase() Phase { return s.phase }
 
-func (s *State) LoadScenarios(levelsDir string) error {
+func (s *State) LoadScenarios(scenariosDir string) error {
 	if s.phase != PhaseNone {
 		return unexpectedPhase("loading scenarios")
 	}
 
-	// TODO: load scenarios into availableScenarios
+	files, err := os.ReadDir(scenariosDir)
+	if err != nil {
+		return err
+	}
+
+	for _, scenarioDir := range files {
+		if !scenarioDir.IsDir() {
+			continue
+		}
+
+		scenario, err := LoadScenario(scenarioDir.Name())
+
+		if err != nil {
+			return err
+		}
+
+		s.AvailableScenarios[scenario.Manifest.ID] = scenario
+	}
 
 	s.phase = PhaseLevelSelect
 
@@ -43,8 +69,13 @@ func (s *State) SelectScenario(scenarioId string) error {
 		return unexpectedPhase("selecting a scenario")
 	}
 
-	// TODO:
+	scenario, ok := s.AvailableScenarios[scenarioId]
 
+	if !ok {
+		return errors.New(fmt.Sprintf("Invalid scenario id %s", scenarioId))
+	}
+
+	s.Scenario = scenario
 	s.phase = PhaseReady
 
 	return nil
@@ -57,7 +88,7 @@ func (s *State) Start() error {
 
 	// TODO:
 
-	s.scenario.resetEvaluation()
+	s.Scenario.resetEvaluation()
 	s.phase = PhaseInProgress
 
 	return nil
@@ -78,14 +109,14 @@ func (s *State) Evaluate(frame Frame) error {
 		return unexpectedPhase("evaluating a frame")
 	}
 
-	return s.scenario.Evaluate(frame)
+	return s.Scenario.Evaluate(frame)
 }
 
 func (s *State) MemoryRanges() ([]emulator.MemoryRange, error) {
-	if s.scenario == nil {
+	if s.Scenario == nil {
 		return nil, errors.New("no scenario selected")
 	}
-	return s.scenario.MemoryRanges(), nil
+	return s.Scenario.MemoryRanges(), nil
 }
 
 func unexpectedPhase(phase string) error {

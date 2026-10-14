@@ -211,7 +211,7 @@ func TestStateBaselineIsLastSettleFrame(t *testing.T) {
 		Success: Predicate{Op: "mem_changed", At: &AddressRef{Sym: "g_buf"}, Len: 1},
 	})
 	s.Setup = &Setup{SettleFrames: 2}
-	state := &State{phase: PhaseReady, scenario: s}
+	state := &State{phase: PhaseReady, Scenario: s}
 
 	if err := state.Start(); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -240,7 +240,7 @@ func TestStateBaselineIsLastSettleFrame(t *testing.T) {
 }
 
 func TestStateStepBeforeStartFails(t *testing.T) {
-	state := &State{phase: PhaseReady, scenario: frameScenario(t)}
+	state := &State{phase: PhaseReady, Scenario: frameScenario(t)}
 
 	if err := state.Evaluate(Frame{}); err == nil {
 		t.Fatal("expected Step before Start to fail")
