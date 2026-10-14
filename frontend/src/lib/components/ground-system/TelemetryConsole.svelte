@@ -23,7 +23,7 @@
 					? "Satellite receiving uplink"
 					: "Satellite idle"
 			}
-			class="h-auto w-1/8 object-contain"
+			class="h-auto w-1/16 object-contain"
 		/>
 		<span class="font-semibold">Telemetry</span>
 	</div>
