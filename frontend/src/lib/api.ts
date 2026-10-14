@@ -12,20 +12,24 @@ export function apiWebSocket(endpoint: string) {
 	return new WebSocket(`ws://${API_ENDPOINT}/${API_PREFIX}/${endpoint}`);
 }
 
-export type ScenariosResponse = Scenario[];
+export type ScenariosResponse = ScenarioResponse[];
 
 export interface ScenarioResponse {
+	id: string;
+	name: string;
+	revision: number;
+	author: string;
+	description: string;
+	difficulty: string;
+	objectives: ObjectiveResponse[];
+	constraints: Map<string, number>;
+}
+
+export interface ObjectiveResponse {
+	id: string;
 	name: string;
 	description: string;
-	antennas: {
-		id: number;
-		name: string;
-	}[];
-	objectives: {
-		name: "string";
-		// TODO
-	}[];
-	constraints: Constraints;
+	status: "ready" | "locked"
 }
 
 export type SelectScenarioResponse = Message;
