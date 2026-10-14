@@ -18,8 +18,8 @@ import (
 
 const qemuSystemArmEnvVar = "QEMU_SYSTEM_ARM_BIN"
 
-const UartTCPAddr = "127.0.0.1"
-const UartTCPPort = 10000
+const uartTCPAddr = "127.0.0.1"
+const uartTCPPort = 10000
 
 const uartConnectTimeout = 5 * time.Second
 
@@ -49,7 +49,7 @@ func LoadAndStartFirmware(
 		cmdDone <- cmd.Wait()
 	}()
 
-	address := net.JoinHostPort(UartTCPAddr, strconv.Itoa(UartTCPPort))
+	address := net.JoinHostPort(uartTCPAddr, strconv.Itoa(uartTCPPort))
 
 	app.LoaderLogger.Printf("Connecting to %s", address)
 	conn, err := dialUART(address, uartConnectTimeout, cmdDone)
@@ -161,7 +161,7 @@ func load(firmwareFilePath string) (*exec.Cmd, error) {
 		"-M", "mps2-an386",
 		"-nographic",
 		"-kernel", firmwareFilePath,
-		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=on", UartTCPAddr, UartTCPPort),
+		"-serial", fmt.Sprintf("tcp:%s:%d,server=on,wait=on", uartTCPAddr, uartTCPPort),
 		"-gdb", fmt.Sprintf("tcp:%s:%d", GDBTCPAddr, GDBTCPPort)}
 
 	app.LoaderLogger.Printf("Starting qemu: %s %s\n",

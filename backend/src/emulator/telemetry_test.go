@@ -1,14 +1,13 @@
-package tests
+package emulator
 
 import (
 	"encoding/binary"
 	"encoding/hex"
 	"reflect"
-	"sojourn/emulator"
 	"testing"
 )
 
-func crc16(data []byte) uint16 {
+func refCRC16(data []byte) uint16 {
 	crc := uint16(0xFFFF)
 	for _, b := range data {
 		crc ^= uint16(b) << 8
@@ -25,7 +24,7 @@ func crc16(data []byte) uint16 {
 
 func encodeFrame(payload []byte) string {
 	body := append([]byte{byte(len(payload))}, payload...)
-	sum := binary.BigEndian.AppendUint16(nil, crc16(body))
+	sum := binary.BigEndian.AppendUint16(nil, refCRC16(body))
 	return hex.EncodeToString(append(append([]byte{0xEB, 0x90}, body...), sum...))
 }
 
@@ -42,7 +41,7 @@ func TestAsMapMatchesReferenceDecoder(t *testing.T) {
 		0x7E, 0x02, 0xAB, 0xCD, // unknown
 	}
 
-	frame, err := emulator.DecodeTelemetryFrame(encodeFrame(payload))
+	frame, err := DecodeTelemetryFrame(encodeFrame(payload))
 	if err != nil {
 		t.Fatalf("decode: %v", err)
 	}

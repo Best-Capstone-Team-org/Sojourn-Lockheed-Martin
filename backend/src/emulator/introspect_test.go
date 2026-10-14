@@ -1,4 +1,4 @@
-package tests
+package emulator_test
 
 import (
 	"bufio"
