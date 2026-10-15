@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sojourn/emulator"
 )
 
@@ -53,7 +54,7 @@ func (s *State) LoadScenarios(scenariosDir string) error {
 			continue
 		}
 
-		scenario, err := LoadScenario(scenarioDir.Name())
+		scenario, err := LoadScenario(filepath.Join(scenariosDir, scenarioDir.Name()))
 
 		if err != nil {
 			return err
