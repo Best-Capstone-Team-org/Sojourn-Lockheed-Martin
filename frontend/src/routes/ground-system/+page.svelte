@@ -14,7 +14,7 @@
 		type CommandDownlink,
 		type CommandUplink,
 	} from "$lib/api";
-	import { gameState } from "$lib/components/ground-system/GameState.svelte"
+	import { gameState } from "$lib/components/ground-system/GameState.svelte";
 	import { onMount } from "svelte";
 
 	// dummy data for the mission status
