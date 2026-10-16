@@ -71,7 +71,7 @@
 
 	onMount(() => {
 		if (!ws) {
-			ws = apiWebSocket(`select-scenario?id=${gameState.id}`);
+			ws = apiWebSocket(`select-scenario?scenario-id=${gameState.id}`);
 
 			ws.onopen = () => {
 				ready = true;
