@@ -12,6 +12,7 @@
 		apiWebSocket,
 		type Telemetry,
 		type CommandDownlink,
+		type CommandUplink,
 	} from "$lib/api";
 	import { onMount } from "svelte";
 
@@ -60,8 +61,9 @@
 	let ws = $state<WebSocket | undefined>(undefined);
 	let ready = $state(false);
 
-	// NOTE might not need this but it's good for debug print
+	// using it for frontend state (DAVID)
 	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
+	let commandUplink = $state<CommandUplink | undefined>(undefined);
 
 	let tlm = $state<string[]>([]);
 	let readOutTlm = $state<Telemetry>();
@@ -122,7 +124,10 @@
 					defaultSize={15}
 					minSize={10}
 				>
-					<TelemetryConsole />
+					<TelemetryConsole
+						{commandDownlink}
+						{commandUplink}
+					/>
 				</Resizable.Pane>
 
 				<Resizable.Handle />

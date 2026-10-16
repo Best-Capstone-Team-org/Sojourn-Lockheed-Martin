@@ -14,7 +14,7 @@
 
 ## Project Goal
 
-Sojourn is a reverse-engineering game platform that places players in the role of mission-operations engineers responsible for saving an aging deep-space probe whose original source code has been lost. Players will analyze an ARM flight binary, compose and transmit commands through a ground-station interface, experience simulated communication delays, and interpret telemetry to determine the effects of their actions. The goal is to create a realistic, extensible educational environment for teaching reverse engineering, where future missions can be added through authored content rather than modifications to the core platform.
+Aerospace and defense organizations like Lockheed Martin need engineers who can analyze software when its source code is gone, yet hands-on training for reverse engineering is scarce. Sojourn is an educational game that casts players as mission-operations engineers saving an aging deep-space probe. They take apart its real ARM flight binary running on emulated hardware, uplink commands through a ground station with realistic signal delays, and decode the telemetry that comes back. New missions are authored as content, not code, so the sponsor, educators, and the wider community can keep building realistic training for the engineers who will maintain tomorrow's spacecraft.
 
 ## Getting Started
 
