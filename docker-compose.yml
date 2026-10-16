@@ -4,5 +4,6 @@ services:
     container_name: sojourn
     environment:
       - BUILD_DIR=/app/frontend
+      - SCENARIOS_DIR=/app/scenarios
     ports:
       - "8080:8080"

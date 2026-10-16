@@ -29,7 +29,7 @@ export interface ObjectiveResponse {
 	id: string;
 	name: string;
 	description: string;
-	status: "ready" | "locked"
+	status: "ready" | "locked";
 }
 
 export type SelectScenarioResponse = Message;
@@ -72,7 +72,6 @@ export type CommandDownlink =
 			objectives: Objective[];
 			constraints: Constraints;
 	  };
-
 
 export interface Save {
 	id: number;

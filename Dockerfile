@@ -26,6 +26,7 @@ WORKDIR /app
 COPY --from=backend /out/sojourn /usr/local/bin/sojourn
 COPY --from=frontend /app/frontend/build ./frontend
 COPY --from=firmware /firmware/build/probe_rom.elf ./probe_rom.elf
+COPY deps/sojourn/scenarios/ ./scenarios
 
 EXPOSE 8080
-CMD ["sojourn", "/app/probe_rom.elf"]
+CMD ["sojourn"]
