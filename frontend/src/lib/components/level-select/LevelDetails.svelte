@@ -18,7 +18,9 @@
 
 <Box class="w-full">
 	<div class="flex min-h-[12vh] min-w-0 flex-row items-stretch gap-[1vw] p-2">
-		<div class="flex min-h-0 min-w-0 flex-1 flex-row items-stretch gap-[1vw]">
+		<div
+			class="flex min-h-0 min-w-0 flex-1 flex-row items-stretch gap-[1vw]"
+		>
 			<Screen
 				class="flex flex-col items-center justify-center gap-[1vw]"
 				bezelClass="aspect-square h-full min-h-0 shrink-0 self-stretch"
