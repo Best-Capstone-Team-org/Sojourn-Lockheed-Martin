@@ -17,7 +17,7 @@
 
 <div
 	class={[
-		"relative overflow-hidden rounded bg-black p-0.5 pt-px",
+		"relative rounded bg-black p-0.5 pt-px",
 
 		// overlay goes from transparent to shadow on button press
 		"after:pointer-events-none after:absolute after:inset-0 after:z-10 after:rounded",

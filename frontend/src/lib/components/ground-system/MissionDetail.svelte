@@ -45,10 +45,7 @@
 				<p class="mb-2 text-sm">{description}</p>
 
 				{#if diagnostic && status !== MissionStatusEnum.COMPLETE}
-					<Screen
-						class="p-3"
-						bezelClass="h-full"
-					>
+					<Screen class="p-3">
 						<p class="text-sm">{diagnostic}</p>
 					</Screen>
 				{/if}
