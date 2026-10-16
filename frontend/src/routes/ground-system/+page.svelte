@@ -14,6 +14,7 @@
 		type CommandDownlink,
 		type CommandUplink,
 	} from "$lib/api";
+	import { gameState } from "$lib/components/ground-system/GameState.svelte"
 	import { onMount } from "svelte";
 
 	// dummy data for the mission status
@@ -70,7 +71,7 @@
 
 	onMount(() => {
 		if (!ws) {
-			ws = apiWebSocket("command-ws");
+			ws = apiWebSocket(`select-scenario?id=${gameState.id}`);
 
 			ws.onopen = () => {
 				ready = true;
