@@ -3,10 +3,7 @@
 	import { resolve } from "$app/paths";
 	import levelSelectScreen from "$lib/assets/level-select-screen.png";
 	import Button from "$lib/components/Button/Button.svelte";
-	import {
-		apiFetch,
-		type ScenarioResponse,
-	} from "$lib/api";
+	import { apiFetch, type ScenarioResponse } from "$lib/api";
 	import { onMount } from "svelte";
 
 	const levels = [1, 2, 3, 4, 5, 6, 7, 8];
