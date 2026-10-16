@@ -3,15 +3,22 @@ package game
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"sojourn/app"
 	"sojourn/emulator"
+	"strconv"
+	"strings"
 )
 
 type State struct {
 	phase Phase
 
 	Scenario *Scenario
+
+	evaluation Evaluation
+	grader     *Grader
 
 	AvailableScenarios map[string]*Scenario
 }
@@ -76,31 +83,90 @@ func (s *State) SelectScenario(scenarioId string) error {
 	scenario, ok := s.AvailableScenarios[scenarioId]
 
 	if !ok {
-		return errors.New(fmt.Sprintf("Invalid scenario id %s", scenarioId))
+		return fmt.Errorf("Invalid scenario id %s", scenarioId)
 	}
 
 	s.Scenario = scenario
+	s.grader = NewGrader(s, net.JoinHostPort(emulator.GDBTCPAddr, strconv.Itoa(emulator.GDBTCPPort)))
+
+	evaluation, err := NewEvaluation(scenario)
+	if err != nil {
+		return err
+	}
+	s.evaluation = evaluation
+
 	s.phase = PhaseReady
 
 	return nil
 }
 
-func (s *State) Start(downlinkChan chan []byte, uplinkChan chan []byte, done chan struct{}) error {
+func (s *State) Start(downlinkChan chan DownlinkMessage, uplinkChan chan []byte, done chan struct{}) error {
 	if s.phase != PhaseReady {
 		return unexpectedPhase("starting game")
 	}
 
-	s.Scenario.resetEvaluation()
+	s.evaluation.reset()
 	s.phase = PhaseInProgress
+
+	emulatorDownlinkChan := make(chan []byte)
 
 	go launchFirmware(
 		filepath.Join(s.Scenario.Dir, s.Scenario.Manifest.Firmware.ROM),
-		downlinkChan,
+		emulatorDownlinkChan,
 		uplinkChan,
 		done,
 	)
 
+	go s.downlinkTranslatorPump(downlinkChan, emulatorDownlinkChan)
+
 	return nil
+}
+
+func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessage,
+	emulatorDownlinkChan chan []byte) {
+	app.GameLogger.Println("Starting downlink translator pump")
+
+	for downlinkMessage := range emulatorDownlinkChan {
+		line := strings.TrimSpace(string(downlinkMessage))
+
+		var err error
+
+		if strings.HasPrefix(line, "TLM ") {
+			frame, err := emulator.DecodeTelemetryFrame(line[4:])
+			if err != nil {
+				app.ErrorLogger.Printf("Failed to decode telemetry frame: %v", err)
+				continue
+			}
+
+			emulator.PrintTelemetryFrame(frame)
+
+			if err := s.grader.Grade(frame); err != nil {
+				app.ErrorLogger.Printf("Grading: %v", err)
+			}
+
+			// TODO: send state downlink
+
+			interfaceDownlinkChan <- &TLMDownlinkMessage{
+				TLM:       line,
+				Telemetry: frame,
+			}
+		} else {
+			app.ServerLogger.Printf("Command Response: `%s`\n", line)
+
+			interfaceDownlinkChan <- &CommandResponseDownlinkMessage{
+				Response: line,
+			}
+		}
+
+		if err != nil {
+			app.ServerLogger.Printf("Error writing JSON, probably WS connection closed: %+v\n", err)
+			break
+		}
+	}
+
+	close(interfaceDownlinkChan)
+
+	app.GameLogger.Println("Exiting downlink translator pump")
 }
 
 func (s *State) Stop() error {
@@ -128,14 +194,24 @@ func (s *State) Evaluate(frame Frame) error {
 		return unexpectedPhase("evaluating a frame")
 	}
 
-	return s.Scenario.Evaluate(frame)
+	return s.evaluation.Evaluate(frame)
+}
+
+func (s *State) ObjectiveStatus(scenario *Scenario, objective Objective) ObjectiveStatus {
+	if s.Scenario == scenario {
+		if state, ok := s.evaluation.GetObjectiveState(objective.ID); ok {
+			return state.Status
+		}
+	}
+
+	return initialObjectiveStatus(objective)
 }
 
 func (s *State) MemoryRanges() ([]emulator.MemoryRange, error) {
 	if s.Scenario == nil {
 		return nil, errors.New("no scenario selected")
 	}
-	return s.Scenario.MemoryRanges(), nil
+	return s.evaluation.MemoryRanges(), nil
 }
 
 func unexpectedPhase(phase string) error {

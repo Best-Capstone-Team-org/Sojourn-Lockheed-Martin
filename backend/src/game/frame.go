@@ -18,22 +18,27 @@ type Frame struct {
 }
 
 type Evaluation struct {
-	memoryRanges []emulator.MemoryRange
-	historyDepth int
-	framesSeen   int
-	baseline     MemoryReader
-	history      []EvaluationSnapshot
+	scenario        *Scenario
+	objectiveStates map[string]*ObjectiveState
+	memoryRanges    []emulator.MemoryRange
+	historyDepth    int
+	framesSeen      int
+	baseline        MemoryReader
+	history         []Frame
+	scriptRunner    ScriptRunner
 }
 
-func newEvaluation(s *Scenario) (Evaluation, error) {
+func NewEvaluation(s *Scenario) (Evaluation, error) {
 	ranges, err := s.collectMemoryRanges()
 	if err != nil {
 		return Evaluation{}, err
 	}
 
 	return Evaluation{
-		memoryRanges: ranges,
-		historyDepth: s.requiredHistoryDepth(),
+		scenario:        s,
+		objectiveStates: initializeObjectiveStates(s.Objectives),
+		memoryRanges:    ranges,
+		historyDepth:    s.requiredHistoryDepth(),
 	}, nil
 }
 
@@ -184,20 +189,18 @@ func predicateChildren(p Predicate) ([]Predicate, error) {
 	}
 }
 
-func (s *Scenario) MemoryRanges() []emulator.MemoryRange {
-	return slices.Clone(s.evaluation.memoryRanges)
+func (e *Evaluation) MemoryRanges() []emulator.MemoryRange {
+	return slices.Clone(e.memoryRanges)
 }
 
-func (s *Scenario) Evaluate(frame Frame) error {
-	e := &s.evaluation
-
+func (e *Evaluation) Evaluate(frame Frame) error {
 	if len(e.memoryRanges) > 0 && frame.Memory == nil {
 		return errors.New("scenario reads memory but the frame carries none")
 	}
 
 	e.framesSeen++
 
-	if s.Setup != nil && e.framesSeen <= s.Setup.SettleFrames {
+	if e.scenario.Setup != nil && e.framesSeen <= e.scenario.Setup.SettleFrames {
 		e.baseline = frame.Memory
 		return nil
 	}
@@ -206,36 +209,11 @@ func (s *Scenario) Evaluate(frame Frame) error {
 		e.baseline = frame.Memory
 	}
 
-	snapshot := EvaluationSnapshot{
-		Telemetry:  frame.Telemetry,
-		Events:     frame.Events,
-		Log:        frame.Log,
-		Budget:     frame.Budget,
-		Introspect: frame.Memory,
-		Baseline:   e.baseline,
-	}
-
-	telemetry := make([]map[string]any, len(e.history))
-	for i, h := range e.history {
-		telemetry[i] = h.Telemetry
-	}
-
-	ctx := &EvaluationContext{
-		Telemetry:       snapshot.Telemetry,
-		Introspect:      snapshot.Introspect,
-		Baseline:        snapshot.Baseline,
-		Events:          snapshot.Events,
-		History:         telemetry,
-		HistoryContexts: e.history,
-		Log:             snapshot.Log,
-		Budget:          snapshot.Budget,
-	}
-
-	if msg := s.evaluateObjectives(ctx); msg != "" {
+	if msg := e.evaluateObjectives(frame); msg != "" {
 		return errors.New(msg)
 	}
 
-	e.history = append(e.history, snapshot)
+	e.history = append(e.history, frame)
 	if e.historyDepth >= 0 && len(e.history) > e.historyDepth {
 		e.history = slices.Clone(e.history[len(e.history)-e.historyDepth:])
 	}
@@ -243,8 +221,15 @@ func (s *Scenario) Evaluate(frame Frame) error {
 	return nil
 }
 
-func (s *Scenario) resetEvaluation() {
-	s.evaluation.framesSeen = 0
-	s.evaluation.baseline = nil
-	s.evaluation.history = nil
+func (e *Evaluation) reset() {
+	e.objectiveStates = initializeObjectiveStates(e.scenario.Objectives)
+	e.framesSeen = 0
+	e.baseline = nil
+	e.history = nil
+}
+
+func (e *Evaluation) past(index int) *Evaluation {
+	past := *e
+	past.history = e.history[:index]
+	return &past
 }

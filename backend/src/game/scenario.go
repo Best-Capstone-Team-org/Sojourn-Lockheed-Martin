@@ -10,14 +10,12 @@ import (
 
 // Scenarios have manifest.json, objectives.json, setup.json, symbols.json, memmap.json
 type Scenario struct {
-	Dir             string
-	Manifest        Manifest
-	Objectives      []Objective
-	Setup           *Setup
-	Symbols         SymbolsFile
-	MemMap          MemMapFile
-	ObjectiveStates map[string]*ObjectiveState
-	evaluation      Evaluation
+	Dir        string
+	Manifest   Manifest
+	Objectives []Objective
+	Setup      *Setup
+	Symbols    SymbolsFile
+	MemMap     MemMapFile
 }
 
 func validateObjectiveRequirements(objectives []Objective) error {
@@ -352,13 +350,12 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 	}
 
 	scenario := &Scenario{
-		Dir:             dir,
-		Manifest:        manifest,
-		Objectives:      objectivesFile.Objectives,
-		Setup:           setup,
-		Symbols:         symbolsFile,
-		MemMap:          memMapFile,
-		ObjectiveStates: initializeObjectiveStates(objectivesFile.Objectives),
+		Dir:        dir,
+		Manifest:   manifest,
+		Objectives: objectivesFile.Objectives,
+		Setup:      setup,
+		Symbols:    symbolsFile,
+		MemMap:     memMapFile,
 	}
 
 	if err := scenario.validateObjectiveAddresses(); err != nil {
@@ -369,11 +366,9 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 		return nil, err
 	}
 
-	evaluation, err := newEvaluation(scenario)
-	if err != nil {
+	if _, err := scenario.collectMemoryRanges(); err != nil {
 		return nil, err
 	}
-	scenario.evaluation = evaluation
 
 	return scenario, nil
 }
@@ -401,23 +396,26 @@ func initializeObjectiveStates(objectives []Objective) map[string]*ObjectiveStat
 	states := make(map[string]*ObjectiveState)
 
 	for _, objective := range objectives {
-		status := ObjectiveStatusActive
-		if len(objective.Requires) > 0 {
-			status = ObjectiveStatusLocked
-		}
-
 		states[objective.ID] = &ObjectiveState{
-			Status: status,
+			Status: initialObjectiveStatus(objective),
 		}
 	}
 
 	return states
 }
 
+func initialObjectiveStatus(objective Objective) ObjectiveStatus {
+	if len(objective.Requires) > 0 {
+		return ObjectiveStatusLocked
+	}
+
+	return ObjectiveStatusActive
+}
+
 // check if all requirements for an objective are complete
-func (s *Scenario) requirementsComplete(objective Objective) bool {
+func (e *Evaluation) requirementsComplete(objective Objective) bool {
 	for _, requiredID := range objective.Requires {
-		state, ok := s.ObjectiveStates[requiredID]
+		state, ok := e.objectiveStates[requiredID]
 		if !ok || state.Status != ObjectiveStatusComplete {
 			return false
 		}
@@ -427,9 +425,9 @@ func (s *Scenario) requirementsComplete(objective Objective) bool {
 }
 
 // update which states are now unlocked
-func (s *Scenario) updateObjectiveStates() {
-	for _, objective := range s.Objectives {
-		state, ok := s.ObjectiveStates[objective.ID]
+func (e *Evaluation) updateObjectiveStates() {
+	for _, objective := range e.scenario.Objectives {
+		state, ok := e.objectiveStates[objective.ID]
 		if !ok {
 			continue
 		}
@@ -438,14 +436,14 @@ func (s *Scenario) updateObjectiveStates() {
 			continue //we don't have to unlock objectives that are already active or complete
 		}
 
-		if s.requirementsComplete(objective) {
+		if e.requirementsComplete(objective) {
 			state.Status = ObjectiveStatusActive
 		}
 	}
 }
 
 // return the current objective state
-func (s *Scenario) GetObjectiveState(id string) (*ObjectiveState, bool) {
-	state, ok := s.ObjectiveStates[id]
+func (e *Evaluation) GetObjectiveState(id string) (*ObjectiveState, bool) {
+	state, ok := e.objectiveStates[id]
 	return state, ok
 }

@@ -577,7 +577,12 @@ func TestScenarioGradesCapturedMemory(t *testing.T) {
 	scenario := loadScenario(t, `{"id": "mode", "title": "Mode", "brief": "Set the mode.",
 		"success": {"op": "mem_u8", "at": {"addr": "0x20000040"}, "cmp": "eq", "value": 3}}`)
 
-	ranges := scenario.MemoryRanges()
+	evaluation, err := game.NewEvaluation(scenario)
+	if err != nil {
+		t.Fatalf("NewEvaluation: %v", err)
+	}
+
+	ranges := evaluation.MemoryRanges()
 	for _, tc := range []struct {
 		value byte
 		want  game.ObjectiveStatus
@@ -588,10 +593,10 @@ func TestScenarioGradesCapturedMemory(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewMemorySnapshot: %v", err)
 		}
-		if err := scenario.Evaluate(game.Frame{Memory: snap}); err != nil {
+		if err := evaluation.Evaluate(game.Frame{Memory: snap}); err != nil {
 			t.Fatalf("Step: %v", err)
 		}
-		if state, _ := scenario.GetObjectiveState("mode"); state.Status != tc.want {
+		if state, _ := evaluation.GetObjectiveState("mode"); state.Status != tc.want {
 			t.Fatalf("with 0x%02X status = %s, want %s", tc.value, state.Status, tc.want)
 		}
 	}

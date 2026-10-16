@@ -30,26 +30,30 @@ func rawPredicate(t *testing.T, p any) json.RawMessage {
 	return data
 }
 
-func frameScenario(t *testing.T, objectives ...Objective) *Scenario {
+func frameEvaluation(t *testing.T, objectives ...Objective) *Evaluation {
 	t.Helper()
 	s := &Scenario{
-		Objectives:      objectives,
-		ObjectiveStates: initializeObjectiveStates(objectives),
+		Objectives: objectives,
 		Symbols: SymbolsFile{
 			Symbols: map[string]string{"g_mode": "0x20000010", "g_buf": "0x20000020"},
 		},
 	}
-	evaluation, err := newEvaluation(s)
+	e, err := NewEvaluation(s)
 	if err != nil {
-		t.Fatalf("newEvaluation: %v", err)
+		t.Fatalf("NewEvaluation: %v", err)
 	}
-	s.evaluation = evaluation
-	return s
+	return &e
 }
 
-func status(t *testing.T, s *Scenario, id string) ObjectiveStatus {
+func readyState(t *testing.T, objectives ...Objective) *State {
 	t.Helper()
-	state, ok := s.GetObjectiveState(id)
+	e := frameEvaluation(t, objectives...)
+	return &State{phase: PhaseReady, Scenario: e.scenario, evaluation: *e}
+}
+
+func status(t *testing.T, e *Evaluation, id string) ObjectiveStatus {
+	t.Helper()
+	state, ok := e.GetObjectiveState(id)
 	if !ok {
 		t.Fatalf("no state for %q", id)
 	}
@@ -62,7 +66,7 @@ var modeIs2 = Objective{
 }
 
 func TestStepEvaluatesFrameMemory(t *testing.T) {
-	s := frameScenario(t, modeIs2)
+	s := frameEvaluation(t, modeIs2)
 
 	if err := s.Evaluate(Frame{Memory: sram(0x10, 1)}); err != nil {
 		t.Fatalf("Evaluate: %v", err)
@@ -80,7 +84,7 @@ func TestStepEvaluatesFrameMemory(t *testing.T) {
 }
 
 func TestStepWithoutRequiredMemoryFails(t *testing.T) {
-	s := frameScenario(t, modeIs2)
+	s := frameEvaluation(t, modeIs2)
 
 	if err := s.Evaluate(Frame{}); err == nil {
 		t.Fatal("expected Step without memory to fail")
@@ -91,7 +95,7 @@ func TestStepWithoutRequiredMemoryFails(t *testing.T) {
 }
 
 func TestMemChangedComparesAgainstFirstFrame(t *testing.T) {
-	s := frameScenario(t, Objective{
+	s := frameEvaluation(t, Objective{
 		ID:      "patched",
 		Success: Predicate{Op: "mem_changed", At: &AddressRef{Sym: "g_buf"}, Len: 4},
 	})
@@ -112,7 +116,7 @@ func TestMemChangedComparesAgainstFirstFrame(t *testing.T) {
 }
 
 func TestSustainedSeesEachFramesMemory(t *testing.T) {
-	s := frameScenario(t, Objective{
+	s := frameEvaluation(t, Objective{
 		ID: "hold",
 		Success: Predicate{
 			Op:     "sustained",
@@ -140,7 +144,7 @@ func TestSustainedSeesEachFramesMemory(t *testing.T) {
 }
 
 func TestHistoryIsBoundedByTemporalDepth(t *testing.T) {
-	s := frameScenario(t, Objective{
+	s := frameEvaluation(t, Objective{
 		ID: "hot",
 		Success: Predicate{
 			Op:     "within",
@@ -155,8 +159,8 @@ func TestHistoryIsBoundedByTemporalDepth(t *testing.T) {
 		}
 	}
 
-	if len(s.evaluation.history) > 2 {
-		t.Fatalf("history holds %d frames, want at most 2", len(s.evaluation.history))
+	if len(s.history) > 2 {
+		t.Fatalf("history holds %d frames, want at most 2", len(s.history))
 	}
 
 	if err := s.Evaluate(Frame{Telemetry: map[string]any{"temp": 60.0}}); err != nil {
@@ -168,7 +172,7 @@ func TestHistoryIsBoundedByTemporalDepth(t *testing.T) {
 }
 
 func TestStepWithoutMemoryPredicatesNeedsNoMemory(t *testing.T) {
-	s := frameScenario(t, Objective{
+	s := frameEvaluation(t, Objective{
 		ID:      "safe",
 		Success: Predicate{Op: "tlm", Path: "mode", Cmp: "eq", Value: "SAFE"},
 	})
@@ -187,7 +191,7 @@ func TestStepWithoutMemoryPredicatesNeedsNoMemory(t *testing.T) {
 
 func TestMemoryRangesCoverEveryPredicateMerged(t *testing.T) {
 	fail := Predicate{Op: "mem_u16", At: &AddressRef{Addr: "0x20000011"}, Cmp: "eq", Value: 0.0}
-	s := frameScenario(t, Objective{
+	s := frameEvaluation(t, Objective{
 		ID: "all",
 		Success: Predicate{Op: "all", Of: rawPredicate(t, []Predicate{
 			{Op: "mem_u8", At: &AddressRef{Sym: "g_mode"}, Cmp: "eq", Value: 1.0},
@@ -206,12 +210,12 @@ func TestMemoryRangesCoverEveryPredicateMerged(t *testing.T) {
 }
 
 func TestStateBaselineIsLastSettleFrame(t *testing.T) {
-	s := frameScenario(t, Objective{
+	state := readyState(t, Objective{
 		ID:      "patched",
 		Success: Predicate{Op: "mem_changed", At: &AddressRef{Sym: "g_buf"}, Len: 1},
 	})
-	s.Setup = &Setup{SettleFrames: 2}
-	state := &State{phase: PhaseReady, Scenario: s}
+	state.Scenario.Setup = &Setup{SettleFrames: 2}
+	s := &state.evaluation
 
 	startGame(t, state)
 
@@ -238,7 +242,7 @@ func TestStateBaselineIsLastSettleFrame(t *testing.T) {
 }
 
 func TestStateStepBeforeStartFails(t *testing.T) {
-	state := &State{phase: PhaseReady, Scenario: frameScenario(t)}
+	state := readyState(t)
 
 	if err := state.Evaluate(Frame{}); err == nil {
 		t.Fatal("expected Step before Start to fail")

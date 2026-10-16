@@ -9,17 +9,17 @@ import (
 	"strings"
 )
 
-func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate) (bool, string) {
+func (e *Evaluation) evaluatePredicate(frame Frame, predicate Predicate) (bool, string) {
 	switch predicate.Op {
 	case "tlm":
-		actual, found := getTelemetryValue(ctx, predicate.Path)
+		actual, found := getTelemetryValue(frame, predicate.Path)
 		if !found {
 			return false, ""
 		}
 
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 	case "tlm_bits":
-		actual, found := getTelemetryValue(ctx, predicate.Path)
+		actual, found := getTelemetryValue(frame, predicate.Path)
 		if !found {
 			return false, ""
 		}
@@ -31,9 +31,9 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 
 		return compareValues(masked, predicate.Value, predicate.Cmp), ""
 	case "channel_present":
-		return telemetryChannelPresent(ctx, predicate.ID), ""
+		return telemetryChannelPresent(frame, predicate.ID), ""
 	case "channel_absent":
-		return !telemetryChannelPresent(ctx, predicate.ID), ""
+		return !telemetryChannelPresent(frame, predicate.ID), ""
 	case "all":
 		var predicates []Predicate
 		if err := json.Unmarshal(predicate.Of, &predicates); err != nil {
@@ -41,7 +41,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 		}
 
 		for _, child := range predicates {
-			result, err := s.evaluatePredicate(ctx, child)
+			result, err := e.evaluatePredicate(frame, child)
 			if err != "" {
 				return false, err
 			}
@@ -59,7 +59,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 		}
 
 		for _, child := range predicates {
-			result, err := s.evaluatePredicate(ctx, child)
+			result, err := e.evaluatePredicate(frame, child)
 			if err != "" {
 				return false, err
 			}
@@ -76,14 +76,14 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, fmt.Sprintf("Failed to parse 'of' field for 'not' operation: %v", err)
 		}
 
-		result, err := s.evaluatePredicate(ctx, child)
+		result, err := e.evaluatePredicate(frame, child)
 		if err != "" {
 			return false, err
 		}
 
 		return !result, ""
 	case "mem_u8":
-		if ctx.Introspect == nil {
+		if frame.Memory == nil {
 			return false, "Introspect not available"
 		}
 
@@ -91,12 +91,12 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, "Predicate missing 'at' field for mem_u8 operation"
 		}
 
-		addr, err := s.ResolveAddress(*predicate.At)
+		addr, err := e.scenario.ResolveAddress(*predicate.At)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
 		}
 
-		data, err := ctx.Introspect.Read(uint32(addr), 1)
+		data, err := frame.Memory.Read(uint32(addr), 1)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
 		}
@@ -108,7 +108,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 	case "mem_u16":
-		if ctx.Introspect == nil {
+		if frame.Memory == nil {
 			return false, "Introspect not available"
 		}
 
@@ -116,12 +116,12 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, "Predicate missing 'at' field for mem_u16 operation"
 		}
 
-		addr, err := s.ResolveAddress(*predicate.At)
+		addr, err := e.scenario.ResolveAddress(*predicate.At)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
 		}
 
-		data, err := ctx.Introspect.Read(uint32(addr), 2)
+		data, err := frame.Memory.Read(uint32(addr), 2)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
 		}
@@ -133,7 +133,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 	case "mem_u32":
-		if ctx.Introspect == nil {
+		if frame.Memory == nil {
 			return false, "Introspect not available"
 		}
 
@@ -141,12 +141,12 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, "Predicate missing 'at' field for mem_u32 operation"
 		}
 
-		addr, err := s.ResolveAddress(*predicate.At)
+		addr, err := e.scenario.ResolveAddress(*predicate.At)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
 		}
 
-		data, err := ctx.Introspect.Read(uint32(addr), 4)
+		data, err := frame.Memory.Read(uint32(addr), 4)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
 		}
@@ -158,7 +158,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 	case "mem_bits":
-		if ctx.Introspect == nil {
+		if frame.Memory == nil {
 			return false, "Introspect not available"
 		}
 
@@ -171,12 +171,12 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			width = 4
 		}
 
-		addr, err := s.ResolveAddress(*predicate.At)
+		addr, err := e.scenario.ResolveAddress(*predicate.At)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
 		}
 
-		data, err := ctx.Introspect.Read(uint32(addr), width)
+		data, err := frame.Memory.Read(uint32(addr), width)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
 		}
@@ -193,7 +193,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 	case "mem":
-		if ctx.Introspect == nil {
+		if frame.Memory == nil {
 			return false, "Introspect not available"
 		}
 
@@ -201,12 +201,12 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, "Predicate missing 'at' field for mem operation"
 		}
 
-		addr, err := s.ResolveAddress(*predicate.At)
+		addr, err := e.scenario.ResolveAddress(*predicate.At)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
 		}
 
-		data, err := ctx.Introspect.Read(uint32(addr), predicate.Len)
+		data, err := frame.Memory.Read(uint32(addr), predicate.Len)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to read memory: %v", err)
 		}
@@ -232,11 +232,11 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 
 		return equal, ""
 	case "mem_changed":
-		if ctx.Introspect == nil {
+		if frame.Memory == nil {
 			return false, "Introspect not available"
 		}
 
-		if ctx.Baseline == nil {
+		if e.baseline == nil {
 			return false, "Baseline memory not available"
 		}
 
@@ -244,17 +244,17 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, "Predicate missing 'at' field for mem_changed operation"
 		}
 
-		addr, err := s.ResolveAddress(*predicate.At)
+		addr, err := e.scenario.ResolveAddress(*predicate.At)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to resolve address: %v", err)
 		}
 
-		current, err := ctx.Introspect.Read(uint32(addr), predicate.Len)
+		current, err := frame.Memory.Read(uint32(addr), predicate.Len)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to read current memory: %v", err)
 		}
 
-		baseline, err := ctx.Baseline.Read(uint32(addr), predicate.Len)
+		baseline, err := e.baseline.Read(uint32(addr), predicate.Len)
 		if err != nil {
 			return false, fmt.Sprintf("Failed to read baseline memory: %v", err)
 		}
@@ -281,7 +281,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 				return false, fmt.Sprintf("Invalid event regex %q: %v", predicate.Match, err)
 			}
 
-			for _, event := range ctx.Events {
+			for _, event := range frame.Events {
 				if re.MatchString(event) {
 					return true, ""
 				}
@@ -290,7 +290,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, ""
 		}
 
-		for _, event := range ctx.Events {
+		for _, event := range frame.Events {
 			if strings.Contains(event, predicate.Match) {
 				return true, ""
 			}
@@ -303,13 +303,8 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, fmt.Sprintf("Failed to parse 'of' field for 'ever' operation: %v", err)
 		}
 
-		for i := 0; i < temporalHistoryLen(ctx); i++ {
-			h, msg := historicalContext(ctx, i, child)
-			if msg != "" {
-				return false, msg
-			}
-
-			result, msg := s.evaluatePredicate(h, child)
+		for i, past := range e.history {
+			result, msg := e.past(i).evaluatePredicate(past, child)
 			if msg != "" {
 				return false, msg
 			}
@@ -319,7 +314,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			}
 		}
 
-		return s.evaluatePredicate(ctx, child)
+		return e.evaluatePredicate(frame, child)
 	case "sustained":
 		var child Predicate
 		if err := json.Unmarshal(predicate.Of, &child); err != nil {
@@ -330,18 +325,13 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, "sustained operation requires frames greater than 0"
 		}
 
-		if temporalHistoryLen(ctx)+1 < predicate.Frames {
+		if len(e.history)+1 < predicate.Frames {
 			return false, ""
 		}
 
-		start := temporalHistoryLen(ctx) - (predicate.Frames - 1)
-		for i := start; i < temporalHistoryLen(ctx); i++ {
-			h, msg := historicalContext(ctx, i, child)
-			if msg != "" {
-				return false, msg
-			}
-
-			result, msg := s.evaluatePredicate(h, child)
+		start := len(e.history) - (predicate.Frames - 1)
+		for i := start; i < len(e.history); i++ {
+			result, msg := e.past(i).evaluatePredicate(e.history[i], child)
 			if msg != "" {
 				return false, msg
 			}
@@ -351,7 +341,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			}
 		}
 
-		return s.evaluatePredicate(ctx, child)
+		return e.evaluatePredicate(frame, child)
 	case "within":
 		var child Predicate
 		if err := json.Unmarshal(predicate.Of, &child); err != nil {
@@ -362,23 +352,15 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			return false, "within operation requires frames greater than 0"
 		}
 
-		result, msg := s.evaluatePredicate(ctx, child)
+		result, msg := e.evaluatePredicate(frame, child)
 		if msg != "" || result {
 			return result, msg
 		}
 
-		start := temporalHistoryLen(ctx) - (predicate.Frames - 1)
-		if start < 0 {
-			start = 0
-		}
+		start := max(len(e.history)-(predicate.Frames-1), 0)
 
-		for i := start; i < temporalHistoryLen(ctx); i++ {
-			h, msg := historicalContext(ctx, i, child)
-			if msg != "" {
-				return false, msg
-			}
-
-			result, msg := s.evaluatePredicate(h, child)
+		for i := start; i < len(e.history); i++ {
+			result, msg := e.past(i).evaluatePredicate(e.history[i], child)
 			if msg != "" {
 				return false, msg
 			}
@@ -392,7 +374,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 	case "commanded":
 		var expectedAddr uint32
 		if predicate.At != nil {
-			addr, err := s.ResolveAddress(*predicate.At)
+			addr, err := e.scenario.ResolveAddress(*predicate.At)
 			if err != nil {
 				return false, fmt.Sprintf("Failed to resolve commanded address: %v", err)
 			}
@@ -400,7 +382,7 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 			expectedAddr = uint32(addr)
 		}
 
-		for _, entry := range ctx.Log {
+		for _, entry := range frame.Log {
 			if predicate.Verb != "" && entry.Verb != predicate.Verb {
 				continue
 			}
@@ -418,18 +400,18 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 
 		return false, ""
 	case "budget":
-		used, found := ctx.Budget[predicate.Resource]
+		used, found := frame.Budget[predicate.Resource]
 		if !found {
 			return false, ""
 		}
 
 		return compareValues(used, predicate.Value, predicate.Cmp), ""
 	case "script":
-		if ctx.ScriptRunner == nil {
+		if e.scriptRunner == nil {
 			return false, "Script runner not available"
 		}
 
-		result, err := ctx.ScriptRunner.EvaluateScript(predicate.Lang, predicate.Entry, ctx)
+		result, err := e.scriptRunner.EvaluateScript(predicate.Lang, predicate.Entry, frame)
 		if err != nil {
 			return false, fmt.Sprintf("Script predicate failed: %v", err)
 		}
@@ -441,8 +423,8 @@ func (s *Scenario) evaluatePredicate(ctx *EvaluationContext, predicate Predicate
 }
 
 // TODO: OBJECTIVE EVALUATION
-func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective) string {
-	state, ok := s.ObjectiveStates[objective.ID]
+func (e *Evaluation) evaluateObjective(frame Frame, objective Objective) string {
+	state, ok := e.objectiveStates[objective.ID]
 	if !ok {
 		return fmt.Sprintf("Objective state for %q not found", objective.ID)
 	}
@@ -465,7 +447,7 @@ func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective
 	}
 
 	if objective.Fail != nil {
-		failed, msg := s.evaluatePredicate(ctx, *objective.Fail)
+		failed, msg := e.evaluatePredicate(frame, *objective.Fail)
 		if msg != "" {
 			return fmt.Sprintf("Error evaluating fail predicate for objective %q: %s", objective.ID, msg)
 		}
@@ -476,13 +458,13 @@ func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective
 		}
 	}
 
-	diagnostic, msg := s.evaluatePartial(ctx, objective)
+	diagnostic, msg := e.evaluatePartial(frame, objective)
 	if msg != "" {
 		return fmt.Sprintf("Error evaluating partial predicate for objective %q: %s", objective.ID, msg)
 	}
 	state.Diagnostic = diagnostic
 
-	success, msg := s.evaluatePredicate(ctx, objective.Success)
+	success, msg := e.evaluatePredicate(frame, objective.Success)
 	if msg != "" {
 		return fmt.Sprintf("Error evaluating success predicate for objective %q: %s", objective.ID, msg)
 	}
@@ -497,20 +479,20 @@ func (s *Scenario) evaluateObjective(ctx *EvaluationContext, objective Objective
 	return ""
 }
 
-func (s *Scenario) evaluateObjectives(ctx *EvaluationContext) string {
-	originalStates := s.ObjectiveStates
-	s.ObjectiveStates = copyObjectiveStates(originalStates)
+func (e *Evaluation) evaluateObjectives(frame Frame) string {
+	originalStates := e.objectiveStates
+	e.objectiveStates = copyObjectiveStates(originalStates)
 
-	for _, objective := range s.Objectives {
-		state := s.ObjectiveStates[objective.ID]
+	for _, objective := range e.scenario.Objectives {
+		state := e.objectiveStates[objective.ID]
 		// Declaration order is meaningful: a later objective may unlock after an earlier
 		// requirement completes during this same evaluation pass.
-		if state != nil && state.Status == ObjectiveStatusLocked && s.requirementsComplete(objective) {
+		if state != nil && state.Status == ObjectiveStatusLocked && e.requirementsComplete(objective) {
 			state.Status = ObjectiveStatusActive
 		}
 
-		if msg := s.evaluateObjective(ctx, objective); msg != "" {
-			s.ObjectiveStates = originalStates
+		if msg := e.evaluateObjective(frame, objective); msg != "" {
+			e.objectiveStates = originalStates
 			return msg
 		}
 	}
@@ -534,9 +516,9 @@ func copyObjectiveStates(states map[string]*ObjectiveState) map[string]*Objectiv
 	return copied
 }
 
-func (s *Scenario) evaluatePartial(ctx *EvaluationContext, objective Objective) (string, string) {
+func (e *Evaluation) evaluatePartial(frame Frame, objective Objective) (string, string) {
 	for _, partial := range objective.Partial {
-		result, errMsg := s.evaluatePredicate(ctx, partial.When)
+		result, errMsg := e.evaluatePredicate(frame, partial.When)
 		if errMsg != "" {
 			return "", errMsg
 		}
