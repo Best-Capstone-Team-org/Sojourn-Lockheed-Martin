@@ -94,7 +94,7 @@ func (s *State) Start(downlinkChan chan []byte, uplinkChan chan []byte, done cha
 	s.phase = PhaseInProgress
 
 	go launchFirmware(
-		s.Scenario.Manifest.Firmware.ROM,
+		filepath.Join(s.Scenario.Dir, s.Scenario.Manifest.Firmware.ROM),
 		downlinkChan,
 		uplinkChan,
 		done,
