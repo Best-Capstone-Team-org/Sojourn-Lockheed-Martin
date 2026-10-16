@@ -250,32 +250,8 @@ type MemoryReader interface {
 	Read(addr uint32, length int) ([]byte, error)
 }
 
-type EvaluationSnapshot struct {
-	Telemetry  map[string]any
-	Events     []string
-	Log        []CommandLogEntry
-	Budget     map[string]int
-	Introspect MemoryReader
-	Baseline   MemoryReader
-}
-
 type ScriptRunner interface {
-	EvaluateScript(lang, entry string, ctx *EvaluationContext) (bool, error)
-}
-
-type EvaluationContext struct {
-	Telemetry  map[string]any
-	Introspect MemoryReader
-	Baseline   MemoryReader
-	Events     []string
-	History    []map[string]any
-	// HistoryContexts is the full per-frame history needed when temporal combinators
-	// wrap predicates that depend on events, command log, budget, or memory.
-	// If omitted, History remains valid for telemetry-only temporal predicates.
-	HistoryContexts []EvaluationSnapshot
-	Log             []CommandLogEntry
-	Budget          map[string]int
-	ScriptRunner    ScriptRunner
+	EvaluateScript(lang, entry string, frame Frame) (bool, error)
 }
 
 // normalize types due to json unmarshalling returning everything as float64
@@ -373,8 +349,8 @@ func compareValues(actual any, expected any, cmp string) bool {
 	}
 }
 
-func getTelemetryValue(ctx *EvaluationContext, path string) (any, bool) {
-	current := any(ctx.Telemetry)
+func getTelemetryValue(frame Frame, path string) (any, bool) {
+	current := any(frame.Telemetry)
 
 	for _, part := range strings.Split(path, ".") {
 		object, ok := current.(map[string]any)
@@ -391,8 +367,8 @@ func getTelemetryValue(ctx *EvaluationContext, path string) (any, bool) {
 	return current, true
 }
 
-func telemetryChannelPresent(ctx *EvaluationContext, id string) bool {
-	channels, ok := ctx.Telemetry["channels"].(map[string]any)
+func telemetryChannelPresent(frame Frame, id string) bool {
+	channels, ok := frame.Telemetry["channels"].(map[string]any)
 	if !ok {
 		return false
 	}
@@ -401,8 +377,8 @@ func telemetryChannelPresent(ctx *EvaluationContext, id string) bool {
 	return exists
 }
 
-func (s *Scenario) getIntrospectionValue(ctx *EvaluationContext, predicate Predicate) ([]byte, string) {
-	if ctx.Introspect == nil {
+func (e *Evaluation) getIntrospectionValue(frame Frame, predicate Predicate) ([]byte, string) {
+	if frame.Memory == nil {
 		return nil, "Introspect not available"
 	}
 
@@ -410,12 +386,12 @@ func (s *Scenario) getIntrospectionValue(ctx *EvaluationContext, predicate Predi
 		return nil, "Predicate missing 'at' field for introspect operation"
 	}
 
-	addr, err := s.ResolveAddress(*predicate.At)
+	addr, err := e.scenario.ResolveAddress(*predicate.At)
 	if err != nil {
 		return nil, fmt.Sprintf("Failed to resolve address: %v", err)
 	}
 
-	data, err := ctx.Introspect.Read(uint32(addr), predicate.Len)
+	data, err := frame.Memory.Read(uint32(addr), predicate.Len)
 	if err != nil {
 		return nil, fmt.Sprintf("Failed to read memory: %v", err)
 	}
@@ -457,84 +433,4 @@ func applyMask(value any, mask int) (any, string) {
 	default:
 		return nil, fmt.Sprintf("Unsupported type %T for mask application", value)
 	}
-}
-
-func predicateNeedsFullHistory(p Predicate) bool {
-	switch p.Op {
-	case "event", "commanded", "budget", "mem_u8", "mem_u16", "mem_u32", "mem_bits", "mem", "mem_changed", "script":
-		return true
-	case "all", "any":
-		var children []Predicate
-		if json.Unmarshal(p.Of, &children) != nil {
-			return true
-		}
-
-		for _, c := range children {
-			if predicateNeedsFullHistory(c) {
-				return true
-			}
-		}
-	case "not", "ever", "sustained", "within":
-		var child Predicate
-		if json.Unmarshal(p.Of, &child) != nil {
-			return true
-		}
-
-		return predicateNeedsFullHistory(child)
-	}
-
-	return false
-}
-
-func temporalHistoryLen(ctx *EvaluationContext) int {
-	if len(ctx.HistoryContexts) > 0 {
-		return len(ctx.HistoryContexts)
-	}
-	return len(ctx.History)
-}
-
-func historicalContext(ctx *EvaluationContext, index int, child Predicate) (*EvaluationContext, string) {
-	if len(ctx.HistoryContexts) > 0 {
-		if index < 0 || index >= len(ctx.HistoryContexts) {
-			return nil, "historical context index out of range"
-		}
-
-		snap := ctx.HistoryContexts[index]
-		h := *ctx
-		h.Telemetry = snap.Telemetry
-		h.Events = snap.Events
-		h.Log = snap.Log
-		h.Budget = snap.Budget
-
-		if snap.Introspect != nil {
-			h.Introspect = snap.Introspect
-		}
-
-		if snap.Baseline != nil {
-			h.Baseline = snap.Baseline
-		}
-
-		if index <= len(ctx.History) {
-			h.History = ctx.History[:index]
-		} else {
-			h.History = nil
-		}
-
-		h.HistoryContexts = ctx.HistoryContexts[:index]
-
-		return &h, ""
-	}
-
-	if predicateNeedsFullHistory(child) {
-		return nil, "temporal predicate requires HistoryContexts for non-telemetry child"
-	}
-
-	if index < 0 || index >= len(ctx.History) {
-		return nil, "historical telemetry index out of range"
-	}
-
-	h := *ctx
-	h.Telemetry = ctx.History[index]
-	h.History = ctx.History[:index]
-	return &h, ""
 }

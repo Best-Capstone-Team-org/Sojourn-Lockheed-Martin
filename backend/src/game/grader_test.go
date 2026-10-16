@@ -6,11 +6,11 @@ import (
 )
 
 func TestGraderGradesTelemetry(t *testing.T) {
-	s := frameScenario(t, Objective{
+	state := readyState(t, Objective{
 		ID:      "safe",
 		Success: Predicate{Op: "tlm", Path: "mode", Cmp: "eq", Value: "SAFE"},
 	})
-	state := &State{phase: PhaseReady, Scenario: s}
+	s := &state.evaluation
 	startGame(t, state)
 	g := NewGrader(state, "127.0.0.1:0")
 	defer g.Close()
@@ -39,8 +39,8 @@ func TestGraderGradesTelemetry(t *testing.T) {
 }
 
 func TestGraderWithoutIntrospectionFailsMemoryObjectives(t *testing.T) {
-	s := frameScenario(t, modeIs2)
-	state := &State{phase: PhaseReady, Scenario: s}
+	state := readyState(t, modeIs2)
+	s := &state.evaluation
 	startGame(t, state)
 
 	// Nothing listens on port 1, so the capture cannot connect.
@@ -56,11 +56,11 @@ func TestGraderWithoutIntrospectionFailsMemoryObjectives(t *testing.T) {
 }
 
 func TestGraderRejectsFramesWhenNotInProgress(t *testing.T) {
-	s := frameScenario(t, Objective{
+	state := readyState(t, Objective{
 		ID:      "safe",
 		Success: Predicate{Op: "tlm", Path: "mode", Cmp: "eq", Value: "SAFE"},
 	})
-	state := &State{phase: PhaseReady, Scenario: s}
+	s := &state.evaluation
 	g := NewGrader(state, "127.0.0.1:1")
 
 	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: true, Mode: "SAFE"}); err == nil {

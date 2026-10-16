@@ -3,26 +3,21 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"sojourn/app"
-	"sojourn/emulator"
 	"sojourn/game"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 type server struct {
-	gs     game.State
-	grader *game.Grader
+	gs game.State
 
 	wsConn *websocket.Conn
 
-	downlinkChan chan []byte
+	downlinkChan chan game.DownlinkMessage
 	uplinkChan   chan []byte
 
 	gameRunningDone chan struct{}
@@ -100,7 +95,7 @@ func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 				ID:          objective.ID,
 				Name:        objective.Title,
 				Description: objective.Brief,
-				Status:      scenario.ObjectiveStates[objective.ID].Status,
+				Status:      s.gs.ObjectiveStatus(scenario, objective),
 			})
 		}
 
@@ -171,13 +166,10 @@ func (s *server) selectScenario(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.wsConn = conn
-	s.downlinkChan = make(chan []byte)
+	s.downlinkChan = make(chan game.DownlinkMessage)
 	s.uplinkChan = make(chan []byte)
 
 	s.gameRunningDone = make(chan struct{})
-
-	// TODO: move this out of the grader
-	s.grader = game.NewGrader(&s.gs, net.JoinHostPort(emulator.GDBTCPAddr, strconv.Itoa(emulator.GDBTCPPort)))
 
 	err = s.gs.Start(s.downlinkChan, s.uplinkChan, s.gameRunningDone)
 	if err != nil {
@@ -238,44 +230,21 @@ func (s *server) uploadPatch(w http.ResponseWriter, r *http.Request) {
 func (s *server) downlinkPump() {
 	app.ServerLogger.Println("Starting downlink pump")
 
-	defer s.grader.Close()
-
 	for downlinkMessage := range s.downlinkChan {
-		line := strings.TrimSpace(string(downlinkMessage))
-
 		var err error
 
-		if strings.HasPrefix(line, "TLM ") {
-			frame, err := emulator.DecodeTelemetryFrame(line[4:])
-			if err != nil {
-				app.ErrorLogger.Printf("Failed to decode telemetry frame: %v", err)
-				continue
-			}
-
-			emulator.PrintTelemetryFrame(frame)
-
-			if err := s.grader.Grade(frame); err != nil {
-				app.ErrorLogger.Printf("Grading: %v", err)
-			}
-
-			// TODO: send state downlink
-
-			t := telemetryDownlink{
+		switch downlinkMessage := downlinkMessage.(type) {
+		case *game.TLMDownlinkMessage:
+			err = s.wsConn.WriteJSON(telemetryDownlink{
 				Type:      "telemetry",
-				TLM:       line,
-				Telemetry: frame,
-			}
-
-			err = s.wsConn.WriteJSON(t)
-		} else {
-			app.ServerLogger.Printf("Command Response: `%s`\n", line)
-
-			r := commandResponseDownlink{
+				TLM:       downlinkMessage.TLM,
+				Telemetry: downlinkMessage.Telemetry,
+			})
+		case *game.CommandResponseDownlinkMessage:
+			err = s.wsConn.WriteJSON(commandResponseDownlink{
 				Type:     "commandResponse",
-				Response: line,
-			}
-
-			err = s.wsConn.WriteJSON(r)
+				Response: downlinkMessage.Response,
+			})
 		}
 
 		if err != nil {

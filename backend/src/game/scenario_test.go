@@ -454,7 +454,10 @@ func TestUpdateObjectiveStatesUnlocksObjective(t *testing.T) {
 				Requires: []string{"objective-1"},
 			},
 		},
-		ObjectiveStates: map[string]*ObjectiveState{
+	}
+	e := &Evaluation{
+		scenario: s,
+		objectiveStates: map[string]*ObjectiveState{
 			"objective-1": {
 				Status: ObjectiveStatusComplete,
 			},
@@ -463,11 +466,11 @@ func TestUpdateObjectiveStatesUnlocksObjective(t *testing.T) {
 			},
 		},
 	}
-	s.updateObjectiveStates()
-	if s.ObjectiveStates["objective-2"].Status != ObjectiveStatusActive {
+	e.updateObjectiveStates()
+	if e.objectiveStates["objective-2"].Status != ObjectiveStatusActive {
 		t.Errorf(
 			"expected objective-2 to be active, got %s",
-			s.ObjectiveStates["objective-2"].Status,
+			e.objectiveStates["objective-2"].Status,
 		)
 	}
 }
@@ -482,7 +485,10 @@ func TestUpdateObjectiveStatesStaysLocked(t *testing.T) {
 				Requires: []string{"objective-1"},
 			},
 		},
-		ObjectiveStates: map[string]*ObjectiveState{
+	}
+	e := &Evaluation{
+		scenario: s,
+		objectiveStates: map[string]*ObjectiveState{
 			"objective-1": {
 				Status: ObjectiveStatusActive,
 			},
@@ -491,11 +497,11 @@ func TestUpdateObjectiveStatesStaysLocked(t *testing.T) {
 			},
 		},
 	}
-	s.updateObjectiveStates()
-	if s.ObjectiveStates["objective-2"].Status != ObjectiveStatusLocked {
+	e.updateObjectiveStates()
+	if e.objectiveStates["objective-2"].Status != ObjectiveStatusLocked {
 		t.Errorf(
 			"expected objective-2 to stay locked, got %s",
-			s.ObjectiveStates["objective-2"].Status,
+			e.objectiveStates["objective-2"].Status,
 		)
 	}
 }
@@ -513,7 +519,10 @@ func TestUpdateObjectiveStatesMultipleRequirements(t *testing.T) {
 				Requires: []string{"objective-1", "objective-2"},
 			},
 		},
-		ObjectiveStates: map[string]*ObjectiveState{
+	}
+	e := &Evaluation{
+		scenario: s,
+		objectiveStates: map[string]*ObjectiveState{
 			"objective-1": {
 				Status: ObjectiveStatusComplete,
 			},
@@ -525,11 +534,11 @@ func TestUpdateObjectiveStatesMultipleRequirements(t *testing.T) {
 			},
 		},
 	}
-	s.updateObjectiveStates()
-	if s.ObjectiveStates["objective-3"].Status != ObjectiveStatusLocked {
+	e.updateObjectiveStates()
+	if e.objectiveStates["objective-3"].Status != ObjectiveStatusLocked {
 		t.Errorf(
 			"expected objective-3 to stay locked, got %s",
-			s.ObjectiveStates["objective-3"].Status,
+			e.objectiveStates["objective-3"].Status,
 		)
 	}
 }
@@ -540,17 +549,20 @@ func TestUpdateObjectiveStatesDoesNotChangeComplete(t *testing.T) {
 				ID: "objective-1",
 			},
 		},
-		ObjectiveStates: map[string]*ObjectiveState{
+	}
+	e := &Evaluation{
+		scenario: s,
+		objectiveStates: map[string]*ObjectiveState{
 			"objective-1": {
 				Status: ObjectiveStatusComplete,
 			},
 		},
 	}
-	s.updateObjectiveStates()
-	if s.ObjectiveStates["objective-1"].Status != ObjectiveStatusComplete {
+	e.updateObjectiveStates()
+	if e.objectiveStates["objective-1"].Status != ObjectiveStatusComplete {
 		t.Errorf(
 			"expected objective-1 to stay complete, got %s",
-			s.ObjectiveStates["objective-1"].Status,
+			e.objectiveStates["objective-1"].Status,
 		)
 	}
 }
@@ -568,7 +580,10 @@ func TestUpdateObjectiveStatesMultipleRequirementsComplete(t *testing.T) {
 				Requires: []string{"objective-1", "objective-2"},
 			},
 		},
-		ObjectiveStates: map[string]*ObjectiveState{
+	}
+	e := &Evaluation{
+		scenario: s,
+		objectiveStates: map[string]*ObjectiveState{
 			"objective-1": {
 				Status: ObjectiveStatusComplete,
 			},
@@ -580,23 +595,25 @@ func TestUpdateObjectiveStatesMultipleRequirementsComplete(t *testing.T) {
 			},
 		},
 	}
-	s.updateObjectiveStates()
-	if s.ObjectiveStates["objective-3"].Status != ObjectiveStatusActive {
+	e.updateObjectiveStates()
+	if e.objectiveStates["objective-3"].Status != ObjectiveStatusActive {
 		t.Errorf(
 			"expected objective-3 to be active, got %s",
-			s.ObjectiveStates["objective-3"].Status,
+			e.objectiveStates["objective-3"].Status,
 		)
 	}
 }
 func TestGetObjectiveState(t *testing.T) {
-	s := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{
+	s := &Scenario{}
+	e := &Evaluation{
+		scenario: s,
+		objectiveStates: map[string]*ObjectiveState{
 			"objective-1": {
 				Status: ObjectiveStatusActive,
 			},
 		},
 	}
-	state, ok := s.GetObjectiveState("objective-1")
+	state, ok := e.GetObjectiveState("objective-1")
 	if !ok {
 		t.Fatal("expected objective state to exist")
 	}
@@ -608,10 +625,12 @@ func TestGetObjectiveState(t *testing.T) {
 	}
 }
 func TestGetObjectiveStateUnknown(t *testing.T) {
-	s := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{},
+	s := &Scenario{}
+	e := &Evaluation{
+		scenario:        s,
+		objectiveStates: map[string]*ObjectiveState{},
 	}
-	_, ok := s.GetObjectiveState("does-not-exist")
+	_, ok := e.GetObjectiveState("does-not-exist")
 	if ok {
 		t.Error("expected unknown objective to not have a state")
 	}
@@ -727,10 +746,13 @@ func TestCompareValuesIn(t *testing.T) {
 }
 func TestEvaluateTelemetryPredicateUnknownPath(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op:    "tlm",
@@ -738,7 +760,7 @@ func TestEvaluateTelemetryPredicateUnknownPath(t *testing.T) {
 		Cmp:   "gt",
 		Value: 50,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -748,11 +770,14 @@ func TestEvaluateTelemetryPredicateUnknownPath(t *testing.T) {
 }
 func TestEvaluateAndPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode":   "NOMINAL",
 			"bus_mv": 5000,
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "all",
@@ -771,7 +796,7 @@ func TestEvaluateAndPredicate(t *testing.T) {
 			}
 		]`),
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -781,10 +806,13 @@ func TestEvaluateAndPredicate(t *testing.T) {
 }
 func TestEvaluateOrPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "any",
@@ -803,7 +831,7 @@ func TestEvaluateOrPredicate(t *testing.T) {
 			}
 		]`),
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -813,10 +841,13 @@ func TestEvaluateOrPredicate(t *testing.T) {
 }
 func TestEvaluateNotPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "not",
@@ -827,7 +858,7 @@ func TestEvaluateNotPredicate(t *testing.T) {
 			"value": "NOMINAL"
 		}`),
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -837,11 +868,14 @@ func TestEvaluateNotPredicate(t *testing.T) {
 }
 func TestNestedLogicalPredicates(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode":   "NOMINAL",
 			"bus_mv": 5000,
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "all",
@@ -863,7 +897,7 @@ func TestNestedLogicalPredicates(t *testing.T) {
 			}
 		]`),
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -887,8 +921,11 @@ func TestGetIntrospectionValue(t *testing.T) {
 	reader := &fakeMemoryReader{
 		data: []byte{2},
 	}
-	ctx := &EvaluationContext{
-		Introspect: reader,
+	frame := Frame{
+		Memory: reader,
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		At: &AddressRef{
@@ -897,7 +934,7 @@ func TestGetIntrospectionValue(t *testing.T) {
 		},
 		Len: 1,
 	}
-	data, errMsg := scenario.getIntrospectionValue(ctx, predicate)
+	data, errMsg := e.getIntrospectionValue(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -967,13 +1004,7 @@ func TestApplyMaskZero(t *testing.T) {
 	}
 }
 func TestEvaluateObjectiveSuccess(t *testing.T) {
-	scenario := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{
-			"obj1": {
-				Status: ObjectiveStatusActive,
-			},
-		},
-	}
+	scenario := &Scenario{}
 	objective := Objective{
 		ID: "obj1",
 		Success: Predicate{
@@ -983,16 +1014,24 @@ func TestEvaluateObjectiveSuccess(t *testing.T) {
 			Value: 2,
 		},
 	}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": 2,
 		},
 	}
-	errMsg := scenario.evaluateObjective(ctx, objective)
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: map[string]*ObjectiveState{
+			"obj1": {
+				Status: ObjectiveStatusActive,
+			},
+		},
+	}
+	errMsg := e.evaluateObjective(frame, objective)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
-	state := scenario.ObjectiveStates["obj1"]
+	state := e.objectiveStates["obj1"]
 	if state.Status != ObjectiveStatusComplete {
 		t.Errorf(
 			"expected objective status %q, got %q",
@@ -1002,13 +1041,7 @@ func TestEvaluateObjectiveSuccess(t *testing.T) {
 	}
 }
 func TestEvaluateObjectiveFailure(t *testing.T) {
-	scenario := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{
-			"obj1": {
-				Status: ObjectiveStatusActive,
-			},
-		},
-	}
+	scenario := &Scenario{}
 	failPredicate := Predicate{
 		Op:    "tlm",
 		Path:  "mode",
@@ -1025,16 +1058,24 @@ func TestEvaluateObjectiveFailure(t *testing.T) {
 		},
 		Fail: &failPredicate,
 	}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": 3,
 		},
 	}
-	errMsg := scenario.evaluateObjective(ctx, objective)
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: map[string]*ObjectiveState{
+			"obj1": {
+				Status: ObjectiveStatusActive,
+			},
+		},
+	}
+	errMsg := e.evaluateObjective(frame, objective)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
-	state := scenario.ObjectiveStates["obj1"]
+	state := e.objectiveStates["obj1"]
 	if state.Status != ObjectiveStatusFailed {
 		t.Errorf(
 			"expected objective status %q, got %q",
@@ -1044,13 +1085,7 @@ func TestEvaluateObjectiveFailure(t *testing.T) {
 	}
 }
 func TestEvaluateObjectiveStaysActive(t *testing.T) {
-	scenario := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{
-			"obj1": {
-				Status: ObjectiveStatusActive,
-			},
-		},
-	}
+	scenario := &Scenario{}
 	failPredicate := Predicate{
 		Op:    "tlm",
 		Path:  "mode",
@@ -1067,16 +1102,24 @@ func TestEvaluateObjectiveStaysActive(t *testing.T) {
 		},
 		Fail: &failPredicate,
 	}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": 1,
 		},
 	}
-	errMsg := scenario.evaluateObjective(ctx, objective)
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: map[string]*ObjectiveState{
+			"obj1": {
+				Status: ObjectiveStatusActive,
+			},
+		},
+	}
+	errMsg := e.evaluateObjective(frame, objective)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
-	state := scenario.ObjectiveStates["obj1"]
+	state := e.objectiveStates["obj1"]
 	if state.Status != ObjectiveStatusActive {
 		t.Errorf(
 			"expected objective status %q, got %q",
@@ -1110,40 +1153,37 @@ func TestEvaluateObjectivesUnlocksNextObjective(t *testing.T) {
 			objective1,
 			objective2,
 		},
-		ObjectiveStates: initializeObjectiveStates(
-			[]Objective{objective1, objective2},
-		),
 	}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": 2,
 		},
 	}
-	errMsg := scenario.evaluateObjectives(ctx)
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: initializeObjectiveStates(
+			[]Objective{objective1, objective2},
+		),
+	}
+	errMsg := e.evaluateObjectives(frame)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
-	if scenario.ObjectiveStates["obj1"].Status != ObjectiveStatusComplete {
+	if e.objectiveStates["obj1"].Status != ObjectiveStatusComplete {
 		t.Errorf(
 			"expected obj1 to be complete, got %q",
-			scenario.ObjectiveStates["obj1"].Status,
+			e.objectiveStates["obj1"].Status,
 		)
 	}
-	if scenario.ObjectiveStates["obj2"].Status != ObjectiveStatusActive {
+	if e.objectiveStates["obj2"].Status != ObjectiveStatusActive {
 		t.Errorf(
 			"expected obj2 to be active, got %q",
-			scenario.ObjectiveStates["obj2"].Status,
+			e.objectiveStates["obj2"].Status,
 		)
 	}
 }
 func TestEvaluateObjectiveRetractable(t *testing.T) {
-	scenario := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{
-			"obj1": {
-				Status: ObjectiveStatusComplete,
-			},
-		},
-	}
+	scenario := &Scenario{}
 	objective := Objective{
 		ID:          "obj1",
 		Retractable: true,
@@ -1154,16 +1194,24 @@ func TestEvaluateObjectiveRetractable(t *testing.T) {
 			Value: 2,
 		},
 	}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": 1,
 		},
 	}
-	errMsg := scenario.evaluateObjective(ctx, objective)
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: map[string]*ObjectiveState{
+			"obj1": {
+				Status: ObjectiveStatusComplete,
+			},
+		},
+	}
+	errMsg := e.evaluateObjective(frame, objective)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
-	state := scenario.ObjectiveStates["obj1"]
+	state := e.objectiveStates["obj1"]
 	if state.Status != ObjectiveStatusActive {
 		t.Errorf(
 			"expected retractable objective to become %q, got %q",
@@ -1173,13 +1221,7 @@ func TestEvaluateObjectiveRetractable(t *testing.T) {
 	}
 }
 func TestEvaluateObjectiveRetractableStaysComplete(t *testing.T) {
-	scenario := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{
-			"obj1": {
-				Status: ObjectiveStatusComplete,
-			},
-		},
-	}
+	scenario := &Scenario{}
 	objective := Objective{
 		ID:          "obj1",
 		Retractable: true,
@@ -1190,20 +1232,28 @@ func TestEvaluateObjectiveRetractableStaysComplete(t *testing.T) {
 			Value: 2,
 		},
 	}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": 2,
 		},
 	}
-	errMsg := scenario.evaluateObjective(ctx, objective)
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: map[string]*ObjectiveState{
+			"obj1": {
+				Status: ObjectiveStatusComplete,
+			},
+		},
+	}
+	errMsg := e.evaluateObjective(frame, objective)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
-	if scenario.ObjectiveStates["obj1"].Status != ObjectiveStatusComplete {
+	if e.objectiveStates["obj1"].Status != ObjectiveStatusComplete {
 		t.Errorf(
 			"expected retractable objective to remain %q, got %q",
 			ObjectiveStatusComplete,
-			scenario.ObjectiveStates["obj1"].Status,
+			e.objectiveStates["obj1"].Status,
 		)
 	}
 }
@@ -1223,8 +1273,11 @@ func TestEvaluateMemU8Predicate(t *testing.T) {
 	reader := &fakeMemoryReader{
 		data: []byte{2},
 	}
-	ctx := &EvaluationContext{
-		Introspect: reader,
+	frame := Frame{
+		Memory: reader,
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "mem_u8",
@@ -1235,7 +1288,7 @@ func TestEvaluateMemU8Predicate(t *testing.T) {
 		Cmp:   "eq",
 		Value: 2,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1260,8 +1313,11 @@ func TestEvaluateMemU16Predicate(t *testing.T) {
 	reader := &fakeMemoryReader{
 		data: []byte{0x34, 0x12},
 	}
-	ctx := &EvaluationContext{
-		Introspect: reader,
+	frame := Frame{
+		Memory: reader,
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "mem_u16",
@@ -1271,7 +1327,7 @@ func TestEvaluateMemU16Predicate(t *testing.T) {
 		Cmp:   "eq",
 		Value: 0x1234,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1296,8 +1352,11 @@ func TestEvaluateMemU32Predicate(t *testing.T) {
 	reader := &fakeMemoryReader{
 		data: []byte{0x78, 0x56, 0x34, 0x12},
 	}
-	ctx := &EvaluationContext{
-		Introspect: reader,
+	frame := Frame{
+		Memory: reader,
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "mem_u32",
@@ -1307,7 +1366,7 @@ func TestEvaluateMemU32Predicate(t *testing.T) {
 		Cmp:   "eq",
 		Value: 0x12345678,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1332,8 +1391,11 @@ func TestEvaluateMemBitsPredicate(t *testing.T) {
 	reader := &fakeMemoryReader{
 		data: []byte{0xAD},
 	}
-	ctx := &EvaluationContext{
-		Introspect: reader,
+	frame := Frame{
+		Memory: reader,
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "mem_bits",
@@ -1345,7 +1407,7 @@ func TestEvaluateMemBitsPredicate(t *testing.T) {
 		Cmp:   "eq",
 		Value: 0x0D,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1370,8 +1432,11 @@ func TestEvaluateMemBitsPredicateDefaultWidth(t *testing.T) {
 	reader := &fakeMemoryReader{
 		data: []byte{0x78, 0x56, 0x34, 0x12},
 	}
-	ctx := &EvaluationContext{
-		Introspect: reader,
+	frame := Frame{
+		Memory: reader,
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "mem_bits",
@@ -1383,7 +1448,7 @@ func TestEvaluateMemBitsPredicateDefaultWidth(t *testing.T) {
 		Value: 0x78,
 		// Width intentionally omitted.
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1405,8 +1470,11 @@ func TestEvaluateMemPredicate(t *testing.T) {
 	reader := &fakeMemoryReader{
 		data: []byte{0xDE, 0xAD, 0xBE, 0xEF},
 	}
-	ctx := &EvaluationContext{
-		Introspect: reader,
+	frame := Frame{
+		Memory: reader,
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "mem",
@@ -1416,7 +1484,7 @@ func TestEvaluateMemPredicate(t *testing.T) {
 		Len:   4,
 		Value: "deadbeef",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1441,8 +1509,11 @@ func TestEvaluateMemPredicateFalse(t *testing.T) {
 	reader := &fakeMemoryReader{
 		data: []byte{0xDE, 0xAD, 0xBE, 0xEF},
 	}
-	ctx := &EvaluationContext{
-		Introspect: reader,
+	frame := Frame{
+		Memory: reader,
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op: "mem",
@@ -1452,7 +1523,7 @@ func TestEvaluateMemPredicateFalse(t *testing.T) {
 		Len:   4,
 		Value: "deadbe00",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1474,9 +1545,12 @@ func TestEvaluateMemChangedPredicate(t *testing.T) {
 	baseline := &fakeMemoryReader{
 		data: []byte{0xDE, 0xAD, 0xBE, 0xEF},
 	}
-	ctx := &EvaluationContext{
-		Introspect: current,
-		Baseline:   baseline,
+	frame := Frame{
+		Memory: current,
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		baseline: baseline,
 	}
 	predicate := Predicate{
 		Op: "mem_changed",
@@ -1485,7 +1559,7 @@ func TestEvaluateMemChangedPredicate(t *testing.T) {
 		},
 		Len: 4,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1507,9 +1581,12 @@ func TestEvaluateMemChangedPredicateFalse(t *testing.T) {
 	baseline := &fakeMemoryReader{
 		data: []byte{0xDE, 0xAD, 0xBE, 0xEF},
 	}
-	ctx := &EvaluationContext{
-		Introspect: current,
-		Baseline:   baseline,
+	frame := Frame{
+		Memory: current,
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		baseline: baseline,
 	}
 	predicate := Predicate{
 		Op: "mem_changed",
@@ -1518,7 +1595,7 @@ func TestEvaluateMemChangedPredicateFalse(t *testing.T) {
 		},
 		Len: 4,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1528,7 +1605,7 @@ func TestEvaluateMemChangedPredicateFalse(t *testing.T) {
 }
 func TestEvaluateTelemetryPredicateNestedPath(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1537,13 +1614,16 @@ func TestEvaluateTelemetryPredicateNestedPath(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op:    "tlm",
 		Path:  "channels.COMMS.antenna",
 		Cmp:   "eq",
 		Value: 1,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1553,7 +1633,7 @@ func TestEvaluateTelemetryPredicateNestedPath(t *testing.T) {
 }
 func TestEvaluateTelemetryBitsPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1562,6 +1642,9 @@ func TestEvaluateTelemetryBitsPredicate(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op:    "tlm_bits",
 		Path:  "channels.COMMS.xstat",
@@ -1569,7 +1652,7 @@ func TestEvaluateTelemetryBitsPredicate(t *testing.T) {
 		Cmp:   "eq",
 		Value: 0x0D,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1579,7 +1662,7 @@ func TestEvaluateTelemetryBitsPredicate(t *testing.T) {
 }
 func TestEvaluateTelemetryBitsPredicateUnknownPath(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1588,6 +1671,9 @@ func TestEvaluateTelemetryBitsPredicateUnknownPath(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op:    "tlm_bits",
 		Path:  "channels.COMMS.missing",
@@ -1595,7 +1681,7 @@ func TestEvaluateTelemetryBitsPredicateUnknownPath(t *testing.T) {
 		Cmp:   "eq",
 		Value: 0x0D,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1605,7 +1691,7 @@ func TestEvaluateTelemetryBitsPredicateUnknownPath(t *testing.T) {
 }
 func TestEvaluateChannelPresentPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1614,11 +1700,14 @@ func TestEvaluateChannelPresentPredicate(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op: "channel_present",
 		ID: "COMMS",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1628,7 +1717,7 @@ func TestEvaluateChannelPresentPredicate(t *testing.T) {
 }
 func TestEvaluateChannelAbsentPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1637,11 +1726,14 @@ func TestEvaluateChannelAbsentPredicate(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op: "channel_absent",
 		ID: "RAD",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1651,17 +1743,20 @@ func TestEvaluateChannelAbsentPredicate(t *testing.T) {
 }
 func TestEvaluateEventPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Events: []string{
 			"MODE_CHANGE:NOMINAL",
 			"HGA_DEPLOYED",
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op:    "event",
 		Match: "HGA_DEPLOYED",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1671,16 +1766,19 @@ func TestEvaluateEventPredicate(t *testing.T) {
 }
 func TestEvaluateEventPredicateFalse(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Events: []string{
 			"MODE_CHANGE:NOMINAL",
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op:    "event",
 		Match: "HGA_DEPLOYED",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1690,18 +1788,21 @@ func TestEvaluateEventPredicateFalse(t *testing.T) {
 }
 func TestEvaluateEventPredicateRegex(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Events: []string{
 			"MODE_CHANGE:NOMINAL",
 			"HGA_DEPLOYED",
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op:    "event",
 		Match: "^MODE_CHANGE:",
 		Regex: true,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1711,17 +1812,20 @@ func TestEvaluateEventPredicateRegex(t *testing.T) {
 }
 func TestEvaluateEventPredicateInvalidRegex(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Events: []string{
 			"MODE_CHANGE:NOMINAL",
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op:    "event",
 		Match: "[",
 		Regex: true,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg == "" {
 		t.Fatal("expected invalid regex to return an error")
 	}
@@ -1731,17 +1835,19 @@ func TestEvaluateEventPredicateInvalidRegex(t *testing.T) {
 }
 func TestEvaluateEverPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
-		History: []map[string]any{
-			{
+	frame := Frame{}
+	e := &Evaluation{
+		scenario: scenario,
+		history: []Frame{
+			{Telemetry: map[string]any{
 				"mode": "NOMINAL",
-			},
-			{
+			}},
+			{Telemetry: map[string]any{
 				"mode": "SAFE",
-			},
-			{
+			}},
+			{Telemetry: map[string]any{
 				"mode": "NOMINAL",
-			},
+			}},
 		},
 	}
 	child := Predicate{
@@ -1758,7 +1864,7 @@ func TestEvaluateEverPredicate(t *testing.T) {
 		Op: "ever",
 		Of: childJSON,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1768,17 +1874,19 @@ func TestEvaluateEverPredicate(t *testing.T) {
 }
 func TestEvaluateEverPredicateFalse(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
-		History: []map[string]any{
-			{
+	frame := Frame{}
+	e := &Evaluation{
+		scenario: scenario,
+		history: []Frame{
+			{Telemetry: map[string]any{
 				"mode": "NOMINAL",
-			},
-			{
+			}},
+			{Telemetry: map[string]any{
 				"mode": "BOOT",
-			},
-			{
+			}},
+			{Telemetry: map[string]any{
 				"mode": "NOMINAL",
-			},
+			}},
 		},
 	}
 	child := Predicate{
@@ -1795,7 +1903,7 @@ func TestEvaluateEverPredicateFalse(t *testing.T) {
 		Op: "ever",
 		Of: childJSON,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1805,13 +1913,16 @@ func TestEvaluateEverPredicateFalse(t *testing.T) {
 }
 func TestEvaluateEverPredicateCurrentFrame(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
-		History: []map[string]any{
-			{"mode": "NOMINAL"},
-			{"mode": "NOMINAL"},
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		history: []Frame{
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -1828,7 +1939,7 @@ func TestEvaluateEverPredicateCurrentFrame(t *testing.T) {
 		Op: "ever",
 		Of: childJSON,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1838,14 +1949,17 @@ func TestEvaluateEverPredicateCurrentFrame(t *testing.T) {
 }
 func TestEvaluateSustainedPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
-		History: []map[string]any{
-			{"mode": "SAFE"},
-			{"mode": "NOMINAL"},
-			{"mode": "NOMINAL"},
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		history: []Frame{
+			{Telemetry: map[string]any{"mode": "SAFE"}},
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -1863,7 +1977,7 @@ func TestEvaluateSustainedPredicate(t *testing.T) {
 		Frames: 3,
 		Of:     childJSON,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1873,14 +1987,17 @@ func TestEvaluateSustainedPredicate(t *testing.T) {
 }
 func TestEvaluateSustainedPredicateFalse(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
-		History: []map[string]any{
-			{"mode": "NOMINAL"},
-			{"mode": "SAFE"},
-			{"mode": "NOMINAL"},
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		history: []Frame{
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{Telemetry: map[string]any{"mode": "SAFE"}},
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -1898,7 +2015,7 @@ func TestEvaluateSustainedPredicateFalse(t *testing.T) {
 		Frames: 3,
 		Of:     childJSON,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1908,14 +2025,17 @@ func TestEvaluateSustainedPredicateFalse(t *testing.T) {
 }
 func TestEvaluateWithinPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
-		History: []map[string]any{
-			{"mode": "NOMINAL"},
-			{"mode": "SAFE"},
-			{"mode": "NOMINAL"},
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		history: []Frame{
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{Telemetry: map[string]any{"mode": "SAFE"}},
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -1933,7 +2053,7 @@ func TestEvaluateWithinPredicate(t *testing.T) {
 		Frames: 3,
 		Of:     childJSON,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1943,14 +2063,17 @@ func TestEvaluateWithinPredicate(t *testing.T) {
 }
 func TestEvaluateWithinPredicateFalse(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
-		History: []map[string]any{
-			{"mode": "SAFE"},
-			{"mode": "NOMINAL"},
-			{"mode": "NOMINAL"},
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		history: []Frame{
+			{Telemetry: map[string]any{"mode": "SAFE"}},
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -1968,7 +2091,7 @@ func TestEvaluateWithinPredicateFalse(t *testing.T) {
 		Frames: 3,
 		Of:     childJSON,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -1978,7 +2101,7 @@ func TestEvaluateWithinPredicateFalse(t *testing.T) {
 }
 func TestEvaluateCommandedPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Log: []CommandLogEntry{
 			{
 				Verb:   "PEEK",
@@ -1990,11 +2113,14 @@ func TestEvaluateCommandedPredicate(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op:   "commanded",
 		Verb: "POKE",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2004,7 +2130,7 @@ func TestEvaluateCommandedPredicate(t *testing.T) {
 }
 func TestEvaluateCommandedPredicateFalse(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Log: []CommandLogEntry{
 			{
 				Verb:   "PEEK",
@@ -2012,11 +2138,14 @@ func TestEvaluateCommandedPredicateFalse(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op:   "commanded",
 		Verb: "POKE",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2026,7 +2155,7 @@ func TestEvaluateCommandedPredicateFalse(t *testing.T) {
 }
 func TestEvaluateCommandedPredicateWithResult(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Log: []CommandLogEntry{
 			{
 				Verb:   "POKE",
@@ -2038,12 +2167,15 @@ func TestEvaluateCommandedPredicateWithResult(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op:     "commanded",
 		Verb:   "POKE",
 		Result: "ACK",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2053,7 +2185,7 @@ func TestEvaluateCommandedPredicateWithResult(t *testing.T) {
 }
 func TestEvaluateCommandedPredicateResultFalse(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Log: []CommandLogEntry{
 			{
 				Verb:   "POKE",
@@ -2061,12 +2193,15 @@ func TestEvaluateCommandedPredicateResultFalse(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op:     "commanded",
 		Verb:   "POKE",
 		Result: "ACK",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2087,7 +2222,7 @@ func TestEvaluateCommandedPredicateWithAddress(t *testing.T) {
 			},
 		},
 	}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Log: []CommandLogEntry{
 			{
 				Verb:   "POKE",
@@ -2095,6 +2230,9 @@ func TestEvaluateCommandedPredicateWithAddress(t *testing.T) {
 				Result: "ACK",
 			},
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op:   "commanded",
@@ -2105,7 +2243,7 @@ func TestEvaluateCommandedPredicateWithAddress(t *testing.T) {
 		},
 		Result: "ACK",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2126,7 +2264,7 @@ func TestEvaluateCommandedPredicateAddressFalse(t *testing.T) {
 			},
 		},
 	}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Log: []CommandLogEntry{
 			{
 				Verb:   "POKE",
@@ -2135,6 +2273,9 @@ func TestEvaluateCommandedPredicateAddressFalse(t *testing.T) {
 			},
 		},
 	}
+	e := &Evaluation{
+		scenario: scenario,
+	}
 	predicate := Predicate{
 		Op: "commanded",
 		At: &AddressRef{
@@ -2142,7 +2283,7 @@ func TestEvaluateCommandedPredicateAddressFalse(t *testing.T) {
 			Field: "mode",
 		},
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2152,11 +2293,14 @@ func TestEvaluateCommandedPredicateAddressFalse(t *testing.T) {
 }
 func TestEvaluateBudgetPredicate(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Budget: map[string]int{
 			"writes": 32,
 			"reads":  150,
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op:       "budget",
@@ -2164,7 +2308,7 @@ func TestEvaluateBudgetPredicate(t *testing.T) {
 		Cmp:      "lte",
 		Value:    40,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2174,10 +2318,13 @@ func TestEvaluateBudgetPredicate(t *testing.T) {
 }
 func TestEvaluateBudgetPredicateFalse(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Budget: map[string]int{
 			"writes": 47,
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op:       "budget",
@@ -2185,7 +2332,7 @@ func TestEvaluateBudgetPredicateFalse(t *testing.T) {
 		Cmp:      "lte",
 		Value:    40,
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2195,10 +2342,13 @@ func TestEvaluateBudgetPredicateFalse(t *testing.T) {
 }
 func TestEvaluatePartialFirstMatch(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	objective := Objective{
 		Partial: []Partial{
@@ -2231,7 +2381,7 @@ func TestEvaluatePartialFirstMatch(t *testing.T) {
 			},
 		},
 	}
-	diagnostic, errMsg := scenario.evaluatePartial(ctx, objective)
+	diagnostic, errMsg := e.evaluatePartial(frame, objective)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2240,16 +2390,18 @@ func TestEvaluatePartialFirstMatch(t *testing.T) {
 	}
 }
 func TestEvaluateObjectivePartial(t *testing.T) {
-	scenario := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{
+	scenario := &Scenario{}
+	frame := Frame{
+		Telemetry: map[string]any{
+			"mode": "SAFE",
+		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: map[string]*ObjectiveState{
 			"test": {
 				Status: ObjectiveStatusActive,
 			},
-		},
-	}
-	ctx := &EvaluationContext{
-		Telemetry: map[string]any{
-			"mode": "SAFE",
 		},
 	}
 	objective := Objective{
@@ -2272,11 +2424,11 @@ func TestEvaluateObjectivePartial(t *testing.T) {
 			},
 		},
 	}
-	errMsg := scenario.evaluateObjective(ctx, objective)
+	errMsg := e.evaluateObjective(frame, objective)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
-	state := scenario.ObjectiveStates["test"]
+	state := e.objectiveStates["test"]
 	if state.Status != ObjectiveStatusActive {
 		t.Errorf("expected objective to remain active, got %v", state.Status)
 	}
@@ -2289,16 +2441,18 @@ func TestEvaluateObjectivePartial(t *testing.T) {
 	}
 }
 func TestEvaluateObjectiveFailTakesPrecedence(t *testing.T) {
-	scenario := &Scenario{
-		ObjectiveStates: map[string]*ObjectiveState{
+	scenario := &Scenario{}
+	frame := Frame{
+		Telemetry: map[string]any{
+			"mode": "SAFE",
+		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: map[string]*ObjectiveState{
 			"test": {
 				Status: ObjectiveStatusActive,
 			},
-		},
-	}
-	ctx := &EvaluationContext{
-		Telemetry: map[string]any{
-			"mode": "SAFE",
 		},
 	}
 	failPredicate := Predicate{
@@ -2328,11 +2482,11 @@ func TestEvaluateObjectiveFailTakesPrecedence(t *testing.T) {
 			},
 		},
 	}
-	errMsg := scenario.evaluateObjective(ctx, objective)
+	errMsg := e.evaluateObjective(frame, objective)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
-	state := scenario.ObjectiveStates["test"]
+	state := e.objectiveStates["test"]
 	if state.Status != ObjectiveStatusFailed {
 		t.Errorf("expected objective to fail, got %v", state.Status)
 	}
@@ -2383,7 +2537,21 @@ func TestEvaluateObjectivesRollsBackOnMemoryError(t *testing.T) {
 			objective1,
 			objective2,
 		},
-		ObjectiveStates: map[string]*ObjectiveState{
+		Symbols: SymbolsFile{
+			Symbols: map[string]string{
+				"g_config": "0x20001000",
+			},
+		},
+	}
+	frame := Frame{
+		Telemetry: map[string]any{
+			"mode": "NOMINAL",
+		},
+		Memory: &failingMemoryReader{},
+	}
+	e := &Evaluation{
+		scenario: scenario,
+		objectiveStates: map[string]*ObjectiveState{
 			"obj1": {
 				Status: ObjectiveStatusActive,
 			},
@@ -2391,49 +2559,41 @@ func TestEvaluateObjectivesRollsBackOnMemoryError(t *testing.T) {
 				Status: ObjectiveStatusActive,
 			},
 		},
-		Symbols: SymbolsFile{
-			Symbols: map[string]string{
-				"g_config": "0x20001000",
-			},
-		},
 	}
-	ctx := &EvaluationContext{
-		Telemetry: map[string]any{
-			"mode": "NOMINAL",
-		},
-		Introspect: &failingMemoryReader{},
-	}
-	errMsg := scenario.evaluateObjectives(ctx)
+	errMsg := e.evaluateObjectives(frame)
 	if errMsg == "" {
 		t.Fatal("expected memory read error")
 	}
-	if scenario.ObjectiveStates["obj1"].Status != ObjectiveStatusActive {
+	if e.objectiveStates["obj1"].Status != ObjectiveStatusActive {
 		t.Errorf(
 			"expected obj1 to roll back to %q, got %q",
 			ObjectiveStatusActive,
-			scenario.ObjectiveStates["obj1"].Status,
+			e.objectiveStates["obj1"].Status,
 		)
 	}
-	if scenario.ObjectiveStates["obj2"].Status != ObjectiveStatusActive {
+	if e.objectiveStates["obj2"].Status != ObjectiveStatusActive {
 		t.Errorf(
 			"expected obj2 to remain %q, got %q",
 			ObjectiveStatusActive,
-			scenario.ObjectiveStates["obj2"].Status,
+			e.objectiveStates["obj2"].Status,
 		)
 	}
 }
 func TestEvaluateEventPredicateSubstring(t *testing.T) {
 	scenario := &Scenario{}
-	ctx := &EvaluationContext{
+	frame := Frame{
 		Events: []string{
 			"ANTENNA HGA -> LGA",
 		},
+	}
+	e := &Evaluation{
+		scenario: scenario,
 	}
 	predicate := Predicate{
 		Op:    "event",
 		Match: "HGA -> LGA",
 	}
-	result, errMsg := scenario.evaluatePredicate(ctx, predicate)
+	result, errMsg := e.evaluatePredicate(frame, predicate)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
