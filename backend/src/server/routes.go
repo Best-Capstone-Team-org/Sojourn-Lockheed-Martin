@@ -140,10 +140,6 @@ var upgrader = websocket.Upgrader{
 }
 
 func (s *server) selectScenario(w http.ResponseWriter, r *http.Request) {
-	if !s.checkRequestMethod(r, http.MethodPut, w) {
-		return
-	}
-
 	queryParams := r.URL.Query()
 	if !queryParams.Has("scenario-id") {
 		http.Error(w, "scenario-id query parameter not supplied", http.StatusBadRequest)
