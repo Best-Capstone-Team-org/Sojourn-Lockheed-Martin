@@ -29,7 +29,7 @@
 		<Box class="w-full p-2">
 			<h1 class="text-4xl font-bold">Level Select</h1>
 		</Box>
-		{#each levels as level}
+		{#each levels as level (level.id)}
 			<LevelDetails scenario={level} />
 		{/each}
 	</div>
