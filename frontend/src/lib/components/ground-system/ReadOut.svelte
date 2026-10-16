@@ -45,7 +45,11 @@
 	]);
 
 	const houseKeeping = $derived([
-		{ label: "Heater", value: hk?.heaterOn == null ? undefined : hk.heaterOn ? "On" : "Off" },
+		{
+			label: "Heater",
+			value:
+				hk?.heaterOn == null ? undefined : hk.heaterOn ? "On" : "Off",
+		},
 		{ label: "Propellant", value: hk?.prop, unit: "mg" },
 		{ label: "Momentum", value: hk?.mom },
 		{ label: "Recorder", value: hk?.rec, unit: "%" },
@@ -55,7 +59,7 @@
 	const readOutSections = $derived([
 		{ title: "Frame Header", items: frameHeader },
 		{ title: "Instruments", items: instruments },
-		{ title: "House Keeping", items: houseKeeping }
+		{ title: "House Keeping", items: houseKeeping },
 	]);
 
 	const isMissing = (value: string | number | null | undefined) =>
@@ -75,9 +79,13 @@
 						<div class="flex justify-between">
 							<span>{item.label}</span>
 							{#if isMissing(item.value)}
-								<span class="text-sys-alert-red">absent</span> 
+								<span class="text-sys-alert-red">absent</span>
 							{:else}
-								<span>{item.value}{item.unit ? ` ${item.unit}` : ""}</span>
+								<span
+									>{item.value}{item.unit
+										? ` ${item.unit}`
+										: ""}</span
+								>
 							{/if}
 						</div>
 					{/each}

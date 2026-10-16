@@ -1,7 +1,14 @@
 <script lang="ts">
 	import Box from "$lib/components/Box/Box.svelte";
 	import MissionDetail from "$lib/components/ground-system/MissionDetail.svelte";
+	import MissionFooter from "./MissionFooter.svelte";
 	import type { MissionDetailType } from "$lib/types";
+
+	// dummy data TODO remove
+	const writes = $state(100);
+	const reads = $state(200);
+	const maxWrites = $state(1000);
+	const maxReads = $state(1000);
 
 	let { missionDetails }: { missionDetails: MissionDetailType[] } = $props();
 </script>
@@ -20,4 +27,10 @@
 			/>
 		{/each}
 	</div>
+	<MissionFooter
+		{writes}
+		{reads}
+		{maxWrites}
+		{maxReads}
+	/>
 </div>
