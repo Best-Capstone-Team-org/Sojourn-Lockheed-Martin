@@ -245,6 +245,12 @@ func (s *server) downlinkPump() {
 				Type:     "commandResponse",
 				Response: downlinkMessage.Response,
 			})
+		case *game.StateDownlinkMessage:
+			err = s.wsConn.WriteJSON(stateDownlink{
+				Type:        "state",
+				Objectives:  downlinkMessage.Objectives,
+				Constraints: downlinkMessage.Constraints,
+			})
 		}
 
 		if err != nil {

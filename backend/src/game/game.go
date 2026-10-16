@@ -144,7 +144,18 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 				app.ErrorLogger.Printf("Grading: %v", err)
 			}
 
-			// TODO: send state downlink
+			stateMessage := &StateDownlinkMessage{}
+
+			for _, objective := range s.Scenario.Objectives {
+				stateMessage.Objectives = append(stateMessage.Objectives,
+					ObjectiveStateDownlinkMessage{
+						ID:     objective.ID,
+						Status: s.evaluation.objectiveStates[objective.ID].Status,
+					})
+			}
+			stateMessage.Constraints = map[string]int{}
+
+			interfaceDownlinkChan <- stateMessage
 
 			interfaceDownlinkChan <- &TLMDownlinkMessage{
 				TLM:       line,

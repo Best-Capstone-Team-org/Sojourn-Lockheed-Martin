@@ -75,10 +75,7 @@ type commandResponseDownlink struct {
 }
 
 type stateDownlink struct {
-	Type       string `json:"type"`
-	Objectives []struct {
-		Name   string               `json:"name"`
-		Status game.ObjectiveStatus `json:"status"`
-	} `json:"objectives"`
-	Constraints map[string]int `json:"constraints"`
+	Type        string                               `json:"type"`
+	Objectives  []game.ObjectiveStateDownlinkMessage `json:"objectives"`
+	Constraints map[string]int                       `json:"constraints"`
 }
