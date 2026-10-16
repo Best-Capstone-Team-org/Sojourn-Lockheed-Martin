@@ -6,7 +6,6 @@
 	import {
 		apiFetch,
 		type ScenarioResponse,
-		type ObjectiveResponse,
 	} from "$lib/api";
 	import { onMount } from "svelte";
 
