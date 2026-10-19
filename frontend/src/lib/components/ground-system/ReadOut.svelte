@@ -6,7 +6,7 @@
 	import { options } from "./Options.svelte";
 	import Led from "./Led.svelte";
 	import Screen from "../Screen/Screen.svelte";
-	import absent from "$lib/assets/absent-icon.png"
+	import absent from "$lib/assets/absent-icon.png";
 
 	let { readOutTlm }: { readOutTlm: Telemetry | undefined } = $props();
 
@@ -80,7 +80,11 @@
 						<div class="flex justify-between">
 							<span>{item.label}</span>
 							{#if isMissing(item.value)}
-								<img src={absent} alt="absent" class="w-4 h-4" />
+								<img
+									src={absent}
+									alt="absent"
+									class="h-4 w-4"
+								/>
 							{:else}
 								<span
 									>{item.value}{item.unit
