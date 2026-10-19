@@ -7,12 +7,20 @@
 		buttonClass = "",
 		wellClass = "",
 		type = "button",
+		alert = false,
 		...rest
 	}: HTMLButtonAttributes & {
 		children: Snippet;
 		buttonClass?: string;
 		wellClass?: string;
+		alert?: boolean;
 	} = $props();
+
+	const buttonColor = $derived(
+		alert
+			? "bg-sys-button-alert border-t-sys-button-alert-top border-r-sys-button-alert-left border-b-sys-button-alert-bottom border-l-sys-button-alert-right noise-opacity-30"
+			: "bg-sys-button border-t-sys-button-top border-r-sys-button-left border-b-sys-button-bottom border-l-sys-button-right noise-opacity-20"
+	);
 </script>
 
 <div
@@ -32,9 +40,10 @@
 		{type}
 		class={[
 			"mx-auto h-full w-full cursor-pointer",
-			"noise-bg rounded bg-sys-button font-bold text-white noise-opacity-20",
-			"border-t-2 border-r-5 border-b-10 border-l-5 border-t-sys-button-top border-r-sys-button-left border-b-sys-button-bottom border-l-sys-button-right",
+			"noise-bg rounded font-bold text-white",
+			"border-t-2 border-r-5 border-b-10 border-l-5 ",
 			"transition-all duration-75 active:translate-y-0.5",
+			buttonColor,
 			buttonClass,
 		]}
 		{...rest}
