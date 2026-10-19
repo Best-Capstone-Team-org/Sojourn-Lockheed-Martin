@@ -13,7 +13,7 @@
 			}
 
 			const scenarios: ScenarioResponse[] = await response.json();
-			levels = scenarios;
+			levels = scenarios.sort((a, b) => a.name.localeCompare(b.name));
 		} catch (error) {
 			console.error("Failed to load scenarios", error);
 		}

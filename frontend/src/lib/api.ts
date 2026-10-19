@@ -22,7 +22,7 @@ export interface ScenarioResponse {
 	description: string;
 	difficulty: string;
 	objectives: ObjectiveResponse[];
-	constraints: Map<string, number>;
+	constraints: Constraints;
 }
 
 export interface ObjectiveResponse {
