@@ -12,7 +12,7 @@
 	let objectivesOpen = $state(false);
 
 	function startScenario() {
-		gameState.id = scenario.id;
+		gameState.scenario = scenario;
 		goto(resolve("/ground-system"));
 	}
 </script>

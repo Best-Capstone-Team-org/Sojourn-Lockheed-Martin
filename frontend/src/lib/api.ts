@@ -25,11 +25,13 @@ export interface ScenarioResponse {
 	constraints: Constraints;
 }
 
+export type ObjectiveStatus = "complete" | "failed" | "active" | "locked";
+
 export interface ObjectiveResponse {
 	id: string;
 	name: string;
 	description: string;
-	status: "ready" | "locked";
+	status: ObjectiveStatus;
 }
 
 export type SelectScenarioResponse = Message;
@@ -130,8 +132,12 @@ export interface Comms {
 }
 
 export interface Objective {
-	name: string;
-	status: "complete" | "failed" | "active" | "locked";
+	id: string;
+	status: ObjectiveStatus;
+	hint?: string[];
 }
 
 export type Constraints = Record<string, number>;
+
+// front end storage for missions
+export type ObjectiveDetail = ObjectiveResponse & Objective;
