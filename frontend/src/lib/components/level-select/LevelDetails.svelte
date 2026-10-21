@@ -22,7 +22,7 @@
 	function probeForDifficulty(difficulty: string) {
 		if (difficulty === "intermediate") {
 			return hardProbe;
-		} else if(difficulty === "tutorial") {
+		} else if (difficulty === "tutorial") {
 			return easyProbe;
 		}
 	}

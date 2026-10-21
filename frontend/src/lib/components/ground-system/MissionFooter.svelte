@@ -9,7 +9,7 @@
 		reads,
 		maxWrites,
 		maxReads,
-		missionComplete
+		missionComplete,
 	}: {
 		writes: number;
 		reads: number;
@@ -26,7 +26,10 @@
 				wellClass="h-full"
 				buttonClass="p-2"
 				alert={!missionComplete}
-				onclick={() => (missionComplete ? goto(resolve("/end-screen")) : goto(resolve("/level-select")))}
+				onclick={() =>
+					missionComplete
+						? goto(resolve("/end-screen"))
+						: goto(resolve("/level-select"))}
 			>
 				{missionComplete ? "Mission Complete" : "Abort Mission"}
 			</Button>
