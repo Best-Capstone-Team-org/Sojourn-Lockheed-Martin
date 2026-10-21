@@ -9,9 +9,22 @@
 	const reads = $state(200);
 	const maxWrites = $state(1000);
 	const maxReads = $state(1000);
+	let missionComplete = $state(false);
+
 
 	let { objectives }: { objectives: Record<string, ObjectiveDetail> } =
 		$props();
+	
+	// check if all objectives are complete
+	$effect(() => {
+		if (
+			Object.values(objectives).every(
+				(objective) => objective.status === "complete"
+			)
+		) {
+			missionComplete = true;
+		}
+	});
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
@@ -28,5 +41,6 @@
 		{reads}
 		{maxWrites}
 		{maxReads}
+		{missionComplete}
 	/>
 </div>

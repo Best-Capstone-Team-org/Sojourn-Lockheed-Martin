@@ -9,11 +9,13 @@
 		reads,
 		maxWrites,
 		maxReads,
+		missionComplete
 	}: {
 		writes: number;
 		reads: number;
 		maxWrites: number;
 		maxReads: number;
+		missionComplete: boolean;
 	} = $props();
 </script>
 
@@ -23,10 +25,10 @@
 			<Button
 				wellClass="h-full"
 				buttonClass="p-2"
-				alert
-				onclick={() => goto(resolve("/level-select"))}
+				alert={!missionComplete}
+				onclick={() => (missionComplete ? goto(resolve("/end-screen")) : goto(resolve("/level-select")))}
 			>
-				Abort Mission
+				{missionComplete ? "Mission Complete" : "Abort Mission"}
 			</Button>
 		</div>
 		<div class="flex flex-col gap-[1vw]">
