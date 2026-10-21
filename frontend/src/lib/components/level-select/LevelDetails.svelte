@@ -21,9 +21,11 @@
 
 	function probeForDifficulty(difficulty: string) {
 		if (difficulty === "intermediate") {
-			return hardProbe;
+			return hardProbe; // just wanted to show the hard probe
 		} else if (difficulty === "tutorial") {
 			return easyProbe;
+		} else {
+			return mediumProbe;
 		}
 	}
 </script>
