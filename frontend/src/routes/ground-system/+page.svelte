@@ -15,7 +15,6 @@
 		type CommandUplink,
 	} from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
-	import { onMount } from "svelte";
 
 	// dummy data for the mission status
 	// TODO remove once we get actual data
@@ -36,7 +35,6 @@
 			diagnostic:
 				"This is the diagnostic for mission two. There are lots of important details here for the player to read.",
 		},
-
 		{
 			id: 3,
 			title: "Mission 3",
@@ -58,44 +56,92 @@
 		},
 	];
 
-	// websocket connection
+	const RECONNECT_BASE_DELAY = 1000;
+	const MAX_RECONNECT_DELAY = 10000;
+
 	let ws = $state<WebSocket | undefined>(undefined);
 	let ready = $state(false);
 
-	// using it for frontend state (DAVID)
 	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
 	let commandUplink = $state<CommandUplink | undefined>(undefined);
 
 	let tlm = $state<string[]>([]);
 	let readOutTlm = $state<Telemetry>();
 
-	onMount(() => {
-		if (!ws) {
-			ws = apiWebSocket(`select-scenario?scenario-id=${gameState.id}`);
+	let attempts = $state(0);
+	let retryTimer: ReturnType<typeof setTimeout> | undefined;
+	let retry = $state(0);
 
-			ws.onopen = () => {
-				ready = true;
-			};
+	function scheduleReconnect() {
+		const delay = Math.min(
+			RECONNECT_BASE_DELAY * 2 ** attempts,
+			MAX_RECONNECT_DELAY
+		);
+		attempts++;
 
-			ws.onmessage = (ev) => {
-				commandDownlink = JSON.parse(ev.data) as CommandDownlink;
+		clearTimeout(retryTimer);
+		retryTimer = setTimeout(() => retry++, delay);
+	}
 
-				switch (commandDownlink.type) {
-					case "telemetry":
-						tlm.push(commandDownlink.TLM);
-						readOutTlm = commandDownlink.telemetry;
-						break;
+	function handleDownlink(message: CommandDownlink) {
+		commandDownlink = message;
 
-					case "commandResponse":
-						tlm.push(commandDownlink.response);
-						break;
+		switch (message.type) {
+			case "telemetry":
+				tlm.push(message.TLM);
+				readOutTlm = message.telemetry;
+				break;
 
-					case "state":
-						// TODO handle state
-						break;
-				}
-			};
+			case "commandResponse":
+				tlm.push(message.response);
+				break;
+
+			case "state":
+				// TODO handle state
+				break;
 		}
+	}
+
+	function handleSocketOpen() {
+		attempts = 0;
+		ready = true;
+	}
+
+	function handleSocketDisconnect() {
+		ready = false;
+		scheduleReconnect();
+	}
+
+	function clearSocketHandlers(socket: WebSocket) {
+		socket.onopen = null;
+		socket.onclose = null;
+		socket.onerror = null;
+		socket.onmessage = null;
+	}
+
+	$effect(() => {
+		// Reconnect when the scenario changes or the retry signal is incremented.
+		void retry;
+
+		const socket = apiWebSocket(
+			`select-scenario?scenario-id=${gameState.id}`
+		);
+		ws = socket;
+		ready = false;
+
+		socket.onopen = handleSocketOpen;
+		socket.onclose = handleSocketDisconnect;
+		socket.onerror = handleSocketDisconnect;
+		socket.onmessage = (event) => {
+			handleDownlink(JSON.parse(event.data) as CommandDownlink);
+		};
+
+		return () => {
+			clearTimeout(retryTimer);
+			clearSocketHandlers(socket);
+			// Use a normal close code so the server treats navigation as a clean exit.
+			socket.close(1000, "client leaving");
+		};
 	});
 </script>
 
@@ -190,10 +236,10 @@
 </div>
 
 <style>
-	/* 
-		hide resize handles 
+	/*
+		hide resize handles
 		will reduce the discoverability for the style
-		TODO: we need to find a good solution 
+		TODO: we need to find a good solution
 	*/
 	div :global([data-slot="resizable-handle"]) {
 		background-color: transparent;
