@@ -1,55 +1,41 @@
 <script lang="ts">
 	import Box from "$lib/components/Box/Box.svelte";
-	import { MissionStatusEnum } from "$lib/enums";
 	import Led from "./Led.svelte";
 	import Screen from "../Screen/Screen.svelte";
+	import type { ObjectiveDetail } from "$lib/api";
 
-	let {
-		title,
-		status,
-		description,
-		diagnostic,
-	}: {
-		title: string;
-		status: MissionStatusEnum;
-		description: string;
-		diagnostic?: string;
-	} = $props();
+	let { objective }: { objective: ObjectiveDetail } = $props();
 </script>
 
 <Box class="w-full p-2">
-	{#if status === MissionStatusEnum.INVALID}
-		<span class="text-sys-alert-red"
-			>Status: INVALID, something went wrong!</span
-		>
-	{:else}
-		<div class="flex items-center justify-between">
-			<p class="font-semibold">{title}</p>
-			<div class="flex items-center gap-2">
-				<span>{status}</span>
-				{#if status === MissionStatusEnum.ACTIVE}
-					<Led color="yellow" />
-				{:else if status === MissionStatusEnum.COMPLETE}
-					<Led color="green" />
-				{:else}
-					<Led />
-				{/if}
-			</div>
+	<div class="flex items-center justify-between">
+		<p class="font-semibold">{objective.name}</p>
+		<div class="flex items-center gap-2">
+			<span>{objective.status}</span>
+			{#if objective.status === "active"}
+				<Led color="yellow" />
+			{:else if objective.status === "complete"}
+				<Led color="green" />
+			{:else if objective.status === "failed"}
+				<Led color="red" />
+			{:else}
+				<Led />
+			{/if}
 		</div>
+	</div>
 
-		{#if status !== MissionStatusEnum.LOCKED}
-			<hr
-				class="my-1 border-t border-black/35 shadow-[0_1px_0_rgba(255,255,255,0.4)]"
-			/>
-			<div class="p-2">
-				<p class="mb-2 text-sm">{description}</p>
+	{#if objective.status !== "locked"}
+		<hr
+			class="my-1 border-t border-black/35 shadow-[0_1px_0_rgba(255,255,255,0.4)]"
+		/>
+		<div class="p-2">
+			<p class="mb-2 text-sm">{objective.description}</p>
 
-				{#if diagnostic && status !== MissionStatusEnum.COMPLETE}
-					<Screen class="p-3">
-						<p class="text-sm">{diagnostic}</p>
-					</Screen>
-				{/if}
-			</div>
-		{/if}
+			{#if objective.hint && objective.status !== "complete"}
+				<Screen class="p-3">
+					<p class="text-sm">{objective.hint.join("\n")}</p>
+				</Screen>
+			{/if}
+		</div>
 	{/if}
 </Box>

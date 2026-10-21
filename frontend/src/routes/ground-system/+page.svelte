@@ -6,55 +6,14 @@
 	import ReadOut from "$lib/components/ground-system/ReadOut.svelte";
 	import Terminal from "$lib/components/ground-system/Terminal.svelte";
 	import * as Resizable from "$lib/components/ui/resizable/index.js";
-	import type { MissionDetailType } from "$lib/types";
-	import { MissionStatusEnum } from "$lib/enums";
 	import {
 		apiWebSocket,
 		type Telemetry,
 		type CommandDownlink,
 		type CommandUplink,
+		type ObjectiveDetail,
 	} from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
-
-	// dummy data for the mission status
-	// TODO remove once we get actual data
-	const missionDetails: MissionDetailType[] = [
-		{
-			id: 1,
-			title: "Mission 1",
-			status: MissionStatusEnum.COMPLETE,
-			description:
-				"This is the description for mission one. There are lots of important details here for the player to read.",
-		},
-		{
-			id: 2,
-			title: "Mission 2",
-			status: MissionStatusEnum.ACTIVE,
-			description:
-				"This is the description for mission two. There are lots of important details here for the player to read.",
-			diagnostic:
-				"This is the diagnostic for mission two. There are lots of important details here for the player to read.",
-		},
-		{
-			id: 3,
-			title: "Mission 3",
-			status: MissionStatusEnum.ACTIVE,
-			description:
-				"This is the description for mission three. There are lots of important details here for the player to read.",
-		},
-		{
-			id: 4,
-			title: "Mission 4",
-			status: MissionStatusEnum.LOCKED,
-			description: "",
-		},
-		{
-			id: 5,
-			title: "Mission 5",
-			status: MissionStatusEnum.LOCKED,
-			description: "",
-		},
-	];
 
 	const RECONNECT_BASE_DELAY = 1000;
 	const MAX_RECONNECT_DELAY = 10000;
@@ -67,6 +26,13 @@
 
 	let tlm = $state<string[]>([]);
 	let readOutTlm = $state<Telemetry>();
+
+	// key objectives by id
+	let objectives = $state<Record<string, ObjectiveDetail>>(
+		Object.fromEntries(
+			(gameState.scenario?.objectives ?? []).map((o) => [o.id, { ...o }])
+		)
+	);
 
 	let attempts = $state(0);
 	let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -97,7 +63,15 @@
 				break;
 
 			case "state":
-				// TODO handle state
+				for (const update of message.objectives) {
+					const objective = objectives[update.id];
+					if (!objective) {
+						continue;
+					}
+					Object.assign(objective, { hint: undefined }, update);
+				}
+
+				// TODO add constraints {}
 				break;
 		}
 	}
@@ -124,7 +98,7 @@
 		void retry;
 
 		const socket = apiWebSocket(
-			`select-scenario?scenario-id=${gameState.id}`
+			`select-scenario?scenario-id=${gameState.scenario?.id ?? ""}`
 		);
 		ws = socket;
 		ready = false;
@@ -155,7 +129,7 @@
 			defaultSize={30}
 			minSize={10}
 		>
-			<MissionStatus {missionDetails} />
+			<MissionStatus {objectives} />
 		</Resizable.Pane>
 
 		<Resizable.Handle />
@@ -236,10 +210,10 @@
 </div>
 
 <style>
-	/*
-		hide resize handles
+	/* 
+		hide resize handles 
 		will reduce the discoverability for the style
-		TODO: we need to find a good solution
+		TODO: we need to find a good solution 
 	*/
 	div :global([data-slot="resizable-handle"]) {
 		background-color: transparent;
