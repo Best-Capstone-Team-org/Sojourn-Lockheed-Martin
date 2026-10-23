@@ -40,6 +40,8 @@ func Serve() {
 		app.ErrorLogger.Fatalf("Unable to load scenarios: %v", err)
 	}
 
+	app.ServerLogger.Printf("Loaded %d scenarios from %s", len(server.gs.AvailableScenarios), scenariosDir)
+
 	mux := server.routes()
 	port := os.Getenv("PORT")
 	if port == "" {

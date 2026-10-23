@@ -2,17 +2,30 @@ package game
 
 import (
 	"fmt"
+	"slices"
 	"sojourn/emulator"
+	"strconv"
+	"strings"
+)
+
+const (
+	pendingCommandLimit = 64
+	bootBanner          = "SOJOURN FSW"
 )
 
 type Grader struct {
 	state      *State
 	gdbAddr    string
 	introspect *emulator.Introspect
+	log        []CommandLogEntry
 }
 
 func NewGrader(state *State, gdbAddr string) *Grader {
 	return &Grader{state: state, gdbAddr: gdbAddr}
+}
+
+func (g *Grader) LogCommand(command CommandLogEntry) {
+	g.log = append(g.log, command)
 }
 
 func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
@@ -31,9 +44,9 @@ func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
 
 	f := Frame{
 		Telemetry: frame.AsMap(),
+		Log:       slices.Clone(g.log),
 		// TODO: fill in
 		// Events
-		// Log
 		// Budget
 	}
 
@@ -78,4 +91,26 @@ func (g *Grader) capture(ranges []emulator.MemoryRange) (*emulator.MemorySnapsho
 	}
 
 	return mem, nil
+}
+
+func parseCommand(raw string) CommandLogEntry {
+	command := CommandLogEntry{Raw: raw}
+
+	fields := strings.Fields(raw)
+	if len(fields) > 0 {
+		command.Verb = fields[0]
+	}
+
+	if len(fields) > 1 {
+		hex := strings.TrimPrefix(strings.TrimPrefix(fields[1], "0x"), "0X")
+		if addr, err := strconv.ParseUint(hex, 16, 32); err == nil {
+			command.Addr = uint32(addr)
+		}
+	}
+
+	return command
+}
+
+func isCommandResponse(line string) bool {
+	return strings.HasPrefix(line, "ACK ") || strings.HasPrefix(line, "NAK ")
 }
