@@ -35,6 +35,7 @@ func Connect(addr string) (*Introspect, error) {
 	}
 
 	if err := in.setPacketSize(); err != nil {
+		in.conn.Close()
 		return nil, err
 	}
 

@@ -331,3 +331,25 @@ func TestDownlinkTranslatorPumpTelemetry(t *testing.T) {
 		t.Fatal("downlink not closed")
 	}
 }
+
+func TestDeselectScenario(t *testing.T) {
+	state := loadedState(t)
+	if err := state.DeselectScenario(); err == nil {
+		t.Fatal("expected DeselectScenario to fail with no scenario selected")
+	}
+
+	if err := state.SelectScenario("sojourn.test.alpha"); err != nil {
+		t.Fatalf("SelectScenario: %v", err)
+	}
+	if err := state.DeselectScenario(); err != nil {
+		t.Fatalf("DeselectScenario: %v", err)
+	}
+	if state.Phase() != PhaseLevelSelect || state.Scenario != nil || state.grader != nil {
+		t.Fatalf("phase = %v, scenario = %v, grader = %v; want level select with nothing selected",
+			state.Phase(), state.Scenario, state.grader)
+	}
+
+	if err := state.SelectScenario("sojourn.test.beta"); err != nil {
+		t.Fatalf("SelectScenario after deselect: %v", err)
+	}
+}

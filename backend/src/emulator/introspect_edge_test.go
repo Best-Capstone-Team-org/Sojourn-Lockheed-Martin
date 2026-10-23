@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"sojourn/emulator"
 )
@@ -272,5 +274,28 @@ func TestSnapshotReportsResumeFailure(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "reading receive") || !strings.Contains(err.Error(), "resuming") {
 		t.Fatalf("err = %v, want both the read and the resume failure", err)
+	}
+}
+
+func TestConnectClosesConnectionOnFailure(t *testing.T) {
+	closed := make(chan struct{})
+	addr := scripted(t, func(conn net.Conn, r *bufio.Reader) {
+		defer close(closed)
+		if _, err := readPacket(r); err != nil {
+			return
+		}
+		conn.Write([]byte("$OK#00"))
+		io.Copy(io.Discard, r)
+	})
+
+	if g, err := emulator.Connect(addr); err == nil {
+		g.Close()
+		t.Fatal("expected Connect to fail")
+	}
+
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Connect left the connection open after failing")
 	}
 }

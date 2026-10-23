@@ -8,6 +8,7 @@ import (
 	"sojourn/emulator"
 	"strings"
 	"testing"
+	"time"
 )
 
 // gdbStub is a minimal GDB remote stub serving reads of mem, based at SRAM.
@@ -157,5 +158,34 @@ func TestGraderInProgressWithoutScenario(t *testing.T) {
 	g := NewGrader(&State{phase: PhaseInProgress}, "127.0.0.1:1")
 	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: true}); err == nil {
 		t.Fatal("expected Grade to fail with no scenario selected")
+	}
+}
+
+func TestDownlinkTranslatorPumpClosesGrader(t *testing.T) {
+	stub := newGDBStub(t, sram(0x10, 2), false)
+	state := readyState(t, modeIs2)
+	grader := NewGrader(state, stub.addr)
+	if _, err := grader.capture(state.evaluation.MemoryRanges()); err != nil {
+		t.Fatalf("capture: %v", err)
+	}
+	if grader.introspect == nil {
+		t.Fatal("capture did not connect")
+	}
+
+	in := make(chan []byte)
+	out := make(chan DownlinkMessage)
+	go state.downlinkTranslatorPump(out, in, grader)
+	close(in)
+
+	select {
+	case _, ok := <-out:
+		if ok {
+			t.Fatal("unexpected downlink message")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("translator pump did not exit")
+	}
+	if grader.introspect != nil {
+		t.Error("translator pump left the grader's GDB connection open")
 	}
 }

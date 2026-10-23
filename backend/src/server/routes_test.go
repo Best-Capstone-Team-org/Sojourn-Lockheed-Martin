@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -245,6 +246,16 @@ func TestSelectScenarioNotWebsocket(t *testing.T) {
 	if s.downlinkChan != nil || s.uplinkChan != nil || s.gameRunningDone != nil {
 		t.Error("channels created after failed upgrade")
 	}
+	if s.gs.Phase() != game.PhaseLevelSelect || s.gs.Scenario != nil {
+		t.Errorf("phase = %v, scenario = %v after failed upgrade, want level select with none selected",
+			s.gs.Phase(), s.gs.Scenario)
+	}
+
+	rec = httptest.NewRecorder()
+	s.selectScenario(rec, httptest.NewRequest(http.MethodGet, "/api/select-scenario?scenario-id=test.scenario", nil))
+	if strings.Contains(rec.Body.String(), "Unexpected game state") {
+		t.Errorf("retry rejected by game state: %q", rec.Body.String())
+	}
 }
 
 func TestUnimplementedHandlers(t *testing.T) {
@@ -450,11 +461,19 @@ func TestDownlinkPumpWriteError(t *testing.T) {
 		}()
 	})
 
-	s.downlinkChan <- &game.CommandResponseDownlinkMessage{Response: "lost"}
+	for i := range 5 {
+		select {
+		case s.downlinkChan <- &game.CommandResponseDownlinkMessage{Response: fmt.Sprintf("lost %d", i)}:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("downlink pump stopped draining after write error (message %d)", i)
+		}
+	}
+
+	close(s.downlinkChan)
 	select {
 	case <-pumpDone:
 	case <-time.After(5 * time.Second):
-		t.Fatal("downlink pump did not exit after write error")
+		t.Fatal("downlink pump did not exit after channel close")
 	}
 }
 
@@ -530,6 +549,37 @@ func TestUplinkPumpAbnormalClosure(t *testing.T) {
 	case <-pumpDone:
 	case <-time.After(5 * time.Second):
 		t.Fatal("uplink pump did not exit on abnormal closure")
+	}
+	if _, ok := <-s.gameRunningDone; ok {
+		t.Error("gameRunningDone not closed")
+	}
+}
+
+func TestUplinkPumpExitsOnUnexpectedReadError(t *testing.T) {
+	s := newTestServer(t)
+	s.uplinkChan = make(chan []byte)
+	s.gameRunningDone = make(chan struct{})
+	pumpDone := make(chan struct{})
+
+	client := wsPair(t, func(conn *websocket.Conn) {
+		s.wsConn = conn
+		go func() {
+			s.uplinkPump()
+			close(pumpDone)
+		}()
+	})
+
+	// A close frame without a status code reads as 1005, which isn't one of
+	// the codes uplinkPump treats as a client close.
+	closeMsg := websocket.FormatCloseMessage(websocket.CloseNoStatusReceived, "")
+	if err := client.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(time.Second)); err != nil {
+		t.Fatalf("write close: %v", err)
+	}
+
+	select {
+	case <-pumpDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("uplink pump did not exit on an unexpected read error")
 	}
 	if _, ok := <-s.gameRunningDone; ok {
 		t.Error("gameRunningDone not closed")
