@@ -34,6 +34,14 @@ export interface ObjectiveResponse {
 	status: ObjectiveStatus;
 }
 
+export interface Objective {
+	id: string;
+	status: ObjectiveStatus;
+	hint?: string[];
+}
+// front end storage for missions
+export type ObjectiveDetail = ObjectiveResponse & Objective;
+
 export type SelectScenarioResponse = Message;
 
 export type NewScenarioResponse = Message;
@@ -131,13 +139,4 @@ export interface Comms {
 	hgaDeploy: number; // in percent
 }
 
-export interface Objective {
-	id: string;
-	status: ObjectiveStatus;
-	hint?: string[];
-}
-
 export type Constraints = Record<string, number>;
-
-// front end storage for missions
-export type ObjectiveDetail = ObjectiveResponse & Objective;

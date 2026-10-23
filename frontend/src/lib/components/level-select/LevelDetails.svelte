@@ -7,6 +7,9 @@
 	import Objectives from "$lib/components/level-select/Objectives.svelte";
 	import type { ScenarioResponse } from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
+	import easyProbe from "$lib/assets/easy-probe.png";
+	import mediumProbe from "$lib/assets/med-probe.png";
+	import hardProbe from "$lib/assets/hard-probe.png";
 
 	let { scenario }: { scenario: ScenarioResponse } = $props();
 	let objectivesOpen = $state(false);
@@ -14,6 +17,16 @@
 	function startScenario() {
 		gameState.scenario = scenario;
 		goto(resolve("/ground-system"));
+	}
+
+	function probeForDifficulty(difficulty: string) {
+		if (difficulty === "intermediate") {
+			return hardProbe; // just wanted to show the hard probe
+		} else if (difficulty === "tutorial") {
+			return easyProbe;
+		} else {
+			return mediumProbe;
+		}
 	}
 </script>
 
@@ -24,9 +37,13 @@
 		>
 			<Screen
 				class="flex flex-col items-center justify-center"
-				bezelClass="w-[11vh] shrink-0"
+				bezelClass="aspect-square w-[11vh] shrink-0"
 			>
-				<p class="text-sm">{scenario.difficulty}</p>
+				<img
+					src={probeForDifficulty(scenario.difficulty)}
+					alt={`${scenario.difficulty} probe`}
+					class="h-full w-full object-contain"
+				/>
 			</Screen>
 
 			<div class="flex min-h-0 min-w-0 flex-1 flex-col">
