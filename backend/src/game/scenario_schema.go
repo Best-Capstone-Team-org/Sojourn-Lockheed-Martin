@@ -62,6 +62,7 @@ type Partial struct {
 }
 
 type CommandLogEntry struct {
+	Raw    string
 	Verb   string
 	Result string
 	Addr   uint32

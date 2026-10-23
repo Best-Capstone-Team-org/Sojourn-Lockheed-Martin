@@ -62,8 +62,20 @@ func TestStartLaunchesScenarioFirmware(t *testing.T) {
 	if l.rom != "probe_rom.elf" {
 		t.Errorf("rom = %q, want probe_rom.elf", l.rom)
 	}
-	if l.uplink != uplink || l.done != done {
-		t.Error("firmware was not given the channels passed to Start")
+	if l.done != done {
+		t.Error("firmware was not given the done channel passed to Start")
+	}
+
+	uplink <- []byte("PING\n")
+	l.downlink <- []byte(bootBanner + " v1.0 boot\n")
+	recvDownlink(t, downlink)
+	if got := recvUplink(t, l.uplink); got != "PING" {
+		t.Errorf("firmware uplink = %q, want the player's PING", got)
+	}
+
+	close(uplink)
+	if _, ok := <-l.uplink; ok {
+		t.Error("firmware uplink not closed after the player's uplink closed")
 	}
 
 	l.downlink <- []byte("ACK PING\n")
@@ -122,5 +134,19 @@ func TestStopReturnsToLevelSelect(t *testing.T) {
 
 	if err := state.Stop(); err == nil {
 		t.Fatal("expected Stop to fail when no game is running")
+	}
+}
+
+func recvUplink(t *testing.T, ch chan []byte) string {
+	t.Helper()
+	select {
+	case msg, ok := <-ch:
+		if !ok {
+			t.Fatal("firmware uplink closed")
+		}
+		return string(msg)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for firmware uplink")
+		return ""
 	}
 }

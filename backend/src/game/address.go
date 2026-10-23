@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -246,6 +247,47 @@ func (s *Scenario) validateObjectiveAddresses() error {
 	}
 
 	return nil
+}
+
+// The firmware's POKE accepts at most this many bytes.
+const maxPokeBytes = 32
+
+// setupCommands returns the POKEs that apply the scenario's setup writes, in
+// order. Integer values are written little-endian, as the target stores them.
+func (s *Scenario) setupCommands() ([]string, error) {
+	if s.Setup == nil {
+		return nil, nil
+	}
+
+	var commands []string
+	for i, write := range s.Setup.Writes {
+		addr, err := s.ResolveAddress(write.At)
+		if err != nil {
+			return nil, fmt.Errorf("setup write %d: %w", i, err)
+		}
+
+		var data []byte
+		switch {
+		case write.U8 != nil:
+			data = []byte{*write.U8}
+		case write.U16 != nil:
+			data = binary.LittleEndian.AppendUint16(nil, *write.U16)
+		case write.U32 != nil:
+			data = binary.LittleEndian.AppendUint32(nil, *write.U32)
+		default:
+			data, err = hex.DecodeString(write.Hex)
+			if err != nil {
+				return nil, fmt.Errorf("setup write %d: %w", i, err)
+			}
+		}
+
+		for offset := 0; offset < len(data); offset += maxPokeBytes {
+			chunk := data[offset:min(offset+maxPokeBytes, len(data))]
+			commands = append(commands, fmt.Sprintf("POKE 0x%08X %X", uint64(addr)+uint64(offset), chunk))
+		}
+	}
+
+	return commands, nil
 }
 
 func (s *Scenario) validateSetupAddresses() error {
