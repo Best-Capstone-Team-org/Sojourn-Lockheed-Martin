@@ -117,19 +117,17 @@ func (s *State) Start(downlinkChan chan DownlinkMessage, uplinkChan chan []byte,
 		done,
 	)
 
-	go s.downlinkTranslatorPump(downlinkChan, emulatorDownlinkChan)
+	go s.downlinkTranslatorPump(downlinkChan, emulatorDownlinkChan, s.grader)
 
 	return nil
 }
 
 func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessage,
-	emulatorDownlinkChan chan []byte) {
+	emulatorDownlinkChan chan []byte, grader *Grader) {
 	app.GameLogger.Println("Starting downlink translator pump")
 
 	for downlinkMessage := range emulatorDownlinkChan {
 		line := strings.TrimSpace(string(downlinkMessage))
-
-		var err error
 
 		if strings.HasPrefix(line, "TLM ") {
 			frame, err := emulator.DecodeTelemetryFrame(line[4:])
@@ -140,7 +138,7 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 
 			emulator.PrintTelemetryFrame(frame)
 
-			if err := s.grader.Grade(frame); err != nil {
+			if err := grader.Grade(frame); err != nil {
 				app.ErrorLogger.Printf("Grading: %v", err)
 			}
 
@@ -168,16 +166,27 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 				Response: line,
 			}
 		}
+	}
 
-		if err != nil {
-			app.ServerLogger.Printf("Error writing JSON, probably WS connection closed: %+v\n", err)
-			break
-		}
+	if grader != nil {
+		grader.Close()
 	}
 
 	close(interfaceDownlinkChan)
 
 	app.GameLogger.Println("Exiting downlink translator pump")
+}
+
+func (s *State) DeselectScenario() error {
+	if s.phase != PhaseReady {
+		return unexpectedPhase("deselecting a scenario")
+	}
+
+	s.Scenario = nil
+	s.grader = nil
+	s.phase = PhaseLevelSelect
+
+	return nil
 }
 
 func (s *State) Stop() error {

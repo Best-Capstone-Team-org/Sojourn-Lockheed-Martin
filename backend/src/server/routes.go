@@ -157,7 +157,7 @@ func (s *server) selectScenario(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		app.ErrorLogger.Printf("Error upgrading to WS: %+v", err)
-		s.clientError(w, http.StatusUpgradeRequired)
+		s.deselectScenario()
 		return
 	}
 
@@ -174,11 +174,18 @@ func (s *server) selectScenario(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("Error starting game: %v", err))
 		conn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(time.Second))
 		conn.Close()
+		s.deselectScenario()
 		return
 	}
 
 	go s.downlinkPump()
 	go s.uplinkPump()
+}
+
+func (s *server) deselectScenario() {
+	if err := s.gs.DeselectScenario(); err != nil {
+		app.ErrorLogger.Printf("Error deselecting scenario: %v", err)
+	}
 }
 
 func (s *server) newScenario(w http.ResponseWriter, r *http.Request) {
@@ -251,8 +258,12 @@ func (s *server) downlinkPump() {
 
 		if err != nil {
 			app.ServerLogger.Printf("Error writing JSON, probably WS connection closed: %+v\n", err)
+			s.wsConn.Close()
 			break
 		}
+	}
+
+	for range s.downlinkChan {
 	}
 
 	app.ServerLogger.Println("Exiting downlink pump")
@@ -268,11 +279,10 @@ func (s *server) uplinkPump() {
 				websocket.CloseAbnormalClosure,
 			) {
 				app.ServerLogger.Printf("Client closed websocket: %+v", err)
-				break
+			} else {
+				app.ErrorLogger.Printf("Error reading WS message: %+v", err)
 			}
-
-			app.ErrorLogger.Printf("Error reading WS message: %+v", err)
-			continue
+			break
 		}
 
 		app.ServerLogger.Printf("Uplink message received: `%s`\n", uplinkMessage)
