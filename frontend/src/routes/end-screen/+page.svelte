@@ -3,5 +3,5 @@
 </svelte:head>
 
 <main class="end-screen">
-	<p>the end</p>
+	<h1>the end</h1>
 </main>
