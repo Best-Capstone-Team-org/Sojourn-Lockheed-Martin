@@ -278,6 +278,7 @@ func (s *State) Stop() error {
 	}
 
 	s.phase = PhaseLevelSelect
+	s.evaluation.reset()
 
 	return nil
 }
