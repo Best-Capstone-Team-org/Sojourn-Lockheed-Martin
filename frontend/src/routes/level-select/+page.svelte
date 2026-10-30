@@ -4,9 +4,6 @@
 	import SelectionBrackets from "$lib/components/level-select/SelectionBrackets.svelte";
 	import { onMount } from "svelte";
 	import { apiFetch, type ScenarioResponse } from "$lib/api";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { gameState } from "$lib/components/ground-system/GameState.svelte";
 	import SelectedLevelPanel from "$lib/components/level-select/SelectedLevelPanel.svelte";
 
 	let levels: ScenarioResponse[] = $state([]);
@@ -43,12 +40,6 @@
 
 	function centerLevel(i: number) {
 		scroller?.scrollTo({ top: i * cardH, behavior: "smooth" });
-	}
-
-	function startSelected() {
-		if (!selectedLevel) return;
-		gameState.scenario = selectedLevel;
-		goto(resolve("/ground-system"));
 	}
 </script>
 
