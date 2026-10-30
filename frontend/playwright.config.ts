@@ -6,6 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
 	testDir: "tests",
 	testMatch: "**/*.e2e.{ts,js}",
+	globalSetup: "./tests/coverage.ts",
 	forbidOnly: !!process.env.CI,
 	reporter: [["list"], ["html", { open: "never" }]],
 	use: {

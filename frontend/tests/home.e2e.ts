@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("Start opens level select", async ({ page }) => {
 	// Start is in the prerendered HTML. Wait until the app's scripts have
