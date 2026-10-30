@@ -21,6 +21,7 @@ type State struct {
 
 	evaluation Evaluation
 	grader     *Grader
+	allowance  *allowance
 
 	AvailableScenarios map[string]*Scenario
 }
@@ -138,14 +139,22 @@ func (s *State) Start(downlinkChan chan DownlinkMessage, uplinkChan chan []byte,
 	)
 
 	link := s.Scenario.Manifest.Link
+	s.allowance = newAllowance(link.Budget)
+
+	admittedUplinkChan := make(chan []byte)
 	delayedUplinkChan := make(chan []byte)
 	translatedDownlinkChan := make(chan DownlinkMessage)
+	delayedDownlinkChan := make(chan DownlinkMessage)
+	refusals := make(chan DownlinkMessage)
+	refusalsDone := make(chan struct{})
 
-	go delayed(uplinkChan, delayedUplinkChan, time.Duration(link.UplinkDelayS)*linkDelayUnit, done)
+	go admitUplink(uplinkChan, admittedUplinkChan, s.allowance, refusals, refusalsDone)
+	go delayed(admittedUplinkChan, delayedUplinkChan, time.Duration(link.UplinkDelayS)*linkDelayUnit, done)
 	go uplinkForwarder(delayedUplinkChan, emulatorUplinkChan, pendingCommands, booted, setupCommands)
 
 	go s.downlinkTranslatorPump(translatedDownlinkChan, emulatorDownlinkChan, s.grader, pendingCommands, booted)
-	go delayed(translatedDownlinkChan, downlinkChan, time.Duration(link.DownlinkDelayS)*linkDelayUnit, done)
+	go delayed(translatedDownlinkChan, delayedDownlinkChan, time.Duration(link.DownlinkDelayS)*linkDelayUnit, done)
+	go mergeDownlink(delayedDownlinkChan, refusals, downlinkChan, refusalsDone)
 
 	return nil
 }
@@ -179,6 +188,24 @@ func delayed[T any](in <-chan T, out chan<- T, delay time.Duration, stop <-chan 
 			}
 		}
 		out <- s.message
+	}
+}
+
+func mergeDownlink(delayedDownlinkChan <-chan DownlinkMessage, immediate <-chan DownlinkMessage,
+	out chan<- DownlinkMessage, done chan<- struct{}) {
+	defer close(done)
+	defer close(out)
+
+	for {
+		select {
+		case message, ok := <-delayedDownlinkChan:
+			if !ok {
+				return
+			}
+			out <- message
+		case message := <-immediate:
+			out <- message
+		}
 	}
 }
 
@@ -319,7 +346,7 @@ func (s *State) sendStateDownlink(interfaceDownlinkChan chan DownlinkMessage) {
 				Status: s.evaluation.objectiveStates[objective.ID].Status,
 			})
 	}
-	stateMessage.Constraints = map[string]int{}
+	stateMessage.Constraints = s.allowance.remaining()
 	interfaceDownlinkChan <- stateMessage
 }
 

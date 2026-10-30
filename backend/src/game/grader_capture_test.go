@@ -196,12 +196,12 @@ func TestParseCommand(t *testing.T) {
 		raw  string
 		want CommandLogEntry
 	}{
-		{"POKE 0x2001E200 09", CommandLogEntry{Raw: "POKE 0x2001E200 09", Verb: "POKE", Addr: 0x2001E200}},
-		{"PEEK 2001e200 16", CommandLogEntry{Raw: "PEEK 2001e200 16", Verb: "PEEK", Addr: 0x2001E200}},
-		{"PEEK  0X10   4", CommandLogEntry{Raw: "PEEK  0X10   4", Verb: "PEEK", Addr: 0x10}},
-		{"PING", CommandLogEntry{Raw: "PING", Verb: "PING"}},
-		{"POKE nothex 1", CommandLogEntry{Raw: "POKE nothex 1", Verb: "POKE"}},
-		{"POKE 0x123456789 1", CommandLogEntry{Raw: "POKE 0x123456789 1", Verb: "POKE"}},
+		{"POKE 0x2001E200 09", CommandLogEntry{Raw: "POKE 0x2001E200 09", Verb: "POKE", Charged: "writes", Addr: 0x2001E200}},
+		{"PEEK 2001e200 16", CommandLogEntry{Raw: "PEEK 2001e200 16", Verb: "PEEK", Charged: "reads", Addr: 0x2001E200}},
+		{"PEEK  0X10   4", CommandLogEntry{Raw: "PEEK  0X10   4", Verb: "PEEK", Charged: "reads", Addr: 0x10}},
+		{"PING", CommandLogEntry{Raw: "PING", Verb: "PING", Charged: "reads"}},
+		{"POKE nothex 1", CommandLogEntry{Raw: "POKE nothex 1", Verb: "POKE", Charged: "writes"}},
+		{"POKE 0x123456789 1", CommandLogEntry{Raw: "POKE 0x123456789 1", Verb: "POKE", Charged: "writes"}},
 		{"", CommandLogEntry{}},
 	}
 
@@ -304,8 +304,8 @@ func TestCommandsAreGradedWithTelemetry(t *testing.T) {
 	}
 
 	want := []CommandLogEntry{
-		{Raw: "POKE 0x20000010 09", Verb: "POKE", Addr: 0x20000010, Result: "NAK E04"},
-		{Raw: "POKE 0x20000010 09", Verb: "POKE", Addr: 0x20000010, Result: "ACK POKE 1"},
+		{Raw: "POKE 0x20000010 09", Verb: "POKE", Charged: "writes", Addr: 0x20000010, Result: "NAK E04"},
+		{Raw: "POKE 0x20000010 09", Verb: "POKE", Charged: "writes", Addr: 0x20000010, Result: "ACK POKE 1"},
 	}
 	if !slices.Equal(state.grader.log, want) {
 		t.Errorf("log = %+v, want %+v", state.grader.log, want)
@@ -463,7 +463,7 @@ func TestSetupAppliedBeforePlayerCommands(t *testing.T) {
 	}
 
 	want := []CommandLogEntry{
-		{Raw: "PEEK 0x20000010 4", Verb: "PEEK", Addr: 0x20000010, Result: "ACK PEEK 02000000"},
+		{Raw: "PEEK 0x20000010 4", Verb: "PEEK", Charged: "reads", Addr: 0x20000010, Result: "ACK PEEK 02000000"},
 	}
 	if !slices.Equal(state.grader.log, want) {
 		t.Errorf("log = %+v, want %+v", state.grader.log, want)

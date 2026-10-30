@@ -62,10 +62,11 @@ type Partial struct {
 }
 
 type CommandLogEntry struct {
-	Raw    string
-	Verb   string
-	Result string
-	Addr   uint32
+	Raw     string
+	Verb    string
+	Charged string
+	Result  string
+	Addr    uint32
 }
 
 type Hint struct {

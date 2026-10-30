@@ -74,6 +74,13 @@ type commandResponseDownlink struct {
 	Response string `json:"response"`
 }
 
+type commandRefusedDownlink struct {
+	Type        string         `json:"type"`
+	Command     string         `json:"command"`
+	Reason      string         `json:"reason"`
+	Constraints map[string]int `json:"constraints"`
+}
+
 type stateDownlink struct {
 	Type        string                               `json:"type"`
 	Objectives  []game.ObjectiveStateDownlinkMessage `json:"objectives"`

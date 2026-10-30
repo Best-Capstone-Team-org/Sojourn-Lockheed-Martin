@@ -30,3 +30,11 @@ type ObjectiveStateDownlinkMessage struct {
 }
 
 func (m *StateDownlinkMessage) downlinkMessage() {}
+
+type CommandRefusedDownlinkMessage struct {
+	Command     string
+	Reason      string
+	Constraints map[string]int
+}
+
+func (m *CommandRefusedDownlinkMessage) downlinkMessage() {}

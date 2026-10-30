@@ -42,9 +42,9 @@ func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
 		CRCOK:     frame.CRCOK,
 		Telemetry: frame.AsMap(),
 		Log:       slices.Clone(g.log),
+		Budget:    budgetUsed(g.log),
 		// TODO: fill in
 		// Events
-		// Budget
 	}
 
 	if len(ranges) > 0 {
@@ -96,6 +96,7 @@ func parseCommand(raw string) CommandLogEntry {
 	fields := strings.Fields(raw)
 	if len(fields) > 0 {
 		command.Verb = fields[0]
+		command.Charged = chargedResource(command.Verb)
 	}
 
 	if len(fields) > 1 {
