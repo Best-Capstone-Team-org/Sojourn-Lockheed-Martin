@@ -25,8 +25,10 @@ type StateDownlinkMessage struct {
 }
 
 type ObjectiveStateDownlinkMessage struct {
-	ID     string          `json:"id"`
-	Status ObjectiveStatus `json:"status"`
+	ID         string          `json:"id"`
+	Status     ObjectiveStatus `json:"status"`
+	Diagnostic string          `json:"diagnostic"`
+	Hints      []string        `json:"hints"`
 }
 
 func (m *StateDownlinkMessage) downlinkMessage() {}

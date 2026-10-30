@@ -498,6 +498,11 @@ func (e *Evaluation) evaluateObjectives(frame Frame) string {
 			e.objectiveStates = originalStates
 			return msg
 		}
+
+		state = e.objectiveStates[objective.ID]
+		if state != nil && state.Status == ObjectiveStatusActive {
+			state.FramesActive++
+		}
 	}
 
 	return ""
