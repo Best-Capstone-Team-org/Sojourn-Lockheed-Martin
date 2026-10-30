@@ -14,7 +14,9 @@
 	let history = $state<string[]>([]);
 	let historyIndex = $state(-1);
 
-	let searchResults = $derived(history.filter((cmd) => cmd.includes(textEntry)));
+	let searchResults = $derived(
+		history.filter((cmd) => cmd.includes(textEntry))
+	);
 	let command = $derived.by(() => {
 		switch (terminalMode) {
 			case "history":
@@ -72,7 +74,7 @@
 		}
 
 		terminalMode = "search";
-	}
+	};
 
 	// mappings
 	const hotKeys = (e: KeyboardEvent) => {
@@ -86,13 +88,13 @@
 	};
 
 	const actions: Record<string, () => void> = {
-		"Enter": sendCommand,
+		Enter: sendCommand,
 		"ctrl+p": historyUp,
-		"ArrowUp": historyUp,
+		ArrowUp: historyUp,
 		"ctrl+n": historyDown,
-		"ArrowDown": historyDown,
+		ArrowDown: historyDown,
 		"ctrl+l": clearCommand,
-		"ctrl+r": historySearch
+		"ctrl+r": historySearch,
 	};
 
 	// event handle
@@ -104,7 +106,6 @@
 			action();
 		}
 	};
-
 </script>
 
 <div class="flex h-full flex-col-reverse overflow-y-hidden">
@@ -122,20 +123,24 @@
 			autocapitalize="off"
 			placeholder="Enter Command"
 			bind:value={textEntry}
-			onkeydown={onkeydown}
+			{onkeydown}
 		/>
 	</div>
 
 	<!-- Terminal History -->
 	<TerminalScroll class="p-3">
-	    {#if terminalMode === "history"}
+		{#if terminalMode === "history"}
 			{#each history as command, index (index)}
 				<p class="mb-1 text-sm break-all">{command}</p>
 			{/each}
 		{:else if terminalMode === "search"}
 			{#each searchResults as result, index (index)}
 				{#if index === searchResults.length - 1}
-				    <p class="mb-1 text-sm break-all bg-white text-black mix-blend-screen">{result}</p>
+					<p
+						class="mb-1 bg-white text-sm break-all text-black mix-blend-screen"
+					>
+						{result}
+					</p>
 				{:else}
 					<p class="mb-1 text-sm break-all">{result}</p>
 				{/if}
