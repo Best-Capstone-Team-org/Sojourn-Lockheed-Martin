@@ -262,10 +262,20 @@ func (s *State) DeselectScenario() error {
 func (s *State) sendStateDownlink(interfaceDownlinkChan chan DownlinkMessage) {
 	stateMessage := &StateDownlinkMessage{}
 	for _, objective := range s.Scenario.Objectives {
+		availableHints := 0
+		if s.evaluation.objectiveStates[objective.ID].Status == ObjectiveStatusActive {
+				for _, hint := range objective.Hints {
+					if s.evaluation.objectiveStates[objective.ID].FramesActive >= hint.AfterFrames {
+						availableHints++
+					}
+				}
+			}
 		stateMessage.Objectives = append(stateMessage.Objectives,
 			ObjectiveStateDownlinkMessage{
 				ID:     objective.ID,
 				Status: s.evaluation.objectiveStates[objective.ID].Status,
+				Diagnostic: s.evaluation.objectiveStates[objective.ID].Diagnostic,
+				AvailableHints: availableHints,
 			})
 	}
 	stateMessage.Constraints = map[string]int{}
