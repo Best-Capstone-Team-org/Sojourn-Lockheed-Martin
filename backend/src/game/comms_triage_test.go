@@ -62,7 +62,7 @@ func TestCommsTriageSolution(t *testing.T) {
 		if radPresent {
 			channels["RAD"] = map[string]any{"counts": 12.0}
 		}
-		f := Frame{Telemetry: map[string]any{"channels": channels}, Log: slices.Clone(log), Memory: memory}
+		f := Frame{CRCOK: true, Telemetry: map[string]any{"channels": channels}, Log: slices.Clone(log), Memory: memory}
 		if err := e.Evaluate(f); err != nil {
 			t.Fatalf("Evaluate: %v", err)
 		}

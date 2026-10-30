@@ -10,6 +10,7 @@ import (
 )
 
 type Frame struct {
+	CRCOK     bool
 	Telemetry map[string]any
 	Events    []string
 	Log       []CommandLogEntry

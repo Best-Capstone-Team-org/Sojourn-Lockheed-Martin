@@ -747,6 +747,7 @@ func TestCompareValuesIn(t *testing.T) {
 func TestEvaluateTelemetryPredicateUnknownPath(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
@@ -771,6 +772,7 @@ func TestEvaluateTelemetryPredicateUnknownPath(t *testing.T) {
 func TestEvaluateAndPredicate(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode":   "NOMINAL",
 			"bus_mv": 5000,
@@ -807,6 +809,7 @@ func TestEvaluateAndPredicate(t *testing.T) {
 func TestEvaluateOrPredicate(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
@@ -842,6 +845,7 @@ func TestEvaluateOrPredicate(t *testing.T) {
 func TestEvaluateNotPredicate(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
@@ -869,6 +873,7 @@ func TestEvaluateNotPredicate(t *testing.T) {
 func TestNestedLogicalPredicates(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode":   "NOMINAL",
 			"bus_mv": 5000,
@@ -1015,6 +1020,7 @@ func TestEvaluateObjectiveSuccess(t *testing.T) {
 		},
 	}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": 2,
 		},
@@ -1059,6 +1065,7 @@ func TestEvaluateObjectiveFailure(t *testing.T) {
 		Fail: &failPredicate,
 	}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": 3,
 		},
@@ -1103,6 +1110,7 @@ func TestEvaluateObjectiveStaysActive(t *testing.T) {
 		Fail: &failPredicate,
 	}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": 1,
 		},
@@ -1155,6 +1163,7 @@ func TestEvaluateObjectivesUnlocksNextObjective(t *testing.T) {
 		},
 	}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": 2,
 		},
@@ -1195,6 +1204,7 @@ func TestEvaluateObjectiveRetractable(t *testing.T) {
 		},
 	}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": 1,
 		},
@@ -1233,6 +1243,7 @@ func TestEvaluateObjectiveRetractableStaysComplete(t *testing.T) {
 		},
 	}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": 2,
 		},
@@ -1606,6 +1617,7 @@ func TestEvaluateMemChangedPredicateFalse(t *testing.T) {
 func TestEvaluateTelemetryPredicateNestedPath(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1634,6 +1646,7 @@ func TestEvaluateTelemetryPredicateNestedPath(t *testing.T) {
 func TestEvaluateTelemetryBitsPredicate(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1663,6 +1676,7 @@ func TestEvaluateTelemetryBitsPredicate(t *testing.T) {
 func TestEvaluateTelemetryBitsPredicateUnknownPath(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1692,6 +1706,7 @@ func TestEvaluateTelemetryBitsPredicateUnknownPath(t *testing.T) {
 func TestEvaluateChannelPresentPredicate(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1718,6 +1733,7 @@ func TestEvaluateChannelPresentPredicate(t *testing.T) {
 func TestEvaluateChannelAbsentPredicate(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"channels": map[string]any{
 				"COMMS": map[string]any{
@@ -1839,13 +1855,13 @@ func TestEvaluateEverPredicate(t *testing.T) {
 	e := &Evaluation{
 		scenario: scenario,
 		history: []Frame{
-			{Telemetry: map[string]any{
+			{CRCOK: true, Telemetry: map[string]any{
 				"mode": "NOMINAL",
 			}},
-			{Telemetry: map[string]any{
+			{CRCOK: true, Telemetry: map[string]any{
 				"mode": "SAFE",
 			}},
-			{Telemetry: map[string]any{
+			{CRCOK: true, Telemetry: map[string]any{
 				"mode": "NOMINAL",
 			}},
 		},
@@ -1878,13 +1894,13 @@ func TestEvaluateEverPredicateFalse(t *testing.T) {
 	e := &Evaluation{
 		scenario: scenario,
 		history: []Frame{
-			{Telemetry: map[string]any{
+			{CRCOK: true, Telemetry: map[string]any{
 				"mode": "NOMINAL",
 			}},
-			{Telemetry: map[string]any{
+			{CRCOK: true, Telemetry: map[string]any{
 				"mode": "BOOT",
 			}},
-			{Telemetry: map[string]any{
+			{CRCOK: true, Telemetry: map[string]any{
 				"mode": "NOMINAL",
 			}},
 		},
@@ -1914,6 +1930,7 @@ func TestEvaluateEverPredicateFalse(t *testing.T) {
 func TestEvaluateEverPredicateCurrentFrame(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
@@ -1921,8 +1938,8 @@ func TestEvaluateEverPredicateCurrentFrame(t *testing.T) {
 	e := &Evaluation{
 		scenario: scenario,
 		history: []Frame{
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -1950,6 +1967,7 @@ func TestEvaluateEverPredicateCurrentFrame(t *testing.T) {
 func TestEvaluateSustainedPredicate(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
@@ -1957,9 +1975,9 @@ func TestEvaluateSustainedPredicate(t *testing.T) {
 	e := &Evaluation{
 		scenario: scenario,
 		history: []Frame{
-			{Telemetry: map[string]any{"mode": "SAFE"}},
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "SAFE"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -1988,6 +2006,7 @@ func TestEvaluateSustainedPredicate(t *testing.T) {
 func TestEvaluateSustainedPredicateFalse(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
@@ -1995,9 +2014,9 @@ func TestEvaluateSustainedPredicateFalse(t *testing.T) {
 	e := &Evaluation{
 		scenario: scenario,
 		history: []Frame{
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
-			{Telemetry: map[string]any{"mode": "SAFE"}},
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "SAFE"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -2026,6 +2045,7 @@ func TestEvaluateSustainedPredicateFalse(t *testing.T) {
 func TestEvaluateWithinPredicate(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
@@ -2033,9 +2053,9 @@ func TestEvaluateWithinPredicate(t *testing.T) {
 	e := &Evaluation{
 		scenario: scenario,
 		history: []Frame{
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
-			{Telemetry: map[string]any{"mode": "SAFE"}},
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "SAFE"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -2064,6 +2084,7 @@ func TestEvaluateWithinPredicate(t *testing.T) {
 func TestEvaluateWithinPredicateFalse(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},
@@ -2071,9 +2092,9 @@ func TestEvaluateWithinPredicateFalse(t *testing.T) {
 	e := &Evaluation{
 		scenario: scenario,
 		history: []Frame{
-			{Telemetry: map[string]any{"mode": "SAFE"}},
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
-			{Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "SAFE"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
+			{CRCOK: true, Telemetry: map[string]any{"mode": "NOMINAL"}},
 		},
 	}
 	child := Predicate{
@@ -2343,6 +2364,7 @@ func TestEvaluateBudgetPredicateFalse(t *testing.T) {
 func TestEvaluatePartialFirstMatch(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
@@ -2392,6 +2414,7 @@ func TestEvaluatePartialFirstMatch(t *testing.T) {
 func TestEvaluateObjectivePartial(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
@@ -2443,6 +2466,7 @@ func TestEvaluateObjectivePartial(t *testing.T) {
 func TestEvaluateObjectiveFailTakesPrecedence(t *testing.T) {
 	scenario := &Scenario{}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "SAFE",
 		},
@@ -2544,6 +2568,7 @@ func TestEvaluateObjectivesRollsBackOnMemoryError(t *testing.T) {
 		},
 	}
 	frame := Frame{
+		CRCOK: true,
 		Telemetry: map[string]any{
 			"mode": "NOMINAL",
 		},

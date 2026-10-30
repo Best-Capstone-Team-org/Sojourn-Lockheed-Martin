@@ -35,19 +35,19 @@ func TestEvaluatePredicateErrors(t *testing.T) {
 		frame Frame
 		want  string
 	}{
-		{"tlm_bits mask", failing, Frame{Telemetry: tele}, "mask"},
+		{"tlm_bits mask", failing, Frame{CRCOK: true, Telemetry: tele}, "mask"},
 		{"all of", Predicate{Op: "all", Of: notJSON}, Frame{}, "'all'"},
-		{"all child", Predicate{Op: "all", Of: rawPredicate(t, []Predicate{failing})}, Frame{Telemetry: tele}, "mask"},
+		{"all child", Predicate{Op: "all", Of: rawPredicate(t, []Predicate{failing})}, Frame{CRCOK: true, Telemetry: tele}, "mask"},
 		{"any of", Predicate{Op: "any", Of: notJSON}, Frame{}, "'any'"},
-		{"any child", Predicate{Op: "any", Of: rawPredicate(t, []Predicate{failing})}, Frame{Telemetry: tele}, "mask"},
+		{"any child", Predicate{Op: "any", Of: rawPredicate(t, []Predicate{failing})}, Frame{CRCOK: true, Telemetry: tele}, "mask"},
 		{"not of", Predicate{Op: "not", Of: notJSON}, Frame{}, "'not'"},
-		{"not child", Predicate{Op: "not", Of: rawPredicate(t, failing)}, Frame{Telemetry: tele}, "mask"},
+		{"not child", Predicate{Op: "not", Of: rawPredicate(t, failing)}, Frame{CRCOK: true, Telemetry: tele}, "mask"},
 		{"ever of", Predicate{Op: "ever", Of: notJSON}, Frame{}, "'ever'"},
 		{"sustained of", Predicate{Op: "sustained", Of: notJSON}, Frame{}, "'sustained'"},
 		{"sustained frames", Predicate{Op: "sustained", Of: rawPredicate(t, failing)}, Frame{}, "frames"},
 		{"within of", Predicate{Op: "within", Of: notJSON}, Frame{}, "'within'"},
 		{"within frames", Predicate{Op: "within", Of: rawPredicate(t, failing)}, Frame{}, "frames"},
-		{"within child", Predicate{Op: "within", Frames: 2, Of: rawPredicate(t, failing)}, Frame{Telemetry: tele}, "mask"},
+		{"within child", Predicate{Op: "within", Frames: 2, Of: rawPredicate(t, failing)}, Frame{CRCOK: true, Telemetry: tele}, "mask"},
 		{"commanded address", Predicate{Op: "commanded", At: bad}, Frame{}, "commanded address"},
 		{"script runner", Predicate{Op: "script"}, Frame{}, "runner"},
 		{"unknown", Predicate{Op: "nope"}, Frame{}, "Unknown"},
@@ -147,7 +147,7 @@ func TestEvaluateTemporalChildErrorsInHistory(t *testing.T) {
 	e := frameEvaluation(t)
 	child := Predicate{Op: "tlm_bits", Path: "s", Mask: 1, Cmp: "eq", Value: 1.0}
 	e.history = []Frame{{Telemetry: map[string]any{"s": "str"}}, {Telemetry: map[string]any{"s": "str"}}}
-	now := Frame{Telemetry: map[string]any{"s": uint8(0)}}
+	now := Frame{CRCOK: true, Telemetry: map[string]any{"s": uint8(0)}}
 
 	for _, p := range []Predicate{
 		{Op: "ever", Of: rawPredicate(t, child)},
@@ -307,7 +307,7 @@ func TestGetIntrospectionValueErrors(t *testing.T) {
 }
 
 func TestTelemetryLookupMisses(t *testing.T) {
-	frame := Frame{Telemetry: map[string]any{"mode": "SAFE", "channels": "none"}}
+	frame := Frame{CRCOK: true, Telemetry: map[string]any{"mode": "SAFE", "channels": "none"}}
 	if _, ok := getTelemetryValue(frame, "mode.sub"); ok {
 		t.Error("descended into a scalar")
 	}
@@ -373,7 +373,7 @@ func TestRequiredHistoryDepth(t *testing.T) {
 func TestEvaluateUnboundedHistory(t *testing.T) {
 	e := frameEvaluation(t, Objective{ID: "o", Success: Predicate{Op: "ever", Of: rawPredicate(t, Predicate{Op: "tlm", Path: "x", Cmp: "eq", Value: 1.0})}})
 	for range 5 {
-		if err := e.Evaluate(Frame{Telemetry: map[string]any{"x": 0.0}}); err != nil {
+		if err := e.Evaluate(Frame{CRCOK: true, Telemetry: map[string]any{"x": 0.0}}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -408,10 +408,10 @@ func TestEvaluateLogicalShortCircuit(t *testing.T) {
 
 func TestEvaluateEverMatchesHistory(t *testing.T) {
 	e := frameEvaluation(t)
-	e.history = []Frame{{Telemetry: map[string]any{"x": 1.0}}}
+	e.history = []Frame{{CRCOK: true, Telemetry: map[string]any{"x": 1.0}}}
 	p := Predicate{Op: "ever", Of: rawPredicate(t, Predicate{Op: "tlm", Path: "x", Cmp: "eq", Value: 1.0})}
 
-	if got, msg := e.evaluatePredicate(Frame{Telemetry: map[string]any{"x": 0.0}}, p); !got || msg != "" {
+	if got, msg := e.evaluatePredicate(Frame{CRCOK: true, Telemetry: map[string]any{"x": 0.0}}, p); !got || msg != "" {
 		t.Fatalf("got %v, %q; want true from history", got, msg)
 	}
 }

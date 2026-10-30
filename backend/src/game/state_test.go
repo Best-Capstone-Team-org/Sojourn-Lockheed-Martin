@@ -187,7 +187,7 @@ func TestObjectiveStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 	startGame(t, state)
-	if err := state.Evaluate(Frame{Telemetry: map[string]any{"mode": "SAFE"}}); err != nil {
+	if err := state.Evaluate(Frame{CRCOK: true, Telemetry: map[string]any{"mode": "SAFE"}}); err != nil {
 		t.Fatal(err)
 	}
 

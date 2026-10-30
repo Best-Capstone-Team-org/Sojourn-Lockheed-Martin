@@ -22,9 +22,9 @@ func TestGraderGradesTelemetry(t *testing.T) {
 		t.Fatalf("status = %s, want active", got)
 	}
 
-	// A frame that failed CRC is rejected and not graded.
-	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: false, Mode: "SAFE"}); err == nil {
-		t.Fatal("expected Grade to fail on a bad CRC")
+	// A frame that failed CRC is graded, but its telemetry reads as false.
+	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: false, Mode: "SAFE"}); err != nil {
+		t.Fatalf("Grade: %v", err)
 	}
 	if got := status(t, s, "safe"); got != ObjectiveStatusActive {
 		t.Fatalf("status after bad CRC = %s, want active", got)

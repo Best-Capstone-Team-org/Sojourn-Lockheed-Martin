@@ -12,6 +12,9 @@ import (
 func (e *Evaluation) evaluatePredicate(frame Frame, predicate Predicate) (bool, string) {
 	switch predicate.Op {
 	case "tlm":
+		if !frame.CRCOK {
+			return false, ""
+		}
 		actual, found := getTelemetryValue(frame, predicate.Path)
 		if !found {
 			return false, ""
