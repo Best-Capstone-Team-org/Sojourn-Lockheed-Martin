@@ -154,7 +154,7 @@ func TestHistoryIsBoundedByTemporalDepth(t *testing.T) {
 	})
 
 	for i := 0; i < 10; i++ {
-		if err := s.Evaluate(Frame{Telemetry: map[string]any{"temp": 20.0}}); err != nil {
+		if err := s.Evaluate(Frame{CRCOK: true, Telemetry: map[string]any{"temp": 20.0}}); err != nil {
 			t.Fatalf("Evaluate %d: %v", i, err)
 		}
 	}
@@ -163,7 +163,7 @@ func TestHistoryIsBoundedByTemporalDepth(t *testing.T) {
 		t.Fatalf("history holds %d frames, want at most 2", len(s.history))
 	}
 
-	if err := s.Evaluate(Frame{Telemetry: map[string]any{"temp": 60.0}}); err != nil {
+	if err := s.Evaluate(Frame{CRCOK: true, Telemetry: map[string]any{"temp": 60.0}}); err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
 	if got := status(t, s, "hot"); got != ObjectiveStatusComplete {
@@ -181,7 +181,7 @@ func TestStepWithoutMemoryPredicatesNeedsNoMemory(t *testing.T) {
 		t.Fatalf("MemoryRanges = %v, want none", ranges)
 	}
 
-	if err := s.Evaluate(Frame{Telemetry: map[string]any{"mode": "SAFE"}}); err != nil {
+	if err := s.Evaluate(Frame{CRCOK: true, Telemetry: map[string]any{"mode": "SAFE"}}); err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
 	if got := status(t, s, "safe"); got != ObjectiveStatusComplete {

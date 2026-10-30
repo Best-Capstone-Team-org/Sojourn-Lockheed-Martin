@@ -29,10 +29,6 @@ func (g *Grader) LogCommand(command CommandLogEntry) {
 }
 
 func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
-	if !frame.CRCOK {
-		return fmt.Errorf("bad crc")
-	}
-
 	if g.state.Phase() != PhaseInProgress {
 		return fmt.Errorf("simulation not in progress")
 	}
@@ -43,6 +39,7 @@ func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
 	}
 
 	f := Frame{
+		CRCOK:     frame.CRCOK,
 		Telemetry: frame.AsMap(),
 		Log:       slices.Clone(g.log),
 		// TODO: fill in
