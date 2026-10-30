@@ -9,6 +9,8 @@ import (
 
 func TestMain(m *testing.M) {
 	app.InitLoggers()
+	// Test scenarios declare link delays in seconds; run them as milliseconds.
+	linkDelayUnit = time.Millisecond
 	os.Exit(m.Run())
 }
 

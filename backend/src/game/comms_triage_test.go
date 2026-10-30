@@ -109,6 +109,7 @@ func TestCommsTriageOnFirmware(t *testing.T) {
 	if _, err := exec.LookPath("qemu-system-arm"); err != nil {
 		t.Skip("qemu-system-arm not installed")
 	}
+	scaleLinkDelays(t, time.Second)
 
 	state := InitState()
 	if err := state.LoadScenarios([]ScenariosDir{{Dir: filepath.Dir(commsTriageDir), Required: true}}); err != nil {
