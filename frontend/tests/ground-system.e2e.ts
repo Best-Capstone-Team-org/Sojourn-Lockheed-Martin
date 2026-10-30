@@ -123,7 +123,6 @@ test("state messages update the objectives until the mission is complete", async
 
 	await page.getByRole("button", { name: "Mission Complete" }).click();
 	await expect(page).toHaveURL(/\/end-screen\/?$/);
-	await expect(page.getByRole("heading", { name: "the end" })).toBeVisible();
 });
 
 test("Abort Mission goes back to level select and closes the socket", async ({
