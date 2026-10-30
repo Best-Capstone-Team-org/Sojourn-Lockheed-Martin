@@ -35,7 +35,18 @@ func Serve() {
 		scenariosDir = "../../deps/sojourn/scenarios/"
 	}
 
-	err := server.gs.LoadScenarios(scenariosDir)
+	scenariosUserDir := os.Getenv("SCENARIOS_USER_DIR")
+
+	err := server.gs.LoadScenarios([]game.ScenariosDir{
+		{
+			Dir:      scenariosDir,
+			Required: true,
+		},
+		{
+			Dir:      scenariosUserDir,
+			Required: false,
+		},
+	})
 	if err != nil {
 		app.ErrorLogger.Fatalf("Unable to load scenarios: %v", err)
 	}

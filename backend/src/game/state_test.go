@@ -80,7 +80,7 @@ func loadedState(t *testing.T) *State {
 	}
 
 	state := InitState()
-	if err := state.LoadScenarios(root); err != nil {
+	if err := state.LoadScenarios([]ScenariosDir{{Dir: root, Required: true}}); err != nil {
 		t.Fatalf("LoadScenarios: %v", err)
 	}
 	return &state
@@ -108,14 +108,14 @@ func TestLoadScenarios(t *testing.T) {
 		}
 	}
 
-	if err := state.LoadScenarios(t.TempDir()); err == nil {
+	if err := state.LoadScenarios([]ScenariosDir{{Dir: t.TempDir(), Required: true}}); err == nil {
 		t.Fatal("expected LoadScenarios to fail outside PhaseNone")
 	}
 }
 
 func TestLoadScenariosErrors(t *testing.T) {
 	state := InitState()
-	if err := state.LoadScenarios(filepath.Join(t.TempDir(), "missing")); err == nil {
+	if err := state.LoadScenarios([]ScenariosDir{{Dir: filepath.Join(t.TempDir(), "missing"), Required: true}}); err == nil {
 		t.Fatal("expected error for a missing directory")
 	}
 
@@ -125,11 +125,67 @@ func TestLoadScenariosErrors(t *testing.T) {
 	writeScenario(t, filepath.Join(root, "bad"), files)
 
 	state = InitState()
-	if err := state.LoadScenarios(root); err == nil {
+	if err := state.LoadScenarios([]ScenariosDir{{Dir: root, Required: true}}); err == nil {
 		t.Fatal("expected error for an invalid scenario")
 	}
 	if state.Phase() != PhaseNone {
 		t.Fatalf("phase = %v, want none", state.Phase())
+	}
+}
+
+func TestLoadScenariosMultipleDirs(t *testing.T) {
+	builtin := t.TempDir()
+	user := t.TempDir()
+	writeScenario(t, filepath.Join(builtin, "alpha"), scenarioFiles("alpha"))
+	writeScenario(t, filepath.Join(user, "beta"), scenarioFiles("beta"))
+
+	state := InitState()
+	err := state.LoadScenarios([]ScenariosDir{
+		{Dir: builtin, Required: true},
+		{Dir: user, Required: false},
+	})
+	if err != nil {
+		t.Fatalf("LoadScenarios: %v", err)
+	}
+	for _, id := range []string{"sojourn.test.alpha", "sojourn.test.beta"} {
+		if state.AvailableScenarios[id] == nil {
+			t.Errorf("scenario %q not loaded", id)
+		}
+	}
+}
+
+func TestLoadScenariosOptionalDirMissing(t *testing.T) {
+	builtin := t.TempDir()
+	writeScenario(t, filepath.Join(builtin, "alpha"), scenarioFiles("alpha"))
+
+	for _, missing := range []string{filepath.Join(t.TempDir(), "missing"), ""} {
+		state := InitState()
+		err := state.LoadScenarios([]ScenariosDir{
+			{Dir: builtin, Required: true},
+			{Dir: missing, Required: false},
+		})
+		if err != nil {
+			t.Fatalf("LoadScenarios with optional dir %q: %v", missing, err)
+		}
+		if state.Phase() != PhaseLevelSelect {
+			t.Fatalf("phase = %v, want level select", state.Phase())
+		}
+		if len(state.AvailableScenarios) != 1 || state.AvailableScenarios["sojourn.test.alpha"] == nil {
+			t.Fatalf("AvailableScenarios = %v, want only alpha", state.AvailableScenarios)
+		}
+	}
+}
+
+func TestLoadScenariosOptionalDirInvalidScenario(t *testing.T) {
+	user := t.TempDir()
+	files := scenarioFiles("bad")
+	files["objectives.json"] = "{"
+	writeScenario(t, filepath.Join(user, "bad"), files)
+
+	state := InitState()
+	err := state.LoadScenarios([]ScenariosDir{{Dir: user, Required: false}})
+	if err == nil {
+		t.Fatal("expected error for an invalid scenario in an optional dir")
 	}
 }
 

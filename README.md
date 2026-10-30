@@ -20,3 +20,4 @@ Aerospace and defense organizations like Lockheed Martin need engineers who can 
 
 - Run `docker compose up` in the root of the repository
 - Visit `localhost:8080`
+- Add custom scenarios at the mountpoint: `docker volume inspect sojourn_scenario_data --format '{{ .Mountpoint }}'`

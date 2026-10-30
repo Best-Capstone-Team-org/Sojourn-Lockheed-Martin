@@ -1,3 +1,9 @@
+name: sojourn
+
+volumes:
+  player_data:
+  scenario_data:
+
 services:
   sojourn:
     build: .
@@ -5,5 +11,8 @@ services:
     environment:
       - BUILD_DIR=/app/frontend
       - SCENARIOS_DIR=/app/scenarios
+      - SCENARIOS_USER_DIR=/app/scenarios-user
     ports:
       - "8080:8080"
+    volumes:
+      - scenario_data:/app/scenarios-user:ro
