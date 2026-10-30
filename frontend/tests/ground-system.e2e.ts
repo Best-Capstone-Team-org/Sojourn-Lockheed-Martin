@@ -82,3 +82,61 @@ test("Ctrl+R finds an earlier command and Enter sends it again", async ({
 		.poll(() => backend.commands)
 		.toEqual(["PING", "PEEK 0x2001E000 16", "PING"]);
 });
+
+test("state messages update the objectives until the mission is complete", async ({
+	page,
+	backend,
+}) => {
+	await expect(page.getByText("active", { exact: true })).toHaveCount(1);
+	await expect(page.getByText("locked", { exact: true })).toHaveCount(1);
+	await expect(page.getByText("Patch the sensor table.")).toBeHidden();
+
+	backend.send({
+		type: "state",
+		objectives: [
+			{ id: "read-downlink", status: "complete" },
+			{
+				id: "fix-sensor",
+				status: "active",
+				hint: ["Try PEEK 0x2001E000 16"],
+			},
+			{ id: "not-in-this-level", status: "failed" },
+		],
+		constraints: {},
+	});
+	await expect(page.getByText("Patch the sensor table.")).toBeVisible();
+	await expect(page.getByText("Try PEEK 0x2001E000 16")).toBeVisible();
+	await expect(
+		page.getByRole("button", { name: "Abort Mission" })
+	).toBeVisible();
+
+	backend.send({
+		type: "state",
+		objectives: [
+			{ id: "read-downlink", status: "complete" },
+			{ id: "fix-sensor", status: "complete" },
+		],
+		constraints: {},
+	});
+	await expect(page.getByText("complete", { exact: true })).toHaveCount(2);
+	await expect(page.getByText("Try PEEK 0x2001E000 16")).toBeHidden();
+
+	await page.getByRole("button", { name: "Mission Complete" }).click();
+	await expect(page).toHaveURL(/\/end-screen\/?$/);
+	await expect(page.getByRole("heading", { name: "the end" })).toBeVisible();
+});
+
+test("Abort Mission goes back to level select and closes the socket", async ({
+	page,
+	backend,
+}) => {
+	await page.getByRole("button", { name: "Abort Mission" }).click();
+	await expect(page).toHaveURL(/\/level-select\/?$/);
+	await expect.poll(() => backend.closes).toEqual([1000]);
+});
+
+test("reconnects after the backend drops the socket", async ({ backend }) => {
+	await backend.sockets[0].close();
+	await expect.poll(() => backend.sockets.length).toBe(2);
+	expect(backend.sockets[1].url()).toContain("scenario-id=first-contact");
+});
