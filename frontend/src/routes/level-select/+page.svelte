@@ -107,13 +107,17 @@
 				<hr class="white mt-2 mb-2 w-full" />
 				<p class="text-lg font-bold">Objectives:</p>
 				<ul class="list-inside list-disc">
-					{#each selectedLevel?.objectives as objective}
+					{#each selectedLevel?.objectives as objective (objective.id)}
 						<li>{objective.name} - {objective.description}</li>
 					{/each}
 				</ul>
 				<hr class="white mt-2 mb-2 w-full" />
-				<p class="text-sm">Writes - {selectedLevel?.constraints.writes ?? "—"}</p>
-				<p class="text-sm">Reads - {selectedLevel?.constraints.reads ?? "—"}</p>
+				<p class="text-sm">
+					Writes - {selectedLevel?.constraints.writes ?? "—"}
+				</p>
+				<p class="text-sm">
+					Reads - {selectedLevel?.constraints.reads ?? "—"}
+				</p>
 			</Screen>
 			<div class="flex h-1/8 w-full flex-row justify-end gap-2">
 				<Button
