@@ -31,7 +31,7 @@
 
 			<div class="flex min-h-0 min-w-0 flex-1 flex-col">
 				<p class="text-md font-bold">{scenario.name}</p>
-				<p class="line-clamp-3 h-[3.75rem] text-sm">
+				<p class="line-clamp-3 h-15 text-sm">
 					{scenario.description}
 				</p>
 			</div>
