@@ -387,8 +387,9 @@ const (
 )
 
 type ObjectiveState struct {
-	Status     ObjectiveStatus
-	Diagnostic string
+	Status       ObjectiveStatus
+	Diagnostic   string
+	FramesActive int
 }
 
 // create the starting runtime state for every objective in the scenario
