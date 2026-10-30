@@ -4,11 +4,10 @@
 	import SelectionBrackets from "$lib/components/level-select/SelectionBrackets.svelte";
 	import { onMount } from "svelte";
 	import { apiFetch, type ScenarioResponse } from "$lib/api";
-	import Screen from "$lib/components/Screen/Screen.svelte";
-	import Button from "$lib/components/Button/Button.svelte";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
+	import SelectedLevelPanel from "$lib/components/level-select/SelectedLevelPanel.svelte";
 
 	let levels: ScenarioResponse[] = $state([]);
 	async function getLevels() {
@@ -97,43 +96,7 @@
 		<Box
 			class="flex h-screen w-2/5 min-w-0 flex-col justify-between gap-2 p-2"
 		>
-			<Screen
-				bezelClass="w-full h-full"
-				class="p-2"
-			>
-				<p class="text-3xl font-bold">{selectedLevel?.name ?? "—"}</p>
-				<hr class="white mb-2 w-full" />
-				<p class="text-sm">{selectedLevel?.description ?? "—"}</p>
-				<hr class="white mt-2 mb-2 w-full" />
-				<p class="text-lg font-bold">Objectives:</p>
-				<ul class="list-inside list-disc">
-					{#each selectedLevel?.objectives as objective (objective.id)}
-						<li>{objective.name} - {objective.description}</li>
-					{/each}
-				</ul>
-				<hr class="white mt-2 mb-2 w-full" />
-				<p class="text-sm">
-					Writes - {selectedLevel?.constraints.writes ?? "—"}
-				</p>
-				<p class="text-sm">
-					Reads - {selectedLevel?.constraints.reads ?? "—"}
-				</p>
-			</Screen>
-			<div class="flex h-1/8 w-full flex-row justify-end gap-2">
-				<Button
-					wellClass="w-1/4"
-					alert
-					onclick={() => goto(resolve("/"))}
-				>
-					Quit
-				</Button>
-				<Button
-					wellClass="w-1/4"
-					onclick={startSelected}
-				>
-					Play
-				</Button>
-			</div>
+			<SelectedLevelPanel {selectedLevel} />
 		</Box>
 	</div>
 </main>
