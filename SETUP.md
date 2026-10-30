@@ -23,3 +23,4 @@ ORG_NAME=Best-Capstone-Team-org
 RUNNER_GROUP=Infrastructure
 RUNNER_WORKDIR=/tmp/runner
 LABELS=self-hosted
+```

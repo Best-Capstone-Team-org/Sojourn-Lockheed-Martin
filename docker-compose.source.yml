@@ -1,0 +1,3 @@
+services:
+  sojourn:
+    image: ghcr.io/best-capstone-team-org/sojourn-lockheed-martin:latest

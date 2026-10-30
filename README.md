@@ -19,5 +19,6 @@ Aerospace and defense organizations like Lockheed Martin need engineers who can 
 ## Getting Started
 
 - Run `docker compose up` in the root of the repository
+    - To pull the image instead compiling, run: `docker compose -f docker-compose.yml -f docker-compose.source.yml up`
 - Visit `localhost:8080`
 - Add custom scenarios at the mountpoint: `docker volume inspect sojourn_scenario_data --format '{{ .Mountpoint }}'`
