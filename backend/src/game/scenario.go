@@ -387,11 +387,11 @@ const (
 )
 
 type ObjectiveState struct {
-	Status       ObjectiveStatus
-	Diagnostic   string
-	FramesActive int
+    Status         ObjectiveStatus
+    Diagnostic     string
+    FramesActive   int
+    AvailableHints int
 }
-
 // create the starting runtime state for every objective in the scenario
 func initializeObjectiveStates(objectives []Objective) map[string]*ObjectiveState {
 	states := make(map[string]*ObjectiveState)
