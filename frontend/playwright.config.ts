@@ -12,6 +12,14 @@ export default defineConfig({
 	use: {
 		baseURL: "http://localhost:4173",
 		trace: "retain-on-failure",
+		// Records every test. The HTML report shows each test's video.
+		video: { mode: "on", size: { width: 1280, height: 720 } },
+		// The end-of-test screenshot also makes the browser draw one more
+		// frame. Without it, the videos of the two quickest tests stay white.
+		screenshot: "on",
+		// Each test takes about a second, too fast to follow in its video.
+		// SLOW_MO=500 npm run test:e2e waits 500 ms after every action.
+		launchOptions: { slowMo: Number(process.env.SLOW_MO ?? 0) },
 	},
 	// page.coverage only works in Chromium.
 	projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
