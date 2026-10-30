@@ -22,4 +22,9 @@ export default defineConfig({
 				conditions: ["browser"],
 			}
 		: undefined,
+	// Set by playwright.config.ts. Coverage needs source maps to map the
+	// bundles back to src/, and unminified code to map them accurately.
+	build: process.env.COVERAGE
+		? { sourcemap: true, minify: false }
+		: undefined,
 });
