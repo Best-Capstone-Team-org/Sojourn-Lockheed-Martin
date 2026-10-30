@@ -116,3 +116,6 @@ jobs:
       - name: Push image
         if: github.ref == 'refs/heads/main'
         run: docker push --all-tags "$IMAGE"
+
+      - name: Check image size
+        run: .github/workflows/scripts/check-image-size.sh "$IMAGE:${{ github.sha }}"
