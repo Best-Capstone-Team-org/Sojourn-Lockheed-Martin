@@ -13,6 +13,6 @@ services:
       - SCENARIOS_DIR=/app/scenarios
       - SCENARIOS_USER_DIR=/app/scenarios-user
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - scenario_data:/app/scenarios-user:ro
