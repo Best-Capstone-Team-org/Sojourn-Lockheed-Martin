@@ -111,7 +111,7 @@ func TestCommsTriageOnFirmware(t *testing.T) {
 	}
 
 	state := InitState()
-	if err := state.LoadScenarios(filepath.Dir(commsTriageDir)); err != nil {
+	if err := state.LoadScenarios([]ScenariosDir{{Dir: filepath.Dir(commsTriageDir), Required: true}}); err != nil {
 		t.Fatalf("LoadScenarios: %v", err)
 	}
 	if err := state.SelectScenario("sojourn.comms.triage"); err != nil {

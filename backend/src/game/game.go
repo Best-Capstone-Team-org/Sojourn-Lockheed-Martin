@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -32,6 +33,11 @@ const (
 	PhaseInProgress
 )
 
+type ScenariosDir struct {
+	Dir      string
+	Required bool
+}
+
 // launchFirmware starts the scenario's firmware. Tests replace it so Start
 // doesn't boot QEMU.
 var launchFirmware = emulator.LoadAndStartFirmware
@@ -46,28 +52,33 @@ func InitState() State {
 
 func (s *State) Phase() Phase { return s.phase }
 
-func (s *State) LoadScenarios(scenariosDir string) error {
+func (s *State) LoadScenarios(scenariosDirs []ScenariosDir) error {
 	if s.phase != PhaseNone {
 		return unexpectedPhase("loading scenarios")
 	}
 
-	files, err := os.ReadDir(scenariosDir)
-	if err != nil {
-		return err
-	}
-
-	for _, scenarioDir := range files {
-		if !scenarioDir.IsDir() {
-			continue
-		}
-
-		scenario, err := LoadScenario(filepath.Join(scenariosDir, scenarioDir.Name()))
-
+	for _, scenariosDir := range scenariosDirs {
+		files, err := os.ReadDir(scenariosDir.Dir)
 		if err != nil {
+			if !scenariosDir.Required && errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
 			return err
 		}
 
-		s.AvailableScenarios[scenario.Manifest.ID] = scenario
+		for _, scenarioDir := range files {
+			if !scenarioDir.IsDir() {
+				continue
+			}
+
+			scenario, err := LoadScenario(filepath.Join(scenariosDir.Dir, scenarioDir.Name()))
+
+			if err != nil {
+				return err
+			}
+
+			s.AvailableScenarios[scenario.Manifest.ID] = scenario
+		}
 	}
 
 	s.phase = PhaseLevelSelect

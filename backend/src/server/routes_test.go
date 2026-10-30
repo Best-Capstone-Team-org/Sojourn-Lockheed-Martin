@@ -30,7 +30,7 @@ func intPtr(v int) *int { return &v }
 func newTestServer(t *testing.T, scenarios ...*game.Scenario) *server {
 	t.Helper()
 	s := newServer()
-	if err := s.gs.LoadScenarios(t.TempDir()); err != nil {
+	if err := s.gs.LoadScenarios([]game.ScenariosDir{{Dir: t.TempDir(), Required: true}}); err != nil {
 		t.Fatalf("LoadScenarios: %v", err)
 	}
 	for _, sc := range scenarios {
@@ -149,7 +149,7 @@ func TestScenariosFromScenariosDir(t *testing.T) {
 	}
 
 	s := newServer()
-	if err := s.gs.LoadScenarios(dir); err != nil {
+	if err := s.gs.LoadScenarios([]game.ScenariosDir{{Dir: dir, Required: true}}); err != nil {
 		t.Skipf("unable to load scenarios: %v", err)
 	}
 
@@ -355,6 +355,7 @@ func TestRoutesDefaultBuildDir(t *testing.T) {
 
 func TestServeListenError(t *testing.T) {
 	t.Setenv("SCENARIOS_DIR", t.TempDir())
+	t.Setenv("SCENARIOS_USER_DIR", t.TempDir())
 	t.Setenv("PORT", "not-a-port")
 
 	done := make(chan struct{})
