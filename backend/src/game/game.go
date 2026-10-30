@@ -10,6 +10,7 @@ import (
 	"sojourn/emulator"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type State struct {
@@ -125,10 +126,49 @@ func (s *State) Start(downlinkChan chan DownlinkMessage, uplinkChan chan []byte,
 		done,
 	)
 
-	go uplinkForwarder(uplinkChan, emulatorUplinkChan, pendingCommands, booted, setupCommands)
-	go s.downlinkTranslatorPump(downlinkChan, emulatorDownlinkChan, s.grader, pendingCommands, booted)
+	link := s.Scenario.Manifest.Link
+	delayedUplinkChan := make(chan []byte)
+	translatedDownlinkChan := make(chan DownlinkMessage)
+
+	go delayed(uplinkChan, delayedUplinkChan, time.Duration(link.UplinkDelayS)*linkDelayUnit, done)
+	go uplinkForwarder(delayedUplinkChan, emulatorUplinkChan, pendingCommands, booted, setupCommands)
+
+	go s.downlinkTranslatorPump(translatedDownlinkChan, emulatorDownlinkChan, s.grader, pendingCommands, booted)
+	go delayed(translatedDownlinkChan, downlinkChan, time.Duration(link.DownlinkDelayS)*linkDelayUnit, done)
 
 	return nil
+}
+
+var linkDelayUnit = time.Second
+
+const delayQueueSize = 1024
+
+func delayed[T any](in <-chan T, out chan<- T, delay time.Duration, stop <-chan struct{}) {
+	type stamped struct {
+		message T
+		due     time.Time
+	}
+
+	queue := make(chan stamped, delayQueueSize)
+	go func() {
+		defer close(queue)
+		for message := range in {
+			queue <- stamped{message, time.Now().Add(delay)}
+		}
+	}()
+
+	defer close(out)
+	for s := range queue {
+		if wait := time.Until(s.due); wait > 0 {
+			timer := time.NewTimer(wait)
+			select {
+			case <-timer.C:
+			case <-stop:
+				timer.Stop()
+			}
+		}
+		out <- s.message
+	}
 }
 
 type pendingCommand struct {
