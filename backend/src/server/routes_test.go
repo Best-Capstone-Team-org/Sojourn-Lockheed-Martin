@@ -439,6 +439,20 @@ func TestDownlinkPump(t *testing.T) {
 		t.Errorf("state = %+v", st)
 	}
 
+	s.downlinkChan <- &game.CommandRefusedDownlinkMessage{
+		Command:     "POKE 0x20000010 01",
+		Reason:      "writes allowance exhausted",
+		Constraints: map[string]int{"writes": 0},
+	}
+	var refused commandRefusedDownlink
+	if err := client.ReadJSON(&refused); err != nil {
+		t.Fatalf("read refusal: %v", err)
+	}
+	if refused.Type != "commandRefused" || refused.Command != "POKE 0x20000010 01" ||
+		refused.Reason != "writes allowance exhausted" || refused.Constraints["writes"] != 0 {
+		t.Errorf("refusal = %+v", refused)
+	}
+
 	close(s.downlinkChan)
 	select {
 	case <-pumpDone:

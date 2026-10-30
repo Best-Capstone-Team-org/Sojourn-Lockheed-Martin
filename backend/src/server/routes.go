@@ -256,6 +256,13 @@ func (s *server) downlinkPump() {
 				Objectives:  downlinkMessage.Objectives,
 				Constraints: downlinkMessage.Constraints,
 			})
+		case *game.CommandRefusedDownlinkMessage:
+			err = s.wsConn.WriteJSON(commandRefusedDownlink{
+				Type:        "commandRefused",
+				Command:     downlinkMessage.Command,
+				Reason:      downlinkMessage.Reason,
+				Constraints: downlinkMessage.Constraints,
+			})
 		}
 
 		if err != nil {

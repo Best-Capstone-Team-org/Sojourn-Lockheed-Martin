@@ -62,7 +62,8 @@ func TestCommsTriageSolution(t *testing.T) {
 		if radPresent {
 			channels["RAD"] = map[string]any{"counts": 12.0}
 		}
-		f := Frame{CRCOK: true, Telemetry: map[string]any{"channels": channels}, Log: slices.Clone(log), Memory: memory}
+		f := Frame{CRCOK: true, Telemetry: map[string]any{"channels": channels}, Log: slices.Clone(log),
+			Budget: budgetUsed(log), Memory: memory}
 		if err := e.Evaluate(f); err != nil {
 			t.Fatalf("Evaluate: %v", err)
 		}
@@ -96,7 +97,8 @@ func TestCommsTriageSolution(t *testing.T) {
 	// A survey between frames must not reset the three-frame streak.
 	command("PEEK 0x20019438 10", "ACK PEEK 00010304020500436061")
 	frame(true)
-	expect(map[string]ObjectiveStatus{"restore-radiation": ObjectiveStatusComplete})
+	// keep-budget unlocks in the same pass: three writes is well inside 40.
+	expect(map[string]ObjectiveStatus{"restore-radiation": ObjectiveStatusComplete, "keep-budget": ObjectiveStatusComplete})
 }
 
 // Plays the first objective of comms-triage on the real firmware: the setup
