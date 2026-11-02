@@ -11,6 +11,7 @@ import (
 
 type Frame struct {
 	CRCOK     bool
+	UptimeS   uint32
 	Telemetry map[string]any
 	Events    []string
 	Log       []CommandLogEntry
@@ -27,6 +28,17 @@ type Evaluation struct {
 	baseline        MemoryReader
 	history         []Frame
 	scriptRunner    ScriptRunner
+	transitions     []ObjectiveTransition
+}
+
+// ObjectiveTransition is an objective changing status during one frame.
+// Frame counts every frame received this game, settle frames included.
+type ObjectiveTransition struct {
+	Frame     int
+	UptimeS   uint32
+	Objective string
+	From      ObjectiveStatus
+	To        ObjectiveStatus
 }
 
 func NewEvaluation(s *Scenario) (Evaluation, error) {
@@ -200,6 +212,7 @@ func (e *Evaluation) Evaluate(frame Frame) error {
 	}
 
 	e.framesSeen++
+	e.transitions = nil
 
 	if e.scenario.Setup != nil && e.framesSeen <= e.scenario.Setup.SettleFrames {
 		e.baseline = frame.Memory
@@ -222,9 +235,15 @@ func (e *Evaluation) Evaluate(frame Frame) error {
 	return nil
 }
 
+// Transitions returns the status changes made by the most recent frame.
+func (e *Evaluation) Transitions() []ObjectiveTransition {
+	return slices.Clone(e.transitions)
+}
+
 func (e *Evaluation) reset() {
 	e.objectiveStates = initializeObjectiveStates(e.scenario.Objectives)
 	e.framesSeen = 0
+	e.transitions = nil
 	e.baseline = nil
 	e.history = nil
 }

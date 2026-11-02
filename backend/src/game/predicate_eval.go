@@ -505,6 +505,29 @@ func (e *Evaluation) evaluateObjectives(frame Frame) string {
 		}
 	}
 
+	var transitions []ObjectiveTransition
+	for _, objective := range e.scenario.Objectives {
+		before, after := originalStates[objective.ID], e.objectiveStates[objective.ID]
+		if before == nil || after == nil || before.Status == after.Status {
+			continue
+		}
+
+		transitions = append(transitions, ObjectiveTransition{
+			Frame:     e.framesSeen,
+			UptimeS:   frame.UptimeS,
+			Objective: objective.ID,
+			From:      before.Status,
+			To:        after.Status,
+		})
+
+		// A retractable objective keeps the frame it first completed on.
+		if after.Status == ObjectiveStatusComplete && after.FirstFrame == 0 {
+			after.FirstFrame = e.framesSeen
+			after.FirstUptimeS = frame.UptimeS
+		}
+	}
+	e.transitions = transitions
+
 	return ""
 }
 

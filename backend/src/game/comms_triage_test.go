@@ -114,6 +114,7 @@ func TestCommsTriageOnFirmware(t *testing.T) {
 	scaleLinkDelays(t, time.Second)
 
 	state := InitState()
+	state.SaveDir = t.TempDir()
 	if err := state.LoadScenarios([]ScenariosDir{{Dir: filepath.Dir(commsTriageDir), Required: true}}); err != nil {
 		t.Fatalf("LoadScenarios: %v", err)
 	}
@@ -134,6 +135,38 @@ func TestCommsTriageOnFirmware(t *testing.T) {
 		}
 	}()
 
+	// The PEEK goes out on a frame the player sees 8 s late and reaches the
+	// probe 8 s after that, so its t_ms is about 16 s past that frame's uptime.
+	var peekFrameUptime uint32
+	t.Cleanup(func() {
+		sessions, _ := filepath.Glob(filepath.Join(state.SaveDir, "sessions", "*"))
+		if len(sessions) != 1 {
+			t.Fatalf("sessions = %v, want one", sessions)
+		}
+		records := readLog(t, filepath.Join(sessions[0], "commands.jsonl"))
+		if len(records) != 1 || records[0]["raw"] != "PEEK 0x2001E200 16" {
+			t.Fatalf("command log = %v, want just the PEEK", records)
+		}
+		tMs, ok := records[0]["t_ms"].(float64)
+		low, high := float64(peekFrameUptime+14)*1000, float64(peekFrameUptime+20)*1000
+		t.Logf("PEEK sent on the %ds frame, applied at t_ms %v", peekFrameUptime, records[0]["t_ms"])
+		if !ok || tMs < low || tMs > high {
+			t.Errorf("t_ms = %v, want between %v and %v", records[0]["t_ms"], low, high)
+		}
+
+		// diagnose completes on the first frame after the PEEK is applied.
+		for _, record := range readLog(t, filepath.Join(sessions[0], "objectives.jsonl")) {
+			t.Logf("objective record %v", record)
+			if record["objective"] == "diagnose" && record["state"] == "complete" {
+				if uptime := record["uptime_s"].(float64); uptime*1000 < tMs || uptime*1000 > tMs+5000 {
+					t.Errorf("diagnose completed at %v s, want the first frame after t_ms %v", uptime, tMs)
+				}
+				return
+			}
+		}
+		t.Error("diagnose's completion was not recorded")
+	})
+
 	deadline := time.After(90 * time.Second)
 	peeked := false
 	for {
@@ -150,6 +183,7 @@ func TestCommsTriageOnFirmware(t *testing.T) {
 				if antenna == "LGA" && !peeked {
 					up <- []byte("PEEK 0x2001E200 16")
 					peeked = true
+					peekFrameUptime = msg.Telemetry.UptimeS
 				}
 			case *StateDownlinkMessage:
 				for _, objective := range msg.Objectives {

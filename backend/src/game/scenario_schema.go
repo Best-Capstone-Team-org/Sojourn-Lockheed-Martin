@@ -67,6 +67,7 @@ type CommandLogEntry struct {
 	Charged string
 	Result  string
 	Addr    uint32
+	TMs     *uint64
 }
 
 type Hint struct {

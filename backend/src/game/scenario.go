@@ -390,6 +390,11 @@ type ObjectiveState struct {
 	Status       ObjectiveStatus
 	Diagnostic   string
 	FramesActive int
+
+	// FirstFrame is the frame the objective first completed on, and 0 until
+	// it has; FirstUptimeS is the probe's uptime in that frame.
+	FirstFrame   int
+	FirstUptimeS uint32
 }
 
 // create the starting runtime state for every objective in the scenario
