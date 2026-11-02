@@ -424,3 +424,20 @@ func TestUpdateObjectiveStatesSkipsUnknown(t *testing.T) {
 		t.Fatal("updateObjectiveStates created a state")
 	}
 }
+func TestRejectScriptPredicate(t *testing.T) {
+	predicate := Predicate{
+		Op:    "script",
+		Lang:  "python",
+		Entry: "checks/test.py:check",
+	}
+
+	err := validatePredicate(predicate)
+
+	if err == nil {
+		t.Fatal("expected script predicate to be rejected")
+	}
+
+	if !strings.Contains(err.Error(), `unknown predicate operation "script"`) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

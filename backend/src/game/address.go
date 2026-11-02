@@ -142,6 +142,49 @@ func (s *Scenario) validateMemoryRange(ref AddressRef, length int) error {
 	)
 }
 
+func (s *Scenario) validateAssertionAddress(ref AddressRef, length int) error {
+	if err := s.validateMemoryRange(ref, length); err != nil {
+		return err
+	}
+
+	if ref.Addr == "" {
+		return nil
+	}
+
+	addr, err := s.ResolveAddress(ref)
+	if err != nil {
+		return err
+	}
+
+	end := addr + uint64(length) - 1
+
+	for _, region := range s.MemMap.Regions {
+		lo, err := strconv.ParseUint(region.Lo, 0, 64)
+		if err != nil {
+			return err
+		}
+
+		hi, err := strconv.ParseUint(region.Hi, 0, 64)
+		if err != nil {
+			return err
+		}
+
+		if addr >= lo && end <= hi {
+			switch region.Name {
+			case "SENSOR_BLOCK", "CAM_REGS", "COMMS_REGS":
+				return nil
+			default:
+				return fmt.Errorf(
+					"absolute address 0x%X is not in a peripheral register block",
+					addr,
+				)
+			}
+		}
+	}
+
+	return fmt.Errorf("absolute address 0x%X is outside the memory map", addr)
+}
+
 func (s *Scenario) validatePredicateAddresses(predicate Predicate) error {
 	var length int
 	switch predicate.Op {
@@ -161,7 +204,7 @@ func (s *Scenario) validatePredicateAddresses(predicate Predicate) error {
 	}
 
 	if length > 0 && predicate.At != nil {
-		if err := s.validateMemoryRange(*predicate.At, length); err != nil {
+		if err := s.validateAssertionAddress(*predicate.At, length); err != nil {
 			return fmt.Errorf(
 				"invalid address for %q predicate: %w",
 				predicate.Op,

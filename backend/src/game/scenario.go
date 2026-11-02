@@ -257,7 +257,7 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 	}
 
 	if manifest.Format != SupportedScenarioFormat {
-		return nil, fmt.Errorf("unsupported manifest format: %d", manifest.Format)
+		return nil, fmt.Errorf("scenario %q: unsupported manifest format: %d", dir, manifest.Format)
 	}
 
 	if err := validatePurity(dir, manifest, pureMode); err != nil {
