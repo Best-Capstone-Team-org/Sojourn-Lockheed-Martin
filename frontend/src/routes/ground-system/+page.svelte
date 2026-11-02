@@ -14,6 +14,7 @@
 		type ObjectiveDetail,
 	} from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
+	import TelemetryButtons from "$lib/components/ground-system/TelemetryButtons.svelte";
 
 	const RECONNECT_BASE_DELAY = 1000;
 	const MAX_RECONNECT_DELAY = 10000;
@@ -37,6 +38,12 @@
 	let attempts = $state(0);
 	let retryTimer: ReturnType<typeof setTimeout> | undefined;
 	let retry = $state(0);
+
+	// constraints
+	let maxWrites = $state(gameState.scenario?.constraints.writes ?? 0);
+	let maxReads = $state(gameState.scenario?.constraints.reads ?? 0);
+	let writes = $state(maxWrites);
+	let reads = $state(maxReads);
 
 	function scheduleReconnect() {
 		const delay = Math.min(
@@ -71,7 +78,17 @@
 					Object.assign(objective, update);
 				}
 
-				// TODO add constraints {}
+				for (const [key, value] of Object.entries(
+					message.constraints
+				)) {
+					if (key === "writes") {
+						writes = value;
+						console.log("writes", writes);
+					} else if (key === "reads") {
+						reads = value;
+						console.log("reads", reads);
+					}
+				}
 				break;
 		}
 	}
@@ -124,12 +141,17 @@
 		direction="horizontal"
 		class="h-full w-full"
 	>
-		<!-- Mission Status -->
 		<Resizable.Pane
 			defaultSize={30}
 			minSize={10}
 		>
-			<MissionStatus {objectives} />
+			<MissionStatus
+				{objectives}
+				{writes}
+				{reads}
+				{maxWrites}
+				{maxReads}
+			/>
 		</Resizable.Pane>
 
 		<Resizable.Handle />
@@ -139,29 +161,27 @@
 			defaultSize={70}
 			minSize={20}
 		>
-			<Resizable.PaneGroup direction="vertical">
-				<!-- Telemetry -->
+			<Resizable.PaneGroup direction="horizontal">
 				<Resizable.Pane
-					defaultSize={15}
+					defaultSize={75}
 					minSize={10}
 				>
-					<TelemetryConsole
-						{commandDownlink}
-						{commandUplink}
-					/>
-				</Resizable.Pane>
+					<Resizable.PaneGroup direction="vertical">
+						<Resizable.Pane
+							defaultSize={15}
+							minSize={10}
+						>
+							<TelemetryConsole
+								{commandDownlink}
+								{commandUplink}
+							/>
+						</Resizable.Pane>
 
-				<Resizable.Handle />
+						<Resizable.Handle />
 
-				<!-- Control Panel -->
-				<Resizable.Pane
-					defaultSize={85}
-					minSize={10}
-				>
-					<Resizable.PaneGroup direction="horizontal">
 						<!-- Console -->
 						<Resizable.Pane
-							defaultSize={75}
+							defaultSize={85}
 							minSize={10}
 						>
 							<Screen
@@ -169,7 +189,6 @@
 								bezelClass="h-full"
 							>
 								<Resizable.PaneGroup direction="vertical">
-									<!-- Downlink -->
 									<Resizable.Pane
 										defaultSize={60}
 										minSize={10}
@@ -179,7 +198,6 @@
 
 									<Resizable.Handle />
 
-									<!-- Terminal -->
 									<Resizable.Pane
 										defaultSize={40}
 										minSize={10}
@@ -192,17 +210,24 @@
 								</Resizable.PaneGroup>
 							</Screen>
 						</Resizable.Pane>
-
-						<Resizable.Handle />
-
-						<!-- Read Out -->
-						<Resizable.Pane
-							defaultSize={25}
-							minSize={10}
-						>
-							<ReadOut {readOutTlm} />
-						</Resizable.Pane>
 					</Resizable.PaneGroup>
+				</Resizable.Pane>
+
+				<Resizable.Handle />
+
+				<!-- Read Out -->
+				<Resizable.Pane
+					defaultSize={25}
+					minSize={10}
+				>
+					<div class="flex h-full min-h-0 flex-col">
+						<div class="shrink-0">
+							<TelemetryButtons />
+						</div>
+						<div class="min-h-0 flex-1">
+							<ReadOut {readOutTlm} />
+						</div>
+					</div>
 				</Resizable.Pane>
 			</Resizable.PaneGroup>
 		</Resizable.Pane>
