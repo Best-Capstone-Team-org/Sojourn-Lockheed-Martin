@@ -5,6 +5,7 @@
 	import type { ObjectiveDetail } from "$lib/api";
 
 	let { objective }: { objective: ObjectiveDetail } = $props();
+	let hintsOpen = $state(false);
 </script>
 
 <Box class="w-full p-2">
@@ -31,10 +32,26 @@
 		<div class="p-2">
 			<p class="mb-2 text-sm">{objective.description}</p>
 
-			{#if objective.hint && objective.status !== "complete"}
-				<Screen class="p-3">
-					<p class="text-sm">{objective.hint.join("\n")}</p>
+			{#if objective.diagnostic}
+				<Screen class="mb-2 p-3">
+					<p class="text-sm">{objective.diagnostic}</p>
 				</Screen>
+			{/if}
+
+			{#if objective.hints?.length}
+				<button
+					class="mb-2 cursor-pointer text-sm font-semibold underline"
+					type="button"
+					aria-expanded={hintsOpen}
+					onclick={() => (hintsOpen = !hintsOpen)}
+				>
+					{hintsOpen ? "Hide hints" : "Show hints"}
+				</button>
+				{#if hintsOpen}
+					<div class="border-l-4 border-sys-shadow-bottom bg-black/5 p-3">
+						<p class="text-sm">{objective.hints.join("\n")}</p>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{/if}
