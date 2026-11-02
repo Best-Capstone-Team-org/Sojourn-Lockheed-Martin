@@ -600,3 +600,56 @@ func TestUplinkPumpExitsOnUnexpectedReadError(t *testing.T) {
 		t.Error("gameRunningDone not closed")
 	}
 }
+
+func TestScenariosReportRecord(t *testing.T) {
+	completed := testScenario()
+	untried := testScenario()
+	untried.Manifest.ID = "test.untried"
+
+	s := newTestServer(t, completed, untried)
+	s.gs.SaveDir = t.TempDir()
+
+	session, err := game.NewSession(s.gs.SaveDir, completed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Append(game.CommandLogEntry{Raw: "PING", Verb: "PING", Result: "ACK PING"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"first", "second"} {
+		err := session.AppendObjective(game.ObjectiveTransition{Objective: id, From: game.ObjectiveStatusActive,
+			To: game.ObjectiveStatusComplete})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	session.Close()
+
+	rec := httptest.NewRecorder()
+	s.scenarios(rec, httptest.NewRequest(http.MethodGet, "/api/scenarios", nil))
+
+	var resp []map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	records := map[string]json.RawMessage{}
+	for _, scenario := range resp {
+		var id string
+		json.Unmarshal(scenario["id"], &id)
+		records[id] = scenario["record"]
+	}
+
+	if got := string(records["test.untried"]); got != "null" {
+		t.Errorf("untried record = %s, want null", got)
+	}
+
+	var record game.ScenarioRecord
+	if err := json.Unmarshal(records["test.scenario"], &record); err != nil {
+		t.Fatalf("decode record %s: %v", records["test.scenario"], err)
+	}
+	if record.Session != filepath.Base(session.Dir) || record.Revision != 3 || record.Uplinks != 1 ||
+		len(record.Objectives) != 2 || record.Objectives[0].ID != "first" || record.Objectives[0].Uplinks != 1 ||
+		record.Objectives[1].ID != "second" || record.Objectives[1].Uplinks != 0 {
+		t.Errorf("record = %+v", record)
+	}
+}
