@@ -48,7 +48,9 @@
 					{hintsOpen ? "Hide hints" : "Show hints"}
 				</button>
 				{#if hintsOpen}
-					<div class="border-l-4 border-sys-shadow-bottom bg-black/5 p-3">
+					<div
+						class="border-l-4 border-sys-shadow-bottom bg-black/5 p-3"
+					>
 						<p class="text-sm">{objective.hints.join("\n")}</p>
 					</div>
 				{/if}
