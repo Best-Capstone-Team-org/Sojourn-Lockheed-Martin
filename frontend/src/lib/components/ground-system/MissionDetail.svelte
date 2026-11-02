@@ -38,7 +38,7 @@
 				</Screen>
 			{/if}
 
-			{#if objective.hints?.length}
+			{#if objective.hints?.length && objective.status !== "complete"}
 				<button
 					class="mb-2 cursor-pointer text-sm font-semibold underline"
 					type="button"
