@@ -381,14 +381,14 @@ func (s *State) UploadPatchedBinary(patchedBinaryPath string) error {
 	return nil
 }
 
-var ErrNoScenarioSelected = errors.New("No scenario selected")
+var ErrNoGameInProgress = errors.New("no game in progress")
 
-func (s *State) ROMPath() (string, error) {
-	if s.Scenario == nil {
-		return "", ErrNoScenarioSelected
+func (s *State) PlayerBinary() ([]byte, error) {
+	if s.phase != PhaseInProgress {
+		return nil, ErrNoGameInProgress
 	}
 
-	return filepath.Join(s.Scenario.Dir, s.Scenario.Manifest.Firmware.ROM), nil
+	return emulator.AppImage(filepath.Join(s.Scenario.Dir, s.Scenario.Manifest.Firmware.ROM))
 }
 
 func (s *State) Evaluate(frame Frame) error {

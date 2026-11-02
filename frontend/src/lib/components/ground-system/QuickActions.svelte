@@ -24,7 +24,7 @@
 			const url = URL.createObjectURL(await response.blob());
 			const link = document.createElement("a");
 			link.href = url;
-			link.download = "probe_rom.elf";
+			link.download = "probe.bin";
 			link.click();
 			URL.revokeObjectURL(url);
 		} catch (error) {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sojourn/app"
 	"sojourn/game"
 	"strconv"
@@ -252,15 +251,11 @@ func (s *server) downloadBinary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	romPath, err := s.gs.ROMPath()
-	var rom []byte
-	if err == nil {
-		rom, err = os.ReadFile(romPath)
-	}
+	image, err := s.gs.PlayerBinary()
 	if err != nil {
-		app.ErrorLogger.Printf("Error reading ROM: %v", err)
+		app.ErrorLogger.Printf("Error reading app image: %v", err)
 		status := http.StatusInternalServerError
-		if errors.Is(err, game.ErrNoScenarioSelected) {
+		if errors.Is(err, game.ErrNoGameInProgress) {
 			status = http.StatusBadRequest
 		}
 
@@ -271,9 +266,9 @@ func (s *server) downloadBinary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(romPath)))
-	w.Header().Set("Content-Length", strconv.Itoa(len(rom)))
-	w.Write(rom)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", "probe.bin"))
+	w.Header().Set("Content-Length", strconv.Itoa(len(image)))
+	w.Write(image)
 }
 
 func (s *server) downlinkPump() {
