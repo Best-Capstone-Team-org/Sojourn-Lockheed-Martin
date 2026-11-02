@@ -12,7 +12,9 @@ services:
       - BUILD_DIR=/app/frontend
       - SCENARIOS_DIR=/app/scenarios
       - SCENARIOS_USER_DIR=/app/scenarios-user
+      - SAVE_DIR=/savedata
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
       - scenario_data:/app/scenarios-user:ro
+      - player_data:/savedata

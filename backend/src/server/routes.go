@@ -53,6 +53,13 @@ func Serve() {
 
 	app.ServerLogger.Printf("Loaded %d scenarios from %s", len(server.gs.AvailableScenarios), scenariosDir)
 
+	server.gs.SaveDir = os.Getenv("SAVE_DIR")
+	if server.gs.SaveDir == "" {
+		app.ErrorLogger.Println("SAVE_DIR is not set: sessions will not be saved")
+	} else {
+		app.ServerLogger.Printf("Saving sessions to %s", server.gs.SaveDir)
+	}
+
 	mux := server.routes()
 	port := os.Getenv("PORT")
 	if port == "" {

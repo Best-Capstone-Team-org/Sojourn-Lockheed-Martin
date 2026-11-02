@@ -28,5 +28,10 @@ COPY --from=frontend /app/frontend/build ./frontend
 COPY --from=firmware /firmware/build/probe_rom.elf ./probe_rom.elf
 COPY deps/sojourn/scenarios/ ./scenarios
 
+# Player state lives only on this volume (charter R14.1).
+ENV SAVE_DIR=/savedata
+RUN mkdir -p /savedata
+VOLUME /savedata
+
 EXPOSE 8080
 CMD ["sojourn"]

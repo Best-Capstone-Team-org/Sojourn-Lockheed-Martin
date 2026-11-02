@@ -175,7 +175,7 @@ func TestDownlinkTranslatorPumpClosesGrader(t *testing.T) {
 
 	in := make(chan []byte)
 	out := make(chan DownlinkMessage)
-	go state.downlinkTranslatorPump(out, in, grader, nil, nil)
+	go state.downlinkTranslatorPump(out, in, grader, nil, nil, nil)
 	close(in)
 
 	select {
