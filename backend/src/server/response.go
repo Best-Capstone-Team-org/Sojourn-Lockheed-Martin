@@ -25,6 +25,8 @@ type scenarioResponse struct {
 	Objectives []objectiveResponse `json:"objectives"`
 
 	Constraints map[string]int `json:"constraints"`
+
+	Record *game.ScenarioRecord `json:"record"`
 }
 
 type selectScenarioResponse struct {
