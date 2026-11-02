@@ -381,6 +381,16 @@ func (s *State) UploadPatchedBinary(patchedBinaryPath string) error {
 	return nil
 }
 
+var ErrNoScenarioSelected = errors.New("No scenario selected")
+
+func (s *State) ROMPath() (string, error) {
+	if s.Scenario == nil {
+		return "", ErrNoScenarioSelected
+	}
+
+	return filepath.Join(s.Scenario.Dir, s.Scenario.Manifest.Firmware.ROM), nil
+}
+
 func (s *State) Evaluate(frame Frame) error {
 	if s.phase != PhaseInProgress {
 		return unexpectedPhase("evaluating a frame")

@@ -600,3 +600,74 @@ func TestUplinkPumpExitsOnUnexpectedReadError(t *testing.T) {
 		t.Error("gameRunningDone not closed")
 	}
 }
+
+func TestDownloadBinaryMethodNotAllowed(t *testing.T) {
+	s := newTestServer(t)
+	rec := httptest.NewRecorder()
+	s.downloadBinary(rec, httptest.NewRequest(http.MethodPost, "/api/download-binary", nil))
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestDownloadBinaryNoScenario(t *testing.T) {
+	s := newTestServer(t)
+	rec := httptest.NewRecorder()
+	s.downloadBinary(rec, httptest.NewRequest(http.MethodGet, "/api/download-binary", nil))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+	var resp downloadBinaryResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v (body %q)", err, rec.Body.String())
+	}
+	if resp.Message == "" {
+		t.Error("empty error message")
+	}
+}
+
+func TestDownloadBinaryMissingROM(t *testing.T) {
+	s := newTestServer(t)
+	sc := testScenario()
+	sc.Manifest.Firmware.ROM = "firmware/probe_rom.elf"
+	s.gs.Scenario = sc
+
+	rec := httptest.NewRecorder()
+	s.downloadBinary(rec, httptest.NewRequest(http.MethodGet, "/api/download-binary", nil))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
+	}
+	var resp downloadBinaryResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil || resp.Message == "" {
+		t.Fatalf("body = %q, want JSON error message", rec.Body.String())
+	}
+}
+
+func TestDownloadBinaryServesROM(t *testing.T) {
+	s := newTestServer(t)
+	sc := testScenario()
+	sc.Dir = "../../../deps/sojourn/scenarios/first-contact"
+	sc.Manifest.Firmware.ROM = "firmware/probe_rom.elf"
+	s.gs.Scenario = sc
+
+	want, err := os.ReadFile(filepath.Join(sc.Dir, sc.Manifest.Firmware.ROM))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	s.downloadBinary(rec, httptest.NewRequest(http.MethodGet, "/api/download-binary", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d (body %q)", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if !strings.Contains(rec.Header().Get("Content-Disposition"), "probe_rom.elf") {
+		t.Errorf("Content-Disposition = %q", rec.Header().Get("Content-Disposition"))
+	}
+	if got := rec.Body.Bytes(); string(got) != string(want) {
+		t.Errorf("body is %d bytes, want %d bytes of ROM ELF", len(got), len(want))
+	}
+}

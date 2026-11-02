@@ -2,11 +2,14 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sojourn/app"
 	"sojourn/game"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -89,6 +92,7 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc(apiPrefix+"/load-save", s.loadSave)
 	mux.HandleFunc(apiPrefix+"/save", s.save)
 	mux.HandleFunc(apiPrefix+"/results", s.results)
+	mux.HandleFunc(apiPrefix+"/download-binary", s.downloadBinary)
 	mux.HandleFunc(apiPrefix+"/upload-patch", s.uploadPatch)
 
 	return mux
@@ -241,6 +245,35 @@ func (s *server) uploadPatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO:
+}
+
+func (s *server) downloadBinary(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodGet, w) {
+		return
+	}
+
+	romPath, err := s.gs.ROMPath()
+	var rom []byte
+	if err == nil {
+		rom, err = os.ReadFile(romPath)
+	}
+	if err != nil {
+		app.ErrorLogger.Printf("Error reading ROM: %v", err)
+		status := http.StatusInternalServerError
+		if errors.Is(err, game.ErrNoScenarioSelected) {
+			status = http.StatusBadRequest
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		json.NewEncoder(w).Encode(downloadBinaryResponse{Message: err.Error()})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(romPath)))
+	w.Header().Set("Content-Length", strconv.Itoa(len(rom)))
+	w.Write(rom)
 }
 
 func (s *server) downlinkPump() {

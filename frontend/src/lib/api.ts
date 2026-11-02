@@ -59,6 +59,8 @@ export interface ResultsResponse {
 
 export type UploadPatchResponse = Message;
 
+export type DownloadBinaryResponse = Message;
+
 export interface CommandUplink {
 	command: {
 		name: string;
