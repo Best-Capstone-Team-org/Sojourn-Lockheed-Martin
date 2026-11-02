@@ -35,12 +35,8 @@
 			</Button>
 		</div>
 		<div class="flex flex-col gap-[1vw]">
-			<span class="font-semibold"
-				>Writes: {maxWrites - writes}/{maxWrites}</span
-			>
-			<span class="font-semibold"
-				>Reads: {maxReads - reads}/{maxReads}</span
-			>
+			<span class="font-semibold">Writes: {writes}/{maxWrites}</span>
+			<span class="font-semibold">Reads: {reads}/{maxReads}</span>
 		</div>
 	</div>
 </Box>
