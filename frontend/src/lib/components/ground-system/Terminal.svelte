@@ -28,16 +28,28 @@
 	});
 
 	// actions
+	const send = (cmd: string) => {
+		if (!ready || !ws) return false;
+		ws.send(cmd);
+		history.push(cmd);
+		return true;
+	};
+
 	const sendCommand = () => {
-		if (ready && ws) {
-			ws.send(command);
-			history.push(command);
+		if (send(command)) {
 			textEntry = "";
 			historyIndex = -1;
 		}
 
 		terminalMode = "history";
 	};
+
+	export async function sendBatch(lines: string[], delayMs = 250) {
+		for (const line of lines) {
+			if (!send(line)) break;
+			await new Promise((r) => setTimeout(r, delayMs));
+		}
+	}
 
 	const clearCommand = () => {
 		terminalMode = "history";
