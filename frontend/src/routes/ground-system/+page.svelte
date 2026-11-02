@@ -38,6 +38,12 @@
 	let retryTimer: ReturnType<typeof setTimeout> | undefined;
 	let retry = $state(0);
 
+	// constraints
+	let maxWrites = $state(gameState.scenario?.constraints.writes ?? 0);
+	let maxReads = $state(gameState.scenario?.constraints.reads ?? 0);
+	let writes = $state(maxWrites);
+	let reads = $state(maxReads);
+
 	function scheduleReconnect() {
 		const delay = Math.min(
 			RECONNECT_BASE_DELAY * 2 ** attempts,
@@ -71,7 +77,17 @@
 					Object.assign(objective, { hint: undefined }, update);
 				}
 
-				// TODO add constraints {}
+				for (const [key, value] of Object.entries(
+					message.constraints
+				)) {
+					if (key === "writes") {
+						writes = value;
+						console.log("writes", writes);
+					} else if (key === "reads") {
+						reads = value;
+						console.log("reads", reads);
+					}
+				}
 				break;
 		}
 	}
@@ -129,7 +145,13 @@
 			defaultSize={30}
 			minSize={10}
 		>
-			<MissionStatus {objectives} />
+			<MissionStatus
+				{objectives}
+				{writes}
+				{reads}
+				{maxWrites}
+				{maxReads}
+			/>
 		</Resizable.Pane>
 
 		<Resizable.Handle />

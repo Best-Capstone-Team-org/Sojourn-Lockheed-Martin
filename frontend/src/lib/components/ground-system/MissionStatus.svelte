@@ -4,14 +4,19 @@
 	import MissionDetail from "./MissionDetail.svelte";
 	import type { ObjectiveDetail } from "$lib/api";
 
-	// dummy data TODO remove
-	const writes = $state(100);
-	const reads = $state(200);
-	const maxWrites = $state(1000);
-	const maxReads = $state(1000);
-
-	let { objectives }: { objectives: Record<string, ObjectiveDetail> } =
-		$props();
+	let {
+		objectives,
+		writes,
+		reads,
+		maxWrites,
+		maxReads,
+	}: {
+		objectives: Record<string, ObjectiveDetail>;
+		writes: number;
+		reads: number;
+		maxWrites: number;
+		maxReads: number;
+	} = $props();
 
 	const missionComplete = $derived(
 		Object.values(objectives).length > 0 &&
