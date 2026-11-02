@@ -105,6 +105,7 @@ test("state messages update the objectives until the mission is complete", async
 		constraints: {},
 	});
 	await expect(page.getByText("Patch the sensor table.")).toBeVisible();
+	await page.getByRole("button", { name: "Show hints" }).click();
 	await expect(page.getByText("Try PEEK 0x2001E000 16")).toBeVisible();
 	await expect(
 		page.getByRole("button", { name: "Abort Mission" })
