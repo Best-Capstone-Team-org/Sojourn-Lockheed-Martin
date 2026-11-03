@@ -78,11 +78,22 @@ func (s *State) LoadScenarios(scenariosDirs []ScenariosDir) error {
 			scenario, err := LoadScenario(filepath.Join(scenariosDir.Dir, scenarioDir.Name()))
 
 			if err != nil {
-				return err
+				app.ErrorLogger.Printf(
+					"Skipping invalid scenario %q: %v",
+					scenarioDir.Name(),
+					err,
+				)
+				continue
 			}
 
 			s.AvailableScenarios[scenario.Manifest.ID] = scenario
 		}
+	}
+
+	if len(s.AvailableScenarios) == 0 {
+		app.ErrorLogger.Println(
+			"Warning: No valid scenarios were loaded",
+		)
 	}
 
 	s.phase = PhaseLevelSelect

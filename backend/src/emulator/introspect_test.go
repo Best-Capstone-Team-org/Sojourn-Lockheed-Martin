@@ -575,7 +575,7 @@ func TestScenarioGradesCapturedMemory(t *testing.T) {
 	g := connect(t, s)
 
 	scenario := loadScenario(t, `{"id": "mode", "title": "Mode", "brief": "Set the mode.",
-		"success": {"op": "mem_u8", "at": {"addr": "0x20000040"}, "cmp": "eq", "value": 3}}`)
+        "success": {"op": "mem_u8", "at": {"sym": "test_mode"}, "cmp": "eq", "value": 3}}`)
 
 	evaluation, err := game.NewEvaluation(scenario)
 	if err != nil {
@@ -617,7 +617,7 @@ func loadScenario(t *testing.T, objective string) *game.Scenario {
 		"objectives.json":       `{"format": 1, "objectives": [` + objective + `]}`,
 		"briefing.md":           "# Briefing\n",
 		"firmware/rom.elf":      "",
-		"firmware/symbols.json": `{"format": 1, "symbols": {}}`,
+		"firmware/symbols.json": `{"format": 1, "symbols": {"test_mode": "0x20000040"}}`,
 		"firmware/memmap.json":  `{"format": 1, "regions": [{"name": "SRAM", "lo": "0x20000000", "hi": "0x20010000", "poke": "rw"}]}`,
 	}
 	for name, contents := range files {

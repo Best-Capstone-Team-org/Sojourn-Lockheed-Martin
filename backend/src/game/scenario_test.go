@@ -3044,3 +3044,44 @@ func TestValidatePredicateEventInvalidRegex(t *testing.T) {
 		t.Fatal("expected invalid event regex to return an error")
 	}
 }
+func TestValidateAssertionAddress(t *testing.T) {
+	s := &Scenario{
+		MemMap: MemMapFile{
+			Regions: []MemoryRegion{
+				{Name: "APP_DATA", Lo: "0x20019000", Hi: "0x2001D000"},
+				{Name: "SENSOR_BLOCK", Lo: "0x2001E000", Hi: "0x2001E100"},
+				{Name: "CAM_REGS", Lo: "0x2001E100", Hi: "0x2001E200"},
+				{Name: "COMMS_REGS", Lo: "0x2001E200", Hi: "0x2001F000"},
+			},
+		},
+		Symbols: SymbolsFile{
+			Symbols: map[string]string{
+				"test_var": "0x20019010",
+			},
+		},
+	}
+
+	tests := []struct {
+		name    string
+		ref     AddressRef
+		wantErr bool
+	}{
+		{"peripheral sensor", AddressRef{Addr: "0x2001E040"}, false},
+		{"peripheral camera", AddressRef{Addr: "0x2001E104"}, false},
+		{"peripheral comms", AddressRef{Addr: "0x2001E204"}, false},
+		{"absolute RAM rejected", AddressRef{Addr: "0x20019010"}, true},
+		{"symbolic RAM accepted", AddressRef{Sym: "test_var"}, false},
+		{"outside memory map", AddressRef{Addr: "0x90000000"}, true},
+		{"crosses peripheral boundary", AddressRef{Addr: "0x2001E0FF"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := s.validateAssertionAddress(tt.ref, 4)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateAssertionAddress(%+v) = %v, wantErr %v",
+					tt.ref, err, tt.wantErr)
+			}
+		})
+	}
+}
