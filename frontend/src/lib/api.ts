@@ -37,7 +37,8 @@ export interface ObjectiveResponse {
 export interface Objective {
 	id: string;
 	status: ObjectiveStatus;
-	hint?: string[];
+	diagnostic?: string;
+	hints?: string[];
 }
 // front end storage for missions
 export type ObjectiveDetail = ObjectiveResponse & Objective;
