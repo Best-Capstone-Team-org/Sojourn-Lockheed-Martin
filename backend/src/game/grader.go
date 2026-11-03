@@ -1,11 +1,14 @@
 package game
 
 import (
+	"encoding/binary"
 	"fmt"
 	"slices"
+	"sojourn/app"
 	"sojourn/emulator"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const (
@@ -13,11 +16,22 @@ const (
 	bootBanner          = "SOJOURN FSW"
 )
 
+// The probe's uptime is SYSBLK->ticks, a 100 Hz counter the bootloader keeps
+// at a fixed address (firmware spec §10).
+const (
+	uptimeTicksAddr = 0x20000100
+	msPerTick       = 10
+)
+
 type Grader struct {
-	state      *State
-	gdbAddr    string
+	state   *State
+	gdbAddr string
+	log     []CommandLogEntry
+
+	// mu guards introspect, which the uplink stamps commands through while
+	// the downlink grades frames.
+	mu         sync.Mutex
 	introspect *emulator.Introspect
-	log        []CommandLogEntry
 }
 
 func NewGrader(state *State, gdbAddr string) *Grader {
@@ -40,6 +54,7 @@ func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
 
 	f := Frame{
 		CRCOK:     frame.CRCOK,
+		UptimeS:   frame.UptimeS,
 		Telemetry: frame.AsMap(),
 		Log:       slices.Clone(g.log),
 		Budget:    budgetUsed(g.log),
@@ -63,6 +78,12 @@ func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
 }
 
 func (g *Grader) Close() error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.closeLocked()
+}
+
+func (g *Grader) closeLocked() error {
 	if g.introspect == nil {
 		return nil
 	}
@@ -72,7 +93,28 @@ func (g *Grader) Close() error {
 	return err
 }
 
+// UptimeMS reads the probe's uptime in milliseconds, or nil if it can't be read.
+func (g *Grader) UptimeMS() *uint64 {
+	snapshot, err := g.capture([]emulator.MemoryRange{{Addr: uptimeTicksAddr, Len: 4}})
+	if err != nil {
+		app.ErrorLogger.Printf("Reading probe uptime: %v", err)
+		return nil
+	}
+
+	data, err := snapshot.Read(uptimeTicksAddr, 4)
+	if err != nil {
+		app.ErrorLogger.Printf("Reading probe uptime: %v", err)
+		return nil
+	}
+
+	ms := uint64(binary.LittleEndian.Uint32(data)) * msPerTick
+	return &ms
+}
+
 func (g *Grader) capture(ranges []emulator.MemoryRange) (*emulator.MemorySnapshot, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	if g.introspect == nil {
 		in, err := emulator.Connect(g.gdbAddr)
 		if err != nil {
@@ -83,7 +125,7 @@ func (g *Grader) capture(ranges []emulator.MemoryRange) (*emulator.MemorySnapsho
 
 	mem, err := emulator.NewMemorySnapshot(g.introspect, ranges)
 	if err != nil {
-		g.Close()
+		g.closeLocked()
 		return nil, err
 	}
 

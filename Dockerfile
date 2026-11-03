@@ -24,5 +24,10 @@ COPY --from=backend /out/sojourn /usr/local/bin/sojourn
 COPY --from=frontend /app/frontend/build ./frontend
 COPY --from=scenarios /scenarios ./scenarios
 
+# Player state lives only on this volume (charter R14.1).
+ENV SAVE_DIR=/savedata
+RUN mkdir -p /savedata
+VOLUME /savedata
+
 EXPOSE 8080
 CMD ["sojourn"]

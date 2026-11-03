@@ -55,6 +55,13 @@ func Serve() {
 
 	app.ServerLogger.Printf("Loaded %d scenarios from %s", len(server.gs.AvailableScenarios), scenariosDir)
 
+	server.gs.SaveDir = os.Getenv("SAVE_DIR")
+	if server.gs.SaveDir == "" {
+		app.ErrorLogger.Println("SAVE_DIR is not set: sessions will not be saved")
+	} else {
+		app.ServerLogger.Printf("Saving sessions to %s", server.gs.SaveDir)
+	}
+
 	mux := server.routes()
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -104,6 +111,11 @@ func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 
 	response := scenariosResponse{}
 
+	records, err := game.BestRecords(s.gs.SaveDir, s.gs.AvailableScenarios)
+	if err != nil {
+		app.ErrorLogger.Printf("Reading scenario records: %v", err)
+	}
+
 	for _, scenario := range s.gs.AvailableScenarios {
 		objectives := []objectiveResponse{}
 		for _, objective := range scenario.Objectives {
@@ -139,12 +151,14 @@ func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 			Objectives: objectives,
 
 			Constraints: constraints,
+
+			Record: records[scenario.Manifest.ID],
 		}
 
 		response = append(response, sr)
 	}
 
-	err := json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 		return

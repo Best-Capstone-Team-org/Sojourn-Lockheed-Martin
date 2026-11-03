@@ -98,7 +98,7 @@ func TestValidatePredicateTable(t *testing.T) {
 		{"script parent", Predicate{Op: "script", Lang: "python", Entry: "../a.py:f"}, false},
 		{"script dotdot", Predicate{Op: "script", Lang: "python", Entry: "..:f"}, false},
 		{"script outside checks", Predicate{Op: "script", Lang: "python", Entry: "lib/a.py:f"}, false},
-		{"script valid", Predicate{Op: "script", Lang: "python", Entry: "checks/a.py:f"}, true},
+		{"script rejected", Predicate{Op: "script", Lang: "python", Entry: "checks/a.py:f"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -439,14 +439,17 @@ func TestLoadScenarioWithOptionsImpure(t *testing.T) {
 	files["manifest.json"] = strings.Replace(files["manifest.json"], `"revision": 1,`, `"revision": 1, "impure": true,`, 1)
 	files["checks/a.py"] = "def f(frame): return True\n"
 	files["objectives.json"] = `{"format": 1, "objectives": [{"id": "s", "title": "t", "brief": "b",
-		"success": {"op": "script", "lang": "python", "entry": "checks/a.py:f"}}]}`
+        "success": {"op": "script", "lang": "python", "entry": "checks/a.py:f"}}]}`
 	writeScenario(t, dir, files)
 
 	if _, err := LoadScenario(dir); err == nil {
 		t.Fatal("expected impure scenario to be refused in pure mode")
 	}
-	if _, err := LoadScenarioWithOptions(dir, false); err != nil {
-		t.Fatalf("LoadScenarioWithOptions: %v", err)
+
+	if _, err := LoadScenarioWithOptions(dir, false); err == nil {
+		t.Fatal("expected script predicate to be rejected even when pure mode is disabled")
+	} else if !strings.Contains(err.Error(), `unknown predicate operation "script"`) {
+		t.Fatalf("expected script predicate rejection, got: %v", err)
 	}
 }
 

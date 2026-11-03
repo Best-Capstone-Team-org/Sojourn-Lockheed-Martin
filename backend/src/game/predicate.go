@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -21,7 +20,7 @@ func validateComparison(cmp string) error {
 
 func isValidPredicateOp(op string) bool {
 	switch op {
-	case "tlm", "tlm_bits", "channel_present", "channel_absent", "event", "mem_u8", "mem_u16", "mem_u32", "mem_bits", "mem", "mem_changed", "commanded", "budget", "all", "any", "not", "ever", "sustained", "within", "script":
+	case "tlm", "tlm_bits", "channel_present", "channel_absent", "event", "mem_u8", "mem_u16", "mem_u32", "mem_bits", "mem", "mem_changed", "commanded", "budget", "all", "any", "not", "ever", "sustained", "within":
 		return true
 	default:
 		return false
@@ -218,28 +217,6 @@ func validatePredicate(predicate Predicate) error {
 
 		if err := validateComparisonValue(predicate.Cmp, predicate.Value, true); err != nil {
 			return fmt.Errorf("budget predicate: %w", err)
-		}
-	case "script":
-		if predicate.Lang != "python" {
-			return fmt.Errorf("script predicate requires lang 'python'")
-		}
-
-		if predicate.Entry == "" {
-			return fmt.Errorf("script predicate requires 'entry'")
-		}
-
-		parts := strings.Split(predicate.Entry, ":")
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return fmt.Errorf("script predicate entry must have form path.py:callable")
-		}
-
-		clean := filepath.Clean(parts[0])
-		if clean == "." || filepath.IsAbs(clean) || strings.HasPrefix(clean, ".."+string(filepath.Separator)) || clean == ".." {
-			return fmt.Errorf("script predicate entry must be a relative package path")
-		}
-
-		if clean != "checks" && !strings.HasPrefix(clean, "checks"+string(filepath.Separator)) {
-			return fmt.Errorf("script predicate entry must point inside checks/")
 		}
 	}
 

@@ -119,17 +119,32 @@ func TestLoadScenariosErrors(t *testing.T) {
 		t.Fatal("expected error for a missing directory")
 	}
 
+	if state.Phase() != PhaseNone {
+		t.Fatalf("phase = %v, want none", state.Phase())
+	}
+
 	root := t.TempDir()
 	files := scenarioFiles("bad")
 	files["objectives.json"] = "{"
 	writeScenario(t, filepath.Join(root, "bad"), files)
 
 	state = InitState()
-	if err := state.LoadScenarios([]ScenariosDir{{Dir: root, Required: true}}); err == nil {
-		t.Fatal("expected error for an invalid scenario")
+	if err := state.LoadScenarios([]ScenariosDir{{Dir: root, Required: true}}); err != nil {
+		t.Fatalf("expected invalid scenario to be skipped, got error: %v", err)
 	}
-	if state.Phase() != PhaseNone {
-		t.Fatalf("phase = %v, want none", state.Phase())
+
+	if len(state.AvailableScenarios) != 0 {
+		t.Fatalf(
+			"expected 0 valid scenarios, got %d",
+			len(state.AvailableScenarios),
+		)
+	}
+
+	if state.Phase() != PhaseLevelSelect {
+		t.Fatalf(
+			"phase = %v, want PhaseLevelSelect",
+			state.Phase(),
+		)
 	}
 }
 
@@ -184,8 +199,14 @@ func TestLoadScenariosOptionalDirInvalidScenario(t *testing.T) {
 
 	state := InitState()
 	err := state.LoadScenarios([]ScenariosDir{{Dir: user, Required: false}})
-	if err == nil {
-		t.Fatal("expected error for an invalid scenario in an optional dir")
+	if err != nil {
+		t.Fatalf("expected invalid scenario in an optional dir to be skipped, got error: %v", err)
+	}
+	if len(state.AvailableScenarios) != 0 {
+		t.Fatalf("AvailableScenarios = %v, want none", state.AvailableScenarios)
+	}
+	if state.Phase() != PhaseLevelSelect {
+		t.Fatalf("phase = %v, want level select", state.Phase())
 	}
 }
 
@@ -210,6 +231,65 @@ func TestSelectScenario(t *testing.T) {
 	}
 	if state.grader == nil {
 		t.Fatal("SelectScenario did not create a grader")
+	}
+}
+
+func TestLoadScenariosSkipsInvalid(t *testing.T) {
+	root := t.TempDir()
+
+	badFiles := scenarioFiles("bad")
+	badFiles["objectives.json"] = "{"
+	writeScenario(t, filepath.Join(root, "bad"), badFiles)
+
+	goodFiles := scenarioFiles("good")
+	writeScenario(t, filepath.Join(root, "good"), goodFiles)
+
+	state := InitState()
+
+	if err := state.LoadScenarios([]ScenariosDir{{Dir: root, Required: true}}); err != nil {
+		t.Fatalf("LoadScenarios failed: %v", err)
+	}
+
+	if len(state.AvailableScenarios) != 1 {
+		t.Fatalf(
+			"expected 1 valid scenario, got %d",
+			len(state.AvailableScenarios),
+		)
+	}
+
+	if len(state.AvailableScenarios) != 1 {
+		t.Fatalf(
+			"expected 1 valid scenario, got %d",
+			len(state.AvailableScenarios),
+		)
+	}
+
+	for id, scenario := range state.AvailableScenarios {
+		if scenario.Manifest.ID != id {
+			t.Fatalf(
+				"scenario registered under incorrect ID: key=%q, manifest ID=%q",
+				id,
+				scenario.Manifest.ID,
+			)
+		}
+
+		if filepath.Base(scenario.Dir) != "good" {
+			t.Fatalf(
+				"expected scenario from good directory, got %q",
+				scenario.Dir,
+			)
+		}
+	}
+
+	if _, ok := state.AvailableScenarios["bad"]; ok {
+		t.Fatal("invalid scenario should have been skipped")
+	}
+
+	if state.Phase() != PhaseLevelSelect {
+		t.Fatalf(
+			"phase = %v, want PhaseLevelSelect",
+			state.Phase(),
+		)
 	}
 }
 

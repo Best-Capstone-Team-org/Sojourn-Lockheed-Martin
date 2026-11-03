@@ -28,7 +28,7 @@
 	let tlm = $state<string[]>([]);
 	let readOutTlm = $state<Telemetry>();
 
-	// key objectives by id
+	// Keep the package's declared order while applying state updates by ID.
 	let objectives = $state<Record<string, ObjectiveDetail>>(
 		Object.fromEntries(
 			(gameState.scenario?.objectives ?? []).map((o) => [o.id, { ...o }])
@@ -75,7 +75,7 @@
 					if (!objective) {
 						continue;
 					}
-					Object.assign(objective, { hint: undefined }, update);
+					Object.assign(objective, update);
 				}
 
 				for (const [key, value] of Object.entries(

@@ -24,6 +24,8 @@ type State struct {
 	allowance  *allowance
 
 	AvailableScenarios map[string]*Scenario
+
+	SaveDir string
 }
 
 type Phase int
@@ -76,11 +78,22 @@ func (s *State) LoadScenarios(scenariosDirs []ScenariosDir) error {
 			scenario, err := LoadScenario(filepath.Join(scenariosDir.Dir, scenarioDir.Name()))
 
 			if err != nil {
-				return err
+				app.ErrorLogger.Printf(
+					"Skipping invalid scenario %q: %v",
+					scenarioDir.Name(),
+					err,
+				)
+				continue
 			}
 
 			s.AvailableScenarios[scenario.Manifest.ID] = scenario
 		}
+	}
+
+	if len(s.AvailableScenarios) == 0 {
+		app.ErrorLogger.Println(
+			"Warning: No valid scenarios were loaded",
+		)
 	}
 
 	s.phase = PhaseLevelSelect
@@ -123,6 +136,15 @@ func (s *State) Start(downlinkChan chan DownlinkMessage, uplinkChan chan []byte,
 		return err
 	}
 
+	var session *Session
+	if s.SaveDir != "" {
+		session, err = NewSession(s.SaveDir, s.Scenario)
+		if err != nil {
+			return fmt.Errorf("recording session: %w", err)
+		}
+		app.GameLogger.Printf("Recording session to %s", session.Dir)
+	}
+
 	s.evaluation.reset()
 	s.phase = PhaseInProgress
 
@@ -150,9 +172,11 @@ func (s *State) Start(downlinkChan chan DownlinkMessage, uplinkChan chan []byte,
 
 	go admitUplink(uplinkChan, admittedUplinkChan, s.allowance, refusals, refusalsDone)
 	go delayed(admittedUplinkChan, delayedUplinkChan, time.Duration(link.UplinkDelayS)*linkDelayUnit, done)
-	go uplinkForwarder(delayedUplinkChan, emulatorUplinkChan, pendingCommands, booted, setupCommands)
+	go uplinkForwarder(delayedUplinkChan, emulatorUplinkChan, pendingCommands, booted, setupCommands,
+		probeUptime(s.grader))
 
-	go s.downlinkTranslatorPump(translatedDownlinkChan, emulatorDownlinkChan, s.grader, pendingCommands, booted)
+	go s.downlinkTranslatorPump(translatedDownlinkChan, emulatorDownlinkChan, s.grader, pendingCommands, booted,
+		session)
 	go delayed(translatedDownlinkChan, delayedDownlinkChan, time.Duration(link.DownlinkDelayS)*linkDelayUnit, done)
 	go mergeDownlink(delayedDownlinkChan, refusals, downlinkChan, refusalsDone)
 
@@ -214,13 +238,26 @@ type pendingCommand struct {
 	setup   bool
 }
 
+func probeUptime(grader *Grader) func() *uint64 {
+	if grader == nil {
+		return func() *uint64 { return nil }
+	}
+	return grader.UptimeMS
+}
+
 func uplinkForwarder(playerUplinkChan <-chan []byte, emulatorUplinkChan chan<- []byte,
-	pendingCommands chan<- pendingCommand, booted <-chan struct{}, setupCommands []string) {
+	pendingCommands chan<- pendingCommand, booted <-chan struct{}, setupCommands []string,
+	uptime func() *uint64) {
 	defer close(emulatorUplinkChan)
 
 	send := func(raw string, setup bool) {
+		command := parseCommand(raw)
+		if !setup {
+			command.TMs = uptime()
+		}
+
 		select {
-		case pendingCommands <- pendingCommand{command: parseCommand(raw), setup: setup}:
+		case pendingCommands <- pendingCommand{command: command, setup: setup}:
 		default:
 			app.ErrorLogger.Printf("Too many unanswered commands, not logging `%s`", raw)
 		}
@@ -258,7 +295,7 @@ waitForBoot:
 
 func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessage,
 	emulatorDownlinkChan chan []byte, grader *Grader, pendingCommands <-chan pendingCommand,
-	booted chan<- struct{}) {
+	booted chan<- struct{}, session *Session) {
 	app.GameLogger.Println("Starting downlink translator pump")
 
 	for downlinkMessage := range emulatorDownlinkChan {
@@ -280,6 +317,13 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 
 			if err := grader.Grade(frame); err != nil {
 				app.ErrorLogger.Printf("Grading: %v", err)
+			}
+
+			for _, transition := range s.evaluation.Transitions() {
+				app.GameLogger.Printf("Objective %s: %s -> %s", transition.Objective, transition.From, transition.To)
+				if err := session.AppendObjective(transition); err != nil {
+					app.ErrorLogger.Printf("Recording objective %s: %v", transition.Objective, err)
+				}
 			}
 
 			s.sendStateDownlink(interfaceDownlinkChan)
@@ -305,6 +349,9 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 					if grader != nil {
 						grader.LogCommand(pending.command)
 					}
+					if err := session.Append(pending.command); err != nil {
+						app.ErrorLogger.Printf("Recording `%s`: %v", pending.command.Raw, err)
+					}
 				default:
 					app.ErrorLogger.Printf("Command response `%s` with no pending command", line)
 				}
@@ -314,6 +361,24 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 				Response: line,
 			}
 		}
+	}
+
+	// Commands the probe never answered, such as one that crashed it, still
+	// happened and are evidence.
+	for unanswered := true; unanswered; {
+		select {
+		case pending := <-pendingCommands:
+			if !pending.setup {
+				if err := session.Append(pending.command); err != nil {
+					app.ErrorLogger.Printf("Recording `%s`: %v", pending.command.Raw, err)
+				}
+			}
+		default:
+			unanswered = false
+		}
+	}
+	if err := session.Close(); err != nil {
+		app.ErrorLogger.Printf("Closing command log: %v", err)
 	}
 
 	if grader != nil {
