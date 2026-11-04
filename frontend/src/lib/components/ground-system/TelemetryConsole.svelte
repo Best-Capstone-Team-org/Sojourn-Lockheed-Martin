@@ -4,15 +4,15 @@
 	import satelliteUplink from "$lib/assets/satelite_up.webp";
 	import satelliteNoop from "$lib/assets/satelite_noop.webp";
 	import satelliteFailure from "$lib/assets/satelite_failture.png";
-	import { type CommandDownlink, type CommandUplink } from "$lib/api";
+	import { type CommandDownlink } from "$lib/api";
 
 	let {
 		commandDownlink,
-		commandUplink,
+		uplinkInFlight,
 		satelliteDown,
 	}: {
 		commandDownlink: CommandDownlink | undefined;
-		commandUplink: CommandUplink | undefined;
+		uplinkInFlight: boolean;
 		satelliteDown: boolean;
 	} = $props();
 
@@ -21,17 +21,17 @@
 			return { src: satelliteFailure, alt: "Satellite down" };
 		}
 
+		if (uplinkInFlight) {
+			return {
+				src: satelliteUplink,
+				alt: "Satellite receiving uplink",
+			};
+		}
+
 		if (commandDownlink?.type === "commandResponse") {
 			return {
 				src: satelliteDownlink,
 				alt: "Satellite transmitting downlink",
-			};
-		}
-
-		if (commandUplink !== undefined) {
-			return {
-				src: satelliteUplink,
-				alt: "Satellite receiving uplink",
 			};
 		}
 

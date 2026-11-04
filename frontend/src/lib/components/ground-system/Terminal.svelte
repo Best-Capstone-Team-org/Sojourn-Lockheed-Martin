@@ -6,10 +6,12 @@
 		ws,
 		ready,
 		uplinkDelayS,
+		onUplinkInFlight,
 	}: {
 		ws: WebSocket | undefined;
 		ready: boolean;
 		uplinkDelayS: number;
+		onUplinkInFlight: (inFlight: boolean) => void;
 	} = $props();
 
 	let terminalMode = $state<"history" | "search">("history");
@@ -41,6 +43,10 @@
 			? 0
 			: Math.max(0, Math.ceil((entry.dueAt - now) / 1000));
 	let inFlight = $derived(entries.some((entry) => remaining(entry) > 0));
+
+	$effect(() => {
+		onUplinkInFlight(inFlight);
+	});
 
 	$effect(() => {
 		if (!inFlight) return;
