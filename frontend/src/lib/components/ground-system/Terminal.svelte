@@ -29,7 +29,9 @@
 
 	// actions
 	const send = (cmd: string) => {
-		if (!ready || !ws) return false;
+		if (!ready || !ws) {
+			return false;
+		}
 		ws.send(cmd);
 		history.push(cmd);
 		return true;
@@ -46,7 +48,11 @@
 
 	export async function sendBatch(lines: string[], delayMs = 250) {
 		for (const line of lines) {
-			if (!send(line)) break;
+			if (!send(line)) {
+				break;
+			}
+
+			// pause for next command
 			await new Promise((r) => setTimeout(r, delayMs));
 		}
 	}

@@ -231,12 +231,14 @@
 								>
 									{#if dragging}
 										<div
-											class="absolute inset-0 pointer-events-none flex items-center justify-center text-xl font-bold text-sys-text-light"
+											class="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-bold text-sys-text-light"
 										>
-											Drop batch file
+											Drop Batch File
 										</div>
 									{:else}
-										<Resizable.PaneGroup direction="vertical">
+										<Resizable.PaneGroup
+											direction="vertical"
+										>
 											<Resizable.Pane
 												defaultSize={60}
 												minSize={10}
