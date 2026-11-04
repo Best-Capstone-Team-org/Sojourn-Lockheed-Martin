@@ -17,6 +17,7 @@
 	const frame = $derived(readOutTlm);
 	const sensors = $derived(frame?.sensors);
 	const hk = $derived(frame?.hk);
+	const comms = $derived(frame?.comms);
 
 	function toggleTelemetry(state: boolean) {
 		options.telemetry = state;
@@ -61,10 +62,21 @@
 		{ label: "Shed Events", value: hk?.shed },
 	]);
 
+	const link = $derived([
+		{ 
+			label: "Antenna",
+			value: comms?.antenna == 0 ? "HGA" : "LGA"
+		},
+		{ label: "Budget", value: comms?.budget, unit: "B" },
+		{ label: "Dropped", value: comms?.dropped },
+		{ label: "HGA Deploy", value: comms?.hgaDeploy, unit: "%" }
+	])
+
 	const readOutSections = $derived([
 		{ title: "Frame Header", items: frameHeader },
 		{ title: "Instruments", items: instruments },
 		{ title: "House Keeping", items: houseKeeping },
+		{ title: "Link", items: link },
 	]);
 
 	const isMissing = (value: string | number | null | undefined) =>
