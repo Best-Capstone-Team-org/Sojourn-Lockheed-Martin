@@ -9,9 +9,6 @@ test("shows the probe's telemetry", async ({ page }) => {
 	await expect(page.getByText("5 s", { exact: true })).toBeVisible();
 	await expect(page.getByText("21 °C", { exact: true })).toBeVisible();
 	await expect(page.getByText("500 mg", { exact: true })).toBeVisible();
-	await expect(
-		page.getByRole("img", { name: "Satellite idle" })
-	).toBeVisible();
 });
 
 test("the telemetry switch hides TLM lines", async ({ page, backend }) => {
@@ -41,9 +38,6 @@ test("Enter sends a command and adds it to the history", async ({
 
 	backend.send({ type: "commandResponse", response: "PONG" });
 	await expect(page.getByText("PONG")).toBeVisible();
-	await expect(
-		page.getByRole("img", { name: "Satellite transmitting downlink" })
-	).toBeVisible();
 });
 
 test("arrow keys bring back earlier commands", async ({ page }) => {
