@@ -446,6 +446,16 @@ func (s *State) UploadPatchedBinary(patchedBinaryPath string) error {
 	return nil
 }
 
+var ErrNoGameInProgress = errors.New("no game in progress")
+
+func (s *State) PlayerBinary() ([]byte, error) {
+	if s.phase != PhaseInProgress {
+		return nil, ErrNoGameInProgress
+	}
+
+	return emulator.AppImage(filepath.Join(s.Scenario.Dir, s.Scenario.Manifest.Firmware.ROM))
+}
+
 func (s *State) Evaluate(frame Frame) error {
 	if s.phase != PhaseInProgress {
 		return unexpectedPhase("evaluating a frame")

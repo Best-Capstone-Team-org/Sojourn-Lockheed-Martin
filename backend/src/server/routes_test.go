@@ -601,6 +601,33 @@ func TestUplinkPumpExitsOnUnexpectedReadError(t *testing.T) {
 	}
 }
 
+func TestDownloadBinaryMethodNotAllowed(t *testing.T) {
+	s := newTestServer(t)
+	rec := httptest.NewRecorder()
+	s.downloadBinary(rec, httptest.NewRequest(http.MethodPost, "/api/download-binary", nil))
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestDownloadBinaryNoGameInProgress(t *testing.T) {
+	s := newTestServer(t)
+	rec := httptest.NewRecorder()
+	s.downloadBinary(rec, httptest.NewRequest(http.MethodGet, "/api/download-binary", nil))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+	var resp downloadBinaryResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v (body %q)", err, rec.Body.String())
+	}
+	if resp.Message == "" {
+		t.Error("empty error message")
+	}
+}
+
 func TestScenariosReportRecord(t *testing.T) {
 	completed := testScenario()
 	untried := testScenario()

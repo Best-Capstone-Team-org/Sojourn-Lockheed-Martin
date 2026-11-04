@@ -1,5 +1,6 @@
 <script lang="ts">
 	import TerminalScroll from "../TerminalScroll/TerminalScroll.svelte";
+	import QuickActions from "./QuickActions.svelte";
 
 	let {
 		ws,
@@ -125,6 +126,7 @@
 			bind:value={textEntry}
 			{onkeydown}
 		/>
+		<QuickActions visible={textEntry === ""} />
 	</div>
 
 	<!-- Terminal History -->

@@ -63,6 +63,10 @@ type uploadPatch struct {
 	Message string `json:"message"`
 }
 
+type downloadBinaryResponse struct {
+	Message string `json:"message"`
+}
+
 // Websocket responses
 
 type telemetryDownlink struct {

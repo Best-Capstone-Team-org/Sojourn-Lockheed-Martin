@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"os"
 	"sojourn/app"
 	"testing"
@@ -136,6 +137,43 @@ func TestStopReturnsToLevelSelect(t *testing.T) {
 
 	if err := state.Stop(); err == nil {
 		t.Fatal("expected Stop to fail when no game is running")
+	}
+}
+
+// firstContactState is ready to play the first-contact scenario's real ROM.
+func firstContactState(t *testing.T) *State {
+	t.Helper()
+	state := readyState(t)
+	state.Scenario.Dir = "../../../deps/sojourn/scenarios/first-contact"
+	state.Scenario.Manifest.Firmware.ROM = "firmware/probe_rom.elf"
+	return state
+}
+
+func TestPlayerBinaryDuringGame(t *testing.T) {
+	state := firstContactState(t)
+	startGame(t, state)
+
+	image, err := state.PlayerBinary()
+	if err != nil {
+		t.Fatalf("PlayerBinary: %v", err)
+	}
+	if len(image) < 4 || string(image[:4]) != "SRJN" {
+		t.Error("player binary does not start with the SRJN header")
+	}
+}
+
+func TestPlayerBinaryRequiresGameInProgress(t *testing.T) {
+	state := firstContactState(t)
+	if _, err := state.PlayerBinary(); !errors.Is(err, ErrNoGameInProgress) {
+		t.Fatalf("before start: err = %v, want ErrNoGameInProgress", err)
+	}
+
+	startGame(t, state)
+	if err := state.Stop(); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+	if _, err := state.PlayerBinary(); !errors.Is(err, ErrNoGameInProgress) {
+		t.Fatalf("after stop: err = %v, want ErrNoGameInProgress", err)
 	}
 }
 
