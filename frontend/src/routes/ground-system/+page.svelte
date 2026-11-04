@@ -66,7 +66,9 @@
 
 		switch (message.type) {
 			case "telemetry":
-				tlm.push(message.TLM);
+				tlm.push(
+					message.telemetry.crcOK ? message.TLM : "TLM failed CRC"
+				);
 				readOutTlm = message.telemetry;
 				if (message.telemetry.crcOK && message.telemetry.comms) {
 					lastCommsTelemetryAt = Date.now();
@@ -279,6 +281,7 @@
 													uplinkDelayS={gameState
 														.scenario
 														?.uplinkDelayS ?? 0}
+													onBatchFile={runBatchFile}
 												/>
 											</Resizable.Pane>
 										</Resizable.PaneGroup>
@@ -301,10 +304,7 @@
 							<TelemetryButtons />
 						</div>
 						<div class="min-h-0 flex-1">
-							<ReadOut
-								{readOutTlm}
-								onBatchFile={runBatchFile}
-							/>
+							<ReadOut {readOutTlm} />
 						</div>
 					</div>
 				</Resizable.Pane>

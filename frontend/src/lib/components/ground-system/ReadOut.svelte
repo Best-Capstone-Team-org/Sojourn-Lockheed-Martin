@@ -7,23 +7,12 @@
 	import Led from "./Led.svelte";
 	import Screen from "../Screen/Screen.svelte";
 	import absent from "$lib/assets/absent-icon.png";
-	import Button from "../Button/Button.svelte";
 
 	let {
 		readOutTlm,
-		onBatchFile,
 	}: {
 		readOutTlm: Telemetry | undefined;
-		onBatchFile: (file: File) => void;
 	} = $props();
-
-	let fileInput: HTMLInputElement;
-
-	function onFileChange(e: Event & { currentTarget: HTMLInputElement }) {
-		const file = e.currentTarget.files?.[0];
-		if (file) onBatchFile(file);
-		e.currentTarget.value = "";
-	}
 
 	const frame = $derived(readOutTlm);
 	const sensors = $derived(frame?.sensors);
@@ -113,27 +102,12 @@
 			</ReadOutSection>
 		{/each}
 		<ReadOutSection title="Console">
-			<div class="flex flex-col gap-2">
-				<div class="flex justify-between">
-					<span>Telemetry</span>
-					<Toggle
-						checked={options.telemetry}
-						onchange={toggleTelemetry}
-					/>
-				</div>
-				<input
-					bind:this={fileInput}
-					type="file"
-					accept=".txt,text/plain"
-					hidden
-					onchange={onFileChange}
+			<div class="flex justify-between">
+				<span>Telemetry</span>
+				<Toggle
+					checked={options.telemetry}
+					onchange={toggleTelemetry}
 				/>
-				<Button
-					buttonClass="p-1"
-					onclick={() => fileInput.click()}
-				>
-					Upload Batch File
-				</Button>
 			</div>
 		</ReadOutSection>
 	</div>

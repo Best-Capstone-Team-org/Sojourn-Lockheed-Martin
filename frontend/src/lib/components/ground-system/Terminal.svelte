@@ -7,11 +7,13 @@
 		ready,
 		uplinkDelayS,
 		onUplinkInFlight,
+		onBatchFile,
 	}: {
 		ws: WebSocket | undefined;
 		ready: boolean;
 		uplinkDelayS: number;
 		onUplinkInFlight: (inFlight: boolean) => void;
+		onBatchFile: (file: File) => void;
 	} = $props();
 
 	let terminalMode = $state<"history" | "search">("history");
@@ -171,7 +173,10 @@
 			bind:value={textEntry}
 			{onkeydown}
 		/>
-		<QuickActions visible={textEntry === ""} />
+		<QuickActions
+			visible={textEntry === ""}
+			{onBatchFile}
+		/>
 	</div>
 
 	<!-- Terminal History -->
