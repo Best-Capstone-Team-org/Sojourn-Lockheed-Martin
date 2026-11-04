@@ -5,9 +5,11 @@
 	let {
 		ws,
 		ready,
+		onBatchFile,
 	}: {
 		ws: WebSocket | undefined;
 		ready: boolean;
+		onBatchFile: (file: File) => void;
 	} = $props();
 
 	let terminalMode = $state<"history" | "search">("history");
@@ -144,7 +146,10 @@
 			bind:value={textEntry}
 			{onkeydown}
 		/>
-		<QuickActions visible={textEntry === ""} />
+		<QuickActions
+			visible={textEntry === ""}
+			{onBatchFile}
+		/>
 	</div>
 
 	<!-- Terminal History -->

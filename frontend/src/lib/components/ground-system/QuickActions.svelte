@@ -8,9 +8,27 @@
 	import { fade } from "svelte/transition";
 	import { apiFetch, type DownloadBinaryResponse } from "$lib/api";
 
-	let { visible }: { visible: boolean } = $props();
+	let {
+		visible,
+		onBatchFile,
+	}: {
+		visible: boolean;
+		onBatchFile: (file: File) => void;
+	} = $props();
 
-	const uploadCommands = () => console.log("TODO: upload commands");
+	let fileInput: HTMLInputElement;
+
+	// batch commands
+	const openBatchPicker = () => fileInput.click();
+	const handleBatchFile = (
+		e: Event & { currentTarget: HTMLInputElement }
+	) => {
+		const file = e.currentTarget.files?.[0];
+		if (file) onBatchFile(file);
+		e.currentTarget.value = "";
+	};
+
+	// downloads
 	const downloadManual = () => console.log("TODO download manual");
 	async function downloadBinary() {
 		try {
@@ -31,23 +49,41 @@
 			console.error("Failed to download binary", error);
 		}
 	}
+
+	// upload binary
 	const uploadBinary = () => console.log("TODO: download manual");
 
 	const quickActions = [
 		{
 			label: "Upload Commands in Bulk (Line Separated, Limit 100)",
 			icon: FileDigitIcon,
-			onclick: uploadCommands,
+			onclick: openBatchPicker,
 		},
-		{ label: "Download Manual", icon: BookIcon, onclick: downloadManual },
+		{
+			label: "Download Manual",
+			icon: BookIcon,
+			onclick: downloadManual,
+		},
 		{
 			label: "Download Binary",
 			icon: DownloadIcon,
 			onclick: downloadBinary,
 		},
-		{ label: "Upload Binary", icon: UploadIcon, onclick: uploadBinary },
+		{
+			label: "Upload Binary",
+			icon: UploadIcon,
+			onclick: uploadBinary,
+		},
 	];
 </script>
+
+<input
+	bind:this={fileInput}
+	type="file"
+	accept=".txt,text/plain"
+	hidden
+	onchange={handleBatchFile}
+/>
 
 {#if visible}
 	<div
