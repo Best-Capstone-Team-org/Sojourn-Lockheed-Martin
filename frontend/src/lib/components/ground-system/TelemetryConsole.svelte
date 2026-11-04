@@ -3,15 +3,40 @@
 	import satelliteDownlink from "$lib/assets/satelite_down.webp";
 	import satelliteUplink from "$lib/assets/satelite_up.webp";
 	import satelliteNoop from "$lib/assets/satelite_noop.webp";
+	import satelliteFailure from "$lib/assets/satelite_failture.png";
 	import { type CommandDownlink, type CommandUplink } from "$lib/api";
 
 	let {
 		commandDownlink,
 		commandUplink,
+		satelliteDown,
 	}: {
 		commandDownlink: CommandDownlink | undefined;
 		commandUplink: CommandUplink | undefined;
+		satelliteDown: boolean;
 	} = $props();
+
+	const satelliteImage = $derived.by(() => {
+		if (satelliteDown) {
+			return { src: satelliteFailure, alt: "Satellite down" };
+		}
+
+		if (commandDownlink?.type === "commandResponse") {
+			return {
+				src: satelliteDownlink,
+				alt: "Satellite transmitting downlink",
+			};
+		}
+
+		if (commandUplink !== undefined) {
+			return {
+				src: satelliteUplink,
+				alt: "Satellite receiving uplink",
+			};
+		}
+
+		return { src: satelliteNoop, alt: "Satellite idle" };
+	});
 </script>
 
 <Screen
@@ -20,16 +45,8 @@
 >
 	<div class="flex w-full flex-col items-center justify-center">
 		<img
-			src={commandDownlink?.type === "commandResponse"
-				? satelliteDownlink
-				: commandUplink !== undefined
-					? satelliteUplink
-					: satelliteNoop}
-			alt={commandDownlink?.type === "commandResponse"
-				? "Satellite transmitting downlink"
-				: commandUplink !== undefined
-					? "Satellite receiving uplink"
-					: "Satellite idle"}
+			src={satelliteImage.src}
+			alt={satelliteImage.alt}
 			class="h-auto w-1/16 object-contain"
 		/>
 		<span class="font-semibold">Telemetry</span>
