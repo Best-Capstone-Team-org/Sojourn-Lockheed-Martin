@@ -110,6 +110,39 @@
 		socket.onmessage = null;
 	}
 
+	// batch file upload
+	let terminal = $state<Terminal>();
+	let dragging = $state(false);
+
+	async function runBatchFile(file: File) {
+		const lines = (await file.text())
+			.split(/\r?\n/)
+			.map((line) => line.trim())
+			.filter((line) => line && !line.startsWith("#"));
+		terminal?.sendBatch(lines);
+	}
+
+	function onDragOver(e: DragEvent) {
+		// prevent file open
+		e.preventDefault();
+		dragging = true;
+	}
+
+	function onDragLeave(e: DragEvent) {
+		const target = e.currentTarget as HTMLElement;
+		if (target.contains(e.relatedTarget as Node | null)) {
+			return;
+		}
+		dragging = false;
+	}
+
+	function onDrop(e: DragEvent) {
+		e.preventDefault();
+		dragging = false;
+		const file = e.dataTransfer?.files[0];
+		if (file) runBatchFile(file);
+	}
+
 	$effect(() => {
 		// Reconnect when the scenario changes or the retry signal is incremented.
 		void retry;
@@ -184,31 +217,51 @@
 							defaultSize={85}
 							minSize={10}
 						>
-							<Screen
-								class="h-full"
-								bezelClass="h-full"
+							<div
+								class="relative h-full"
+								role="region"
+								aria-label="Console"
+								ondragover={onDragOver}
+								ondragleave={onDragLeave}
+								ondrop={onDrop}
 							>
-								<Resizable.PaneGroup direction="vertical">
-									<Resizable.Pane
-										defaultSize={60}
-										minSize={10}
-									>
-										<Downlink {tlm} />
-									</Resizable.Pane>
+								<Screen
+									class="h-full"
+									bezelClass="h-full"
+								>
+									{#if dragging}
+										<div
+											class="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-bold text-sys-text-light"
+										>
+											Drop Batch File
+										</div>
+									{:else}
+										<Resizable.PaneGroup
+											direction="vertical"
+										>
+											<Resizable.Pane
+												defaultSize={60}
+												minSize={10}
+											>
+												<Downlink {tlm} />
+											</Resizable.Pane>
 
-									<Resizable.Handle />
+											<Resizable.Handle />
 
-									<Resizable.Pane
-										defaultSize={40}
-										minSize={10}
-									>
-										<Terminal
-											{ws}
-											{ready}
-										/>
-									</Resizable.Pane>
-								</Resizable.PaneGroup>
-							</Screen>
+											<Resizable.Pane
+												defaultSize={40}
+												minSize={10}
+											>
+												<Terminal
+													bind:this={terminal}
+													{ws}
+													{ready}
+												/>
+											</Resizable.Pane>
+										</Resizable.PaneGroup>
+									{/if}
+								</Screen>
+							</div>
 						</Resizable.Pane>
 					</Resizable.PaneGroup>
 				</Resizable.Pane>
@@ -225,7 +278,10 @@
 							<TelemetryButtons />
 						</div>
 						<div class="min-h-0 flex-1">
-							<ReadOut {readOutTlm} />
+							<ReadOut
+								{readOutTlm}
+								onBatchFile={runBatchFile}
+							/>
 						</div>
 					</div>
 				</Resizable.Pane>
