@@ -116,6 +116,29 @@ export interface Telemetry {
 	unknown: Record<string, string>;
 }
 
+export const COMMS_TELEMETRY_INTERVAL_MS = 5000;
+export const SATELLITE_DOWN_TIMEOUT_MS = COMMS_TELEMETRY_INTERVAL_MS + 1;
+const COMMS_LINK_BIT = 1;
+
+export function isSatelliteDown(
+	telemetry: Telemetry | undefined,
+	lastCommsTelemetryAt: number | undefined,
+	now = Date.now()
+): boolean {
+	if (
+		!telemetry?.crcOK ||
+		!telemetry.comms ||
+		lastCommsTelemetryAt === undefined
+	) {
+		return true;
+	}
+
+	return (
+		(telemetry.comms.xStat & COMMS_LINK_BIT) === 0 ||
+		now - lastCommsTelemetryAt >= SATELLITE_DOWN_TIMEOUT_MS
+	);
+}
+
 export interface Camera {
 	frame: number;
 	target: number;

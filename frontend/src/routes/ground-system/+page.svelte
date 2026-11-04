@@ -8,6 +8,7 @@
 	import * as Resizable from "$lib/components/ui/resizable/index.js";
 	import {
 		apiWebSocket,
+		isSatelliteDown,
 		type Telemetry,
 		type CommandDownlink,
 		type CommandUplink,
@@ -27,6 +28,11 @@
 
 	let tlm = $state<string[]>([]);
 	let readOutTlm = $state<Telemetry>();
+	let lastCommsTelemetryAt = $state<number>();
+	let now = $state(Date.now());
+	let satelliteDown = $derived(
+		isSatelliteDown(readOutTlm, lastCommsTelemetryAt, now)
+	);
 
 	// Keep the package's declared order while applying state updates by ID.
 	let objectives = $state<Record<string, ObjectiveDetail>>(
@@ -63,6 +69,9 @@
 			case "telemetry":
 				tlm.push(message.TLM);
 				readOutTlm = message.telemetry;
+				if (message.telemetry.crcOK && message.telemetry.comms) {
+					lastCommsTelemetryAt = Date.now();
+				}
 				break;
 
 			case "commandResponse":
@@ -144,6 +153,12 @@
 	}
 
 	$effect(() => {
+		const clock = setInterval(() => (now = Date.now()), 1000);
+
+		return () => clearInterval(clock);
+	});
+
+	$effect(() => {
 		// Reconnect when the scenario changes or the retry signal is incremented.
 		void retry;
 
@@ -207,6 +222,7 @@
 							<TelemetryConsole
 								{commandDownlink}
 								{commandUplink}
+								{satelliteDown}
 							/>
 						</Resizable.Pane>
 
