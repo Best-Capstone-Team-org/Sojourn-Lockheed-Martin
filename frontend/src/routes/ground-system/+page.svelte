@@ -272,6 +272,9 @@
 													bind:this={terminal}
 													{ws}
 													{ready}
+													uplinkDelayS={gameState
+														.scenario
+														?.uplinkDelayS ?? 0}
 												/>
 											</Resizable.Pane>
 										</Resizable.PaneGroup>
