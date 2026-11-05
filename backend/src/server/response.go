@@ -26,6 +26,8 @@ type scenarioResponse struct {
 
 	Constraints map[string]int `json:"constraints"`
 
+	UplinkDelayS int `json:"uplinkDelayS"`
+
 	Record *game.ScenarioRecord `json:"record"`
 }
 

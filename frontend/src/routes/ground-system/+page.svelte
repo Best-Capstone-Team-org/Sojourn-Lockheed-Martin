@@ -11,7 +11,6 @@
 		isSatelliteDown,
 		type Telemetry,
 		type CommandDownlink,
-		type CommandUplink,
 		type ObjectiveDetail,
 	} from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
@@ -24,7 +23,7 @@
 	let ready = $state(false);
 
 	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
-	let commandUplink = $state<CommandUplink | undefined>(undefined);
+	let uplinkInFlight = $state(false);
 
 	let tlm = $state<string[]>([]);
 	let readOutTlm = $state<Telemetry>();
@@ -221,7 +220,7 @@
 						>
 							<TelemetryConsole
 								{commandDownlink}
-								{commandUplink}
+								{uplinkInFlight}
 								{satelliteDown}
 							/>
 						</Resizable.Pane>
@@ -272,6 +271,14 @@
 													bind:this={terminal}
 													{ws}
 													{ready}
+													onUplinkInFlight={(
+														inFlight
+													) =>
+														(uplinkInFlight =
+															inFlight)}
+													uplinkDelayS={gameState
+														.scenario
+														?.uplinkDelayS ?? 0}
 												/>
 											</Resizable.Pane>
 										</Resizable.PaneGroup>

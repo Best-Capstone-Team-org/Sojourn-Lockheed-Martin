@@ -23,6 +23,7 @@ export interface ScenarioResponse {
 	difficulty: string;
 	objectives: ObjectiveResponse[];
 	constraints: Constraints;
+	uplinkDelayS: number;
 }
 
 export type ObjectiveStatus = "complete" | "failed" | "active" | "locked";

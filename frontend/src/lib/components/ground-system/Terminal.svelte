@@ -5,14 +5,23 @@
 	let {
 		ws,
 		ready,
+		uplinkDelayS,
+		onUplinkInFlight,
 	}: {
 		ws: WebSocket | undefined;
 		ready: boolean;
+		uplinkDelayS: number;
+		onUplinkInFlight: (inFlight: boolean) => void;
 	} = $props();
 
 	let terminalMode = $state<"history" | "search">("history");
 	let textEntry = $state("");
-	let history = $state<string[]>([]);
+
+	// dueAt is set only while the command is still travelling to the probe.
+	type Entry = { command: string; dueAt?: number };
+	let entries = $state<Entry[]>([]);
+	let history = $derived(entries.map((entry) => entry.command));
+	let now = $state(Date.now());
 	let historyIndex = $state(-1);
 
 	let searchResults = $derived(
@@ -28,13 +37,31 @@
 		}
 	});
 
+	// Whole seconds left, rounded up so the player never sees 0 s early.
+	const remaining = (entry: Entry) =>
+		entry.dueAt === undefined
+			? 0
+			: Math.max(0, Math.ceil((entry.dueAt - now) / 1000));
+	let inFlight = $derived(entries.some((entry) => remaining(entry) > 0));
+
+	$effect(() => {
+		onUplinkInFlight(inFlight);
+	});
+
+	$effect(() => {
+		if (!inFlight) return;
+		const clock = setInterval(() => (now = Date.now()), 250);
+		return () => clearInterval(clock);
+	});
+
 	// actions
 	const send = (cmd: string) => {
-		if (!ready || !ws) {
+		if (!ready || !ws || !cmd.trim()) {
 			return false;
 		}
 		ws.send(cmd);
-		history.push(cmd);
+		now = Date.now();
+		entries.push({ command: cmd, dueAt: now + uplinkDelayS * 1000 });
 		return true;
 	};
 
@@ -150,8 +177,14 @@
 	<!-- Terminal History -->
 	<TerminalScroll class="p-3">
 		{#if terminalMode === "history"}
-			{#each history as command, index (index)}
-				<p class="mb-1 text-sm break-all">{command}</p>
+			{#each entries as entry, index (index)}
+				<p class="mb-1 text-sm break-all">
+					<span>{entry.command}</span>
+					{#if remaining(entry) > 0}
+						<span class="ml-2 opacity-70">{remaining(entry)} s</span
+						>
+					{/if}
+				</p>
 			{/each}
 		{:else if terminalMode === "search"}
 			{#each searchResults as result, index (index)}

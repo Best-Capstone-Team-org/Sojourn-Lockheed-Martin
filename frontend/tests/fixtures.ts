@@ -20,6 +20,7 @@ export const scenarios: ScenarioResponse[] = [
 		difficulty: "advanced",
 		objectives: [],
 		constraints: {},
+		uplinkDelayS: 0,
 	},
 	{
 		id: "first-contact",
@@ -43,6 +44,7 @@ export const scenarios: ScenarioResponse[] = [
 			},
 		],
 		constraints: { writes: 5, reads: 20 },
+		uplinkDelayS: 0,
 	},
 	{
 		id: "ion-storm",
@@ -60,6 +62,7 @@ export const scenarios: ScenarioResponse[] = [
 			},
 		],
 		constraints: { writes: 2 },
+		uplinkDelayS: 0,
 	},
 ];
 
