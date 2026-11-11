@@ -292,3 +292,40 @@ func TestAsMapAllChannels(t *testing.T) {
 		t.Errorf("header = %v", m)
 	}
 }
+
+func TestWithChannelsDecodesOnlyListedChannels(t *testing.T) {
+	aux := uint16(0xBEEF)
+	frame := &TelemetryFrame{
+		Frame: 7, UptimeS: 42, Mode: "NOMINAL", BusMV: 5000,
+		Sensors: map[byte]int32{chMAG: -10, chRAD: 3},
+		Camera:  &CameraData{Stars: 4},
+		HK:      &HKData{RecFillPct: 50},
+		Comms:   &CommsData{Antenna: 1},
+		AUX:     &aux,
+		Unknown: map[string]string{"CH_7F": "00"},
+	}
+
+	got := frame.WithChannels([]string{"MAG", "COMMS"})
+
+	if got.Frame != 7 || got.UptimeS != 42 || got.Mode != "NOMINAL" || got.BusMV != 5000 {
+		t.Errorf("header not kept: %+v", got)
+	}
+	if len(got.Sensors) != 1 || got.Sensors[chMAG] != -10 {
+		t.Errorf("sensors = %v, want only MAG", got.Sensors)
+	}
+	if got.Comms == nil || got.Comms.Antenna != 1 {
+		t.Errorf("comms = %+v, want decoded", got.Comms)
+	}
+	if got.Camera != nil || got.HK != nil || got.AUX != nil || got.Unknown != nil {
+		t.Errorf("undecoded channels leaked: cam %v hk %v aux %v unknown %v", got.Camera, got.HK, got.AUX, got.Unknown)
+	}
+
+	// The original, which grading uses, keeps everything.
+	if len(frame.Sensors) != 2 || frame.Camera == nil || frame.AUX == nil {
+		t.Error("WithChannels modified the original frame")
+	}
+
+	if none := frame.WithChannels(nil); len(none.Sensors) != 0 || none.Comms != nil {
+		t.Errorf("empty decode list decoded channels: %+v", none)
+	}
+}

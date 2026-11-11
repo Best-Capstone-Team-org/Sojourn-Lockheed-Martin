@@ -330,7 +330,7 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 
 			interfaceDownlinkChan <- &TLMDownlinkMessage{
 				TLM:       line,
-				Telemetry: frame,
+				Telemetry: frame.WithChannels(s.Scenario.Manifest.Console.Decode),
 			}
 		} else {
 			app.ServerLogger.Printf("Command Response: `%s`\n", line)

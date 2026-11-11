@@ -341,6 +341,39 @@ var sensorNames = map[byte]string{
 	chSTR: "STR",
 }
 
+// WithChannels returns a copy of the frame with only the named channels
+// decoded, for the player's read-out (charter R25.3). The frame header is not
+// a channel and is kept; every other channel is left to the raw TLM line.
+func (f *TelemetryFrame) WithChannels(names []string) *TelemetryFrame {
+	decode := make(map[string]bool, len(names))
+	for _, name := range names {
+		decode[name] = true
+	}
+
+	c := *f
+	c.Sensors = map[byte]int32{}
+	for cid, v := range f.Sensors {
+		if decode[sensorNames[cid]] {
+			c.Sensors[cid] = v
+		}
+	}
+	if !decode["CAM"] {
+		c.Camera = nil
+	}
+	if !decode["HK"] {
+		c.HK = nil
+	}
+	if !decode["COMMS"] {
+		c.Comms = nil
+	}
+	if !decode["AUX"] {
+		c.AUX = nil
+	}
+	c.Unknown = nil
+
+	return &c
+}
+
 // scenarios have different serialization format than frontend
 func (f *TelemetryFrame) AsMap() map[string]any {
 	channels := make(map[string]any)
