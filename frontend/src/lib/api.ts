@@ -159,7 +159,7 @@ export interface HK {
 }
 
 export interface Comms {
-	antenna: string;
+	antenna: number;
 	budget: number; // in B
 	dropped: number;
 	xStat: number;

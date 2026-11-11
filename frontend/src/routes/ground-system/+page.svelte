@@ -14,7 +14,6 @@
 		type ObjectiveDetail,
 	} from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
-	import TelemetryButtons from "$lib/components/ground-system/TelemetryButtons.svelte";
 
 	const RECONNECT_BASE_DELAY = 1000;
 	const MAX_RECONNECT_DELAY = 10000;
@@ -66,7 +65,9 @@
 
 		switch (message.type) {
 			case "telemetry":
-				tlm.push(message.TLM);
+				tlm.push(
+					message.telemetry.crcOK ? message.TLM : "TLM failed CRC"
+				);
 				readOutTlm = message.telemetry;
 				if (message.telemetry.crcOK && message.telemetry.comms) {
 					lastCommsTelemetryAt = Date.now();
@@ -213,80 +214,54 @@
 					defaultSize={75}
 					minSize={10}
 				>
-					<Resizable.PaneGroup direction="vertical">
-						<Resizable.Pane
-							defaultSize={15}
-							minSize={10}
+					<div
+						class="relative h-full"
+						role="region"
+						aria-label="Console"
+						ondragover={onDragOver}
+						ondragleave={onDragLeave}
+						ondrop={onDrop}
+					>
+						<Screen
+							class="h-full"
+							bezelClass="h-full"
 						>
-							<TelemetryConsole
-								{commandDownlink}
-								{uplinkInFlight}
-								{satelliteDown}
-							/>
-						</Resizable.Pane>
-
-						<Resizable.Handle />
-
-						<!-- Console -->
-						<Resizable.Pane
-							defaultSize={85}
-							minSize={10}
-						>
-							<div
-								class="relative h-full"
-								role="region"
-								aria-label="Console"
-								ondragover={onDragOver}
-								ondragleave={onDragLeave}
-								ondrop={onDrop}
-							>
-								<Screen
-									class="h-full"
-									bezelClass="h-full"
+							{#if dragging}
+								<div
+									class="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-bold text-sys-text-light"
 								>
-									{#if dragging}
-										<div
-											class="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-bold text-sys-text-light"
-										>
-											Drop Batch File
-										</div>
-									{:else}
-										<Resizable.PaneGroup
-											direction="vertical"
-										>
-											<Resizable.Pane
-												defaultSize={60}
-												minSize={10}
-											>
-												<Downlink {tlm} />
-											</Resizable.Pane>
+									Drop Batch File
+								</div>
+							{:else}
+								<Resizable.PaneGroup direction="vertical">
+									<Resizable.Pane
+										defaultSize={60}
+										minSize={10}
+									>
+										<Downlink {tlm} />
+									</Resizable.Pane>
 
-											<Resizable.Handle />
+									<Resizable.Handle />
 
-											<Resizable.Pane
-												defaultSize={40}
-												minSize={10}
-											>
-												<Terminal
-													bind:this={terminal}
-													{ws}
-													{ready}
-													onUplinkInFlight={(
-														inFlight
-													) =>
-														(uplinkInFlight =
-															inFlight)}
-													uplinkDelayS={gameState
-														.scenario
-														?.uplinkDelayS ?? 0}
-												/>
-											</Resizable.Pane>
-										</Resizable.PaneGroup>
-									{/if}
-								</Screen>
-							</div>
-						</Resizable.Pane>
-					</Resizable.PaneGroup>
+									<Resizable.Pane
+										defaultSize={40}
+										minSize={10}
+									>
+										<Terminal
+											bind:this={terminal}
+											{ws}
+											{ready}
+											onUplinkInFlight={(inFlight) =>
+												(uplinkInFlight = inFlight)}
+											uplinkDelayS={gameState.scenario
+												?.uplinkDelayS ?? 0}
+											onBatchFile={runBatchFile}
+										/>
+									</Resizable.Pane>
+								</Resizable.PaneGroup>
+							{/if}
+						</Screen>
+					</div>
 				</Resizable.Pane>
 
 				<Resizable.Handle />
@@ -298,13 +273,14 @@
 				>
 					<div class="flex h-full min-h-0 flex-col">
 						<div class="shrink-0">
-							<TelemetryButtons />
+							<TelemetryConsole
+								{commandDownlink}
+								{uplinkInFlight}
+								{satelliteDown}
+							/>
 						</div>
 						<div class="min-h-0 flex-1">
-							<ReadOut
-								{readOutTlm}
-								onBatchFile={runBatchFile}
-							/>
+							<ReadOut {readOutTlm} />
 						</div>
 					</div>
 				</Resizable.Pane>

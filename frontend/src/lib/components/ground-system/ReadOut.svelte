@@ -7,27 +7,17 @@
 	import Led from "./Led.svelte";
 	import Screen from "../Screen/Screen.svelte";
 	import absent from "$lib/assets/absent-icon.png";
-	import Button from "../Button/Button.svelte";
 
 	let {
 		readOutTlm,
-		onBatchFile,
 	}: {
 		readOutTlm: Telemetry | undefined;
-		onBatchFile: (file: File) => void;
 	} = $props();
-
-	let fileInput: HTMLInputElement;
-
-	function onFileChange(e: Event & { currentTarget: HTMLInputElement }) {
-		const file = e.currentTarget.files?.[0];
-		if (file) onBatchFile(file);
-		e.currentTarget.value = "";
-	}
 
 	const frame = $derived(readOutTlm);
 	const sensors = $derived(frame?.sensors);
 	const hk = $derived(frame?.hk);
+	const comms = $derived(frame?.comms);
 
 	function toggleTelemetry(state: boolean) {
 		options.telemetry = state;
@@ -72,10 +62,21 @@
 		{ label: "Shed Events", value: hk?.shed },
 	]);
 
+	const link = $derived([
+		{
+			label: "Antenna",
+			value: comms?.antenna == 0 ? "HGA" : "LGA",
+		},
+		{ label: "Budget", value: comms?.budget, unit: "B" },
+		{ label: "Dropped", value: comms?.dropped },
+		{ label: "HGA Deploy", value: comms?.hgaDeploy, unit: "%" },
+	]);
+
 	const readOutSections = $derived([
 		{ title: "Frame Header", items: frameHeader },
 		{ title: "Instruments", items: instruments },
 		{ title: "House Keeping", items: houseKeeping },
+		{ title: "Link", items: link },
 	]);
 
 	const isMissing = (value: string | number | null | undefined) =>
@@ -113,27 +114,12 @@
 			</ReadOutSection>
 		{/each}
 		<ReadOutSection title="Console">
-			<div class="flex flex-col gap-2">
-				<div class="flex justify-between">
-					<span>Telemetry</span>
-					<Toggle
-						checked={options.telemetry}
-						onchange={toggleTelemetry}
-					/>
-				</div>
-				<input
-					bind:this={fileInput}
-					type="file"
-					accept=".txt,text/plain"
-					hidden
-					onchange={onFileChange}
+			<div class="flex justify-between">
+				<span>Telemetry</span>
+				<Toggle
+					checked={options.telemetry}
+					onchange={toggleTelemetry}
 				/>
-				<Button
-					buttonClass="p-1"
-					onclick={() => fileInput.click()}
-				>
-					Upload Batch File
-				</Button>
 			</div>
 		</ReadOutSection>
 	</div>
