@@ -77,6 +77,10 @@
 				tlm.push(message.response);
 				break;
 
+			case "commandRefused":
+				tlm.push(`CMD REFUSED: ${message.reason}`);
+				break;
+
 			case "state":
 				for (const update of message.objectives) {
 					const objective = objectives[update.id];
