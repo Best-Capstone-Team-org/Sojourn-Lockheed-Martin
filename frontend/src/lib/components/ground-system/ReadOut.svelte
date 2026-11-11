@@ -63,14 +63,14 @@
 	]);
 
 	const link = $derived([
-		{ 
+		{
 			label: "Antenna",
-			value: comms?.antenna == 0 ? "HGA" : "LGA"
+			value: comms?.antenna == 0 ? "HGA" : "LGA",
 		},
 		{ label: "Budget", value: comms?.budget, unit: "B" },
 		{ label: "Dropped", value: comms?.dropped },
-		{ label: "HGA Deploy", value: comms?.hgaDeploy, unit: "%" }
-	])
+		{ label: "HGA Deploy", value: comms?.hgaDeploy, unit: "%" },
+	]);
 
 	const readOutSections = $derived([
 		{ title: "Frame Header", items: frameHeader },
