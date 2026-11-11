@@ -85,6 +85,12 @@ export type CommandDownlink =
 			type: "state";
 			objectives: Objective[];
 			constraints: Constraints;
+	  }
+	| {
+			type: "commandRefused";
+			command: string;
+			reason: string;
+			constraints: Constraints;
 	  };
 
 export interface Save {
