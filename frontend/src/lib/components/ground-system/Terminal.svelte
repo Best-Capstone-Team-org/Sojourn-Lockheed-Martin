@@ -1,6 +1,10 @@
 <script lang="ts">
+	import { onMount } from "svelte";
 	import TerminalScroll from "../TerminalScroll/TerminalScroll.svelte";
 	import QuickActions from "./QuickActions.svelte";
+
+	const HISTORY_STORAGE_KEY = "sojourn-terminal-history";
+	const MAX_HISTORY_ENTRIES = 500;
 
 	let {
 		ws,
@@ -25,6 +29,45 @@
 	let history = $derived(entries.map((entry) => entry.command));
 	let now = $state(Date.now());
 	let historyIndex = $state(-1);
+
+	const persistHistory = () => {
+		try {
+			localStorage.setItem(
+				HISTORY_STORAGE_KEY,
+				JSON.stringify(
+					entries
+						.slice(-MAX_HISTORY_ENTRIES)
+						.map((entry) => entry.command)
+				)
+			);
+		} catch (error) {
+			console.error("Unable to persist terminal history", error);
+		}
+	};
+
+	onMount(() => {
+		try {
+			const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+			if (stored === null) return;
+
+			const commands: unknown = JSON.parse(stored);
+			if (!Array.isArray(commands)) {
+				console.error(
+					"Ignoring invalid terminal history: expected an array"
+				);
+				return;
+			}
+
+			const validCommands = commands.filter(
+				(command): command is string => typeof command === "string"
+			);
+			entries = validCommands
+				.slice(-MAX_HISTORY_ENTRIES)
+				.map((command) => ({ command }));
+		} catch (error) {
+			console.error("Unable to load terminal history", error);
+		}
+	});
 
 	let searchResults = $derived(
 		history.filter((cmd) => cmd.includes(textEntry))
@@ -64,6 +107,10 @@
 		ws.send(cmd);
 		now = Date.now();
 		entries.push({ command: cmd, dueAt: now + uplinkDelayS * 1000 });
+		if (entries.length > MAX_HISTORY_ENTRIES) {
+			entries = entries.slice(-MAX_HISTORY_ENTRIES);
+		}
+		persistHistory();
 		return true;
 	};
 
