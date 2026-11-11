@@ -31,4 +31,8 @@ for dir in "$src"/*/; do
             cp "$dir$f" "$dest/$name/$f"
         fi
     done
+    if [[ -d "${dir}docs" ]]; then
+        mkdir -p "$dest/$name"
+        cp -r "${dir}docs" "$dest/$name/docs"
+    fi
 done
