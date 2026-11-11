@@ -482,7 +482,7 @@ func (e *Evaluation) evaluateObjective(frame Frame, objective Objective) string 
 	return ""
 }
 
-func (e *Evaluation) evaluateObjectives(frame Frame) string {
+func (e *Evaluation) evaluateObjectives(frame Frame, telemetryOnly bool) string {
 	originalStates := e.objectiveStates
 	e.objectiveStates = copyObjectiveStates(originalStates)
 
@@ -494,9 +494,11 @@ func (e *Evaluation) evaluateObjectives(frame Frame) string {
 			state.Status = ObjectiveStatusActive
 		}
 
-		if msg := e.evaluateObjective(frame, objective); msg != "" {
-			e.objectiveStates = originalStates
-			return msg
+		if !telemetryOnly || !e.readsMemory[objective.ID] {
+			if msg := e.evaluateObjective(frame, objective); msg != "" {
+				e.objectiveStates = originalStates
+				return msg
+			}
 		}
 
 		state = e.objectiveStates[objective.ID]

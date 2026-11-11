@@ -38,8 +38,11 @@ func TestGraderGradesTelemetry(t *testing.T) {
 	}
 }
 
-func TestGraderWithoutIntrospectionFailsMemoryObjectives(t *testing.T) {
-	state := readyState(t, modeIs2)
+func TestGraderWithoutIntrospectionGradesTelemetryOnly(t *testing.T) {
+	state := readyState(t, modeIs2, Objective{
+		ID:      "safe",
+		Success: Predicate{Op: "tlm", Path: "mode", Cmp: "eq", Value: "SAFE"},
+	})
 	s := &state.evaluation
 	startGame(t, state)
 
@@ -47,11 +50,17 @@ func TestGraderWithoutIntrospectionFailsMemoryObjectives(t *testing.T) {
 	g := NewGrader(state, "127.0.0.1:1")
 	defer g.Close()
 
-	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: true}); err == nil {
-		t.Fatal("expected Grade to fail without an introspection connection")
+	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: true, Mode: "SAFE"}); err != nil {
+		t.Fatalf("Grade: %v", err)
+	}
+	if got := status(t, s, "safe"); got != ObjectiveStatusComplete {
+		t.Errorf("telemetry objective = %s, want complete", got)
 	}
 	if got := status(t, s, "mode"); got != ObjectiveStatusActive {
-		t.Fatalf("status = %s, want active", got)
+		t.Errorf("memory objective = %s, want unchanged", got)
+	}
+	if got := g.Status(); !got.Degraded || got.Reason != reasonMemoryUnreachable {
+		t.Errorf("status = %+v, want degraded: memory unreachable", got)
 	}
 }
 

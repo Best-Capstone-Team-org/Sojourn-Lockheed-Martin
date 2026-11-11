@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"sojourn/emulator"
 	"strconv"
 	"strings"
 	"testing"
@@ -178,7 +179,13 @@ func TestCommsTriageOnFirmware(t *testing.T) {
 					t.Fatalf("setup write reply %q reached the player's console", msg.Response)
 				}
 			case *TLMDownlinkMessage:
-				antenna := msg.Telemetry.AsMap()["channels"].(map[string]any)["COMMS"].(map[string]any)["antenna"]
+				// The read-out decodes only console.decode channels, so read
+				// the antenna from the raw line the player also receives.
+				full, err := emulator.DecodeTelemetryFrame(strings.TrimPrefix(msg.TLM, "TLM "))
+				if err != nil {
+					t.Fatalf("decoding %q: %v", msg.TLM, err)
+				}
+				antenna := full.AsMap()["channels"].(map[string]any)["COMMS"].(map[string]any)["antenna"]
 				t.Logf("uptime %3ds antenna %v", msg.Telemetry.UptimeS, antenna)
 				if antenna == "LGA" && !peeked {
 					up <- []byte("PEEK 0x2001E200 16")

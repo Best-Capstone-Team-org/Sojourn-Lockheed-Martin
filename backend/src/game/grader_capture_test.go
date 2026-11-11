@@ -22,7 +22,12 @@ type gdbStub struct {
 
 func newGDBStub(t *testing.T, mem memory, failReads bool) *gdbStub {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	return newGDBStubOn(t, "127.0.0.1:0", mem, failReads)
+}
+
+func newGDBStubOn(t *testing.T, addr string, mem memory, failReads bool) *gdbStub {
+	t.Helper()
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +127,9 @@ func TestGraderCapturesMemory(t *testing.T) {
 	}
 }
 
-func TestGraderCaptureFailureDropsConnection(t *testing.T) {
+// A failed read aborts the pass (R24.15), drops the connection, and reconnects
+// at once so a guest left halted is resumed (R24.13, R24.16).
+func TestGraderCaptureFailureReconnects(t *testing.T) {
 	stub := newGDBStub(t, sram(0), true)
 
 	state := readyState(t, modeIs2)
@@ -133,8 +140,11 @@ func TestGraderCaptureFailureDropsConnection(t *testing.T) {
 	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: true}); err == nil {
 		t.Fatal("expected Grade to fail when memory reads fail")
 	}
-	if g.introspect != nil {
-		t.Fatal("failed capture kept the introspection connection")
+	if g.introspect == nil {
+		t.Fatal("no fresh connection after the failed capture")
+	}
+	if got := g.Status(); !got.Degraded || got.Reason != reasonFrameNotGraded {
+		t.Errorf("status = %+v, want degraded: frame not graded", got)
 	}
 	if got := status(t, &state.evaluation, "mode"); got != ObjectiveStatusActive {
 		t.Fatalf("status = %s, want active", got)
