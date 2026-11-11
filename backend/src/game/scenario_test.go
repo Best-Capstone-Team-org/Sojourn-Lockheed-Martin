@@ -1174,7 +1174,7 @@ func TestEvaluateObjectivesUnlocksNextObjective(t *testing.T) {
 			[]Objective{objective1, objective2},
 		),
 	}
-	errMsg := e.evaluateObjectives(frame)
+	errMsg := e.evaluateObjectives(frame, false)
 	if errMsg != "" {
 		t.Fatalf("unexpected error: %s", errMsg)
 	}
@@ -2585,7 +2585,7 @@ func TestEvaluateObjectivesRollsBackOnMemoryError(t *testing.T) {
 			},
 		},
 	}
-	errMsg := e.evaluateObjectives(frame)
+	errMsg := e.evaluateObjectives(frame, false)
 	if errMsg == "" {
 		t.Fatal("expected memory read error")
 	}

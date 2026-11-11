@@ -22,6 +22,7 @@ func (m *CommandResponseDownlinkMessage) downlinkMessage() {}
 type StateDownlinkMessage struct {
 	Objectives  []ObjectiveStateDownlinkMessage
 	Constraints map[string]int
+	Grading     GradingStatus
 }
 
 type ObjectiveStateDownlinkMessage struct {

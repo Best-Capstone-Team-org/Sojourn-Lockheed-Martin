@@ -41,6 +41,12 @@ export interface Objective {
 	diagnostic?: string;
 	hints?: string[];
 }
+
+export interface GradingStatus {
+	degraded: boolean;
+	reason?: string;
+}
+
 // front end storage for missions
 export type ObjectiveDetail = ObjectiveResponse & Objective;
 
@@ -85,6 +91,7 @@ export type CommandDownlink =
 			type: "state";
 			objectives: Objective[];
 			constraints: Constraints;
+			grading: GradingStatus;
 	  }
 	| {
 			type: "commandRefused";

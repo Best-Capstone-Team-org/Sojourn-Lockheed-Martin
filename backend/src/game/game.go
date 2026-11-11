@@ -422,6 +422,7 @@ func (s *State) sendStateDownlink(interfaceDownlinkChan chan DownlinkMessage) {
 			})
 	}
 	stateMessage.Constraints = s.allowance.remaining()
+	stateMessage.Grading = s.grader.Status()
 	interfaceDownlinkChan <- stateMessage
 }
 
@@ -462,6 +463,14 @@ func (s *State) Evaluate(frame Frame) error {
 	}
 
 	return s.evaluation.Evaluate(frame)
+}
+
+func (s *State) EvaluateTelemetryOnly(frame Frame) error {
+	if s.phase != PhaseInProgress {
+		return unexpectedPhase("evaluating a frame")
+	}
+
+	return s.evaluation.EvaluateTelemetryOnly(frame)
 }
 
 func (s *State) ObjectiveStatus(scenario *Scenario, objective Objective) ObjectiveStatus {

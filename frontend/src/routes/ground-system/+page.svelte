@@ -12,6 +12,7 @@
 		type Telemetry,
 		type CommandDownlink,
 		type ObjectiveDetail,
+		type GradingStatus,
 	} from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
 
@@ -23,6 +24,7 @@
 
 	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
 	let uplinkInFlight = $state(false);
+	let grading = $state<GradingStatus>({ degraded: false });
 
 	let tlm = $state<string[]>([]);
 	let readOutTlm = $state<Telemetry>();
@@ -83,6 +85,7 @@
 				break;
 
 			case "state":
+				grading = message.grading;
 				for (const update of message.objectives) {
 					const objective = objectives[update.id];
 					if (!objective) {
@@ -199,6 +202,7 @@
 		>
 			<MissionStatus
 				{objectives}
+				{grading}
 				{writes}
 				{reads}
 				{maxWrites}

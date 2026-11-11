@@ -430,13 +430,15 @@ func TestDownlinkPump(t *testing.T) {
 	s.downlinkChan <- &game.StateDownlinkMessage{
 		Objectives:  []game.ObjectiveStateDownlinkMessage{{ID: "first", Status: game.ObjectiveStatusComplete}},
 		Constraints: map[string]int{"writes": 2},
+		Grading:     game.GradingStatus{Degraded: true, Reason: "paused"},
 	}
 	var st stateDownlink
 	if err := client.ReadJSON(&st); err != nil {
 		t.Fatalf("read state: %v", err)
 	}
 	if st.Type != "state" || len(st.Objectives) != 1 || st.Objectives[0].ID != "first" ||
-		st.Objectives[0].Status != game.ObjectiveStatusComplete || st.Constraints["writes"] != 2 {
+		st.Objectives[0].Status != game.ObjectiveStatusComplete || st.Constraints["writes"] != 2 ||
+		!st.Grading.Degraded || st.Grading.Reason != "paused" {
 		t.Errorf("state = %+v", st)
 	}
 

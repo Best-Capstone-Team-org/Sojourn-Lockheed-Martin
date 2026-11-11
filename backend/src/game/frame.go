@@ -21,6 +21,7 @@ type Frame struct {
 
 type Evaluation struct {
 	scenario        *Scenario
+	readsMemory     map[string]bool
 	objectiveStates map[string]*ObjectiveState
 	memoryRanges    []emulator.MemoryRange
 	historyDepth    int
@@ -47,8 +48,14 @@ func NewEvaluation(s *Scenario) (Evaluation, error) {
 		return Evaluation{}, err
 	}
 
+	readsMemory := map[string]bool{}
+	for _, objective := range s.Objectives {
+		readsMemory[objective.ID] = slices.ContainsFunc(objectivePredicates(objective), predicateReadsMemory)
+	}
+
 	return Evaluation{
 		scenario:        s,
+		readsMemory:     readsMemory,
 		objectiveStates: initializeObjectiveStates(s.Objectives),
 		memoryRanges:    ranges,
 		historyDepth:    s.requiredHistoryDepth(),
@@ -172,6 +179,19 @@ func (s *Scenario) requiredHistoryDepth() int {
 	return deepest
 }
 
+func predicateReadsMemory(p Predicate) bool {
+	switch p.Op {
+	case "mem_u8", "mem_u16", "mem_u32", "mem_bits", "mem", "mem_changed":
+		return true
+	}
+
+	children, err := predicateChildren(p)
+	if err != nil {
+		return true
+	}
+	return slices.ContainsFunc(children, predicateReadsMemory)
+}
+
 func objectivePredicates(objective Objective) []Predicate {
 	predicates := []Predicate{objective.Success}
 	if objective.Fail != nil {
@@ -210,12 +230,22 @@ func (e *Evaluation) Evaluate(frame Frame) error {
 	if len(e.memoryRanges) > 0 && frame.Memory == nil {
 		return errors.New("scenario reads memory but the frame carries none")
 	}
+	return e.evaluate(frame, false)
+}
 
+func (e *Evaluation) EvaluateTelemetryOnly(frame Frame) error {
+	frame.Memory = nil
+	return e.evaluate(frame, true)
+}
+
+func (e *Evaluation) evaluate(frame Frame, telemetryOnly bool) error {
 	e.framesSeen++
 	e.transitions = nil
 
 	if e.scenario.Setup != nil && e.framesSeen <= e.scenario.Setup.SettleFrames {
-		e.baseline = frame.Memory
+		if frame.Memory != nil {
+			e.baseline = frame.Memory
+		}
 		return nil
 	}
 
@@ -223,7 +253,7 @@ func (e *Evaluation) Evaluate(frame Frame) error {
 		e.baseline = frame.Memory
 	}
 
-	if msg := e.evaluateObjectives(frame); msg != "" {
+	if msg := e.evaluateObjectives(frame, telemetryOnly); msg != "" {
 		return errors.New(msg)
 	}
 

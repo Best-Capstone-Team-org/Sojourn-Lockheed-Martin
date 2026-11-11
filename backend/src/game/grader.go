@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"slices"
 	"sojourn/app"
@@ -23,15 +24,49 @@ const (
 	msPerTick       = 10
 )
 
+// errIntrospectionUnavailable means probe memory could not be reached at all,
+// as opposed to a read that failed partway through a capture.
+var errIntrospectionUnavailable = errors.New("introspection unavailable")
+
+// GradingStatus tells the player whether their objectives are being fully
+// graded. It never names the introspection channel (charter R24.19).
+type GradingStatus struct {
+	Degraded bool   `json:"degraded"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+const (
+	reasonMemoryUnreachable = "Grading is degraded: the probe's memory can't be read, so objectives that " +
+		"depend on it are paused. Telemetry objectives are still graded."
+	reasonFrameNotGraded = "Grading is degraded: reading the probe's memory failed, so this frame was not graded."
+)
+
 type Grader struct {
 	state   *State
 	gdbAddr string
 	log     []CommandLogEntry
 
 	// mu guards introspect, which the uplink stamps commands through while
-	// the downlink grades frames.
+	// the downlink grades frames, and status.
 	mu         sync.Mutex
 	introspect *emulator.Introspect
+	status     GradingStatus
+}
+
+// Status reports how the most recent frame was graded.
+func (g *Grader) Status() GradingStatus {
+	if g == nil {
+		return GradingStatus{}
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.status
+}
+
+func (g *Grader) setStatus(status GradingStatus) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.status = status
 }
 
 func NewGrader(state *State, gdbAddr string) *Grader {
@@ -62,15 +97,28 @@ func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
 		// Events
 	}
 
+	evaluate := g.state.Evaluate
 	if len(ranges) > 0 {
 		mem, err := g.capture(ranges)
-		if err != nil {
+		switch {
+		case err == nil:
+			f.Memory = mem
+			g.setStatus(GradingStatus{})
+		case errors.Is(err, errIntrospectionUnavailable):
+			// R24.16: keep grading what telemetry alone decides, and say so.
+			app.ErrorLogger.Printf("Grading frame %d from telemetry only: %v", frame.Frame, err)
+			g.setStatus(GradingStatus{Degraded: true, Reason: reasonMemoryUnreachable})
+			evaluate = g.state.EvaluateTelemetryOnly
+		default:
+			// R24.15: a failed read is an error, never a false predicate.
+			g.setStatus(GradingStatus{Degraded: true, Reason: reasonFrameNotGraded})
 			return fmt.Errorf("capturing memory for frame %d: %w", frame.Frame, err)
 		}
-		f.Memory = mem
+	} else {
+		g.setStatus(GradingStatus{})
 	}
 
-	if err := g.state.Evaluate(f); err != nil {
+	if err := evaluate(f); err != nil {
 		return fmt.Errorf("evaluating frame %d: %w", frame.Frame, err)
 	}
 
@@ -118,7 +166,7 @@ func (g *Grader) capture(ranges []emulator.MemoryRange) (*emulator.MemorySnapsho
 	if g.introspect == nil {
 		in, err := emulator.Connect(g.gdbAddr)
 		if err != nil {
-			return nil, fmt.Errorf("connecting to %s: %w", g.gdbAddr, err)
+			return nil, fmt.Errorf("%w: connecting to %s: %w", errIntrospectionUnavailable, g.gdbAddr, err)
 		}
 		g.introspect = in
 	}
@@ -126,6 +174,15 @@ func (g *Grader) capture(ranges []emulator.MemoryRange) (*emulator.MemorySnapsho
 	mem, err := emulator.NewMemorySnapshot(g.introspect, ranges)
 	if err != nil {
 		g.closeLocked()
+
+		// Reconnect at once rather than at the next pass: attaching resumes
+		// a guest the failed capture may have left halted (R24.13), and the
+		// next pass finds the channel ready (R24.16).
+		if in, connErr := emulator.Connect(g.gdbAddr); connErr == nil {
+			g.introspect = in
+		} else {
+			app.ErrorLogger.Printf("Reconnecting to %s: %v", g.gdbAddr, connErr)
+		}
 		return nil, err
 	}
 

@@ -97,6 +97,7 @@ test("state messages update the objectives until the mission is complete", async
 			{ id: "not-in-this-level", status: "failed" },
 		],
 		constraints: {},
+		grading: { degraded: false },
 	});
 	await expect(page.getByText("Patch the sensor table.")).toBeVisible();
 	await page.getByRole("button", { name: "Show hints" }).click();
@@ -112,12 +113,36 @@ test("state messages update the objectives until the mission is complete", async
 			{ id: "fix-sensor", status: "complete" },
 		],
 		constraints: {},
+		grading: { degraded: false },
 	});
 	await expect(page.getByText("complete", { exact: true })).toHaveCount(2);
 	await expect(page.getByText("Try PEEK 0x2001E000 16")).toBeHidden();
 
 	await page.getByRole("button", { name: "Mission Complete" }).click();
 	await expect(page).toHaveURL(/\/end-screen\/?$/);
+});
+
+test("displays degraded grading status and clears it when grading recovers", async ({
+	page,
+	backend,
+}) => {
+	const reason =
+		"Grading is degraded: the probe's memory can't be read, so objectives that depend on it are paused.";
+
+	backend.send({
+		type: "state",
+		objectives: [],
+		constraints: {},
+		grading: { degraded: true, reason },
+	});
+	await expect(
+		page.getByText("Grading degraded", { exact: true })
+	).toBeVisible();
+	await expect(page.getByText(reason, { exact: true })).toBeVisible();
+	await test.info().attach("degraded-grading", {
+		body: await page.screenshot({ fullPage: true }),
+		contentType: "image/png",
+	});
 });
 
 test("Abort Mission goes back to level select and closes the socket", async ({
