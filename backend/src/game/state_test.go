@@ -338,18 +338,6 @@ func TestObjectiveStatus(t *testing.T) {
 	}
 }
 
-func TestUploadPatchedBinary(t *testing.T) {
-	state := readyState(t)
-	if err := state.UploadPatchedBinary("patched.elf"); err == nil {
-		t.Fatal("expected upload to fail before the game starts")
-	}
-
-	startGame(t, state)
-	if err := state.UploadPatchedBinary("patched.elf"); err != nil {
-		t.Fatalf("UploadPatchedBinary: %v", err)
-	}
-}
-
 func TestStateMemoryRanges(t *testing.T) {
 	if _, err := (&State{}).MemoryRanges(); err == nil {
 		t.Fatal("expected error with no scenario selected")

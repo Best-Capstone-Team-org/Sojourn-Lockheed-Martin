@@ -1,6 +1,7 @@
 package game
 
 import (
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -202,5 +203,115 @@ func TestCommsTriageOnFirmware(t *testing.T) {
 		case <-deadline:
 			t.Fatalf("diagnose not complete after 90s (antenna failed and PEEK sent: %v)", peeked)
 		}
+	}
+}
+
+// Uploads a patched image to the real firmware: the patch becomes POKEs into
+// APP RAM through the normal uplink, and the running image reflects it.
+func TestPatchUploadOnFirmware(t *testing.T) {
+	if os.Getenv("SOJOURN_FIRMWARE_TESTS") == "" {
+		t.Skip("set SOJOURN_FIRMWARE_TESTS=1 to boot the real firmware")
+	}
+	if _, err := exec.LookPath("qemu-system-arm"); err != nil {
+		t.Skip("qemu-system-arm not installed")
+	}
+	scaleLinkDelays(t, time.Second)
+
+	state := InitState()
+	state.SaveDir = t.TempDir()
+	if err := state.LoadScenarios([]ScenariosDir{{Dir: filepath.Dir(commsTriageDir), Required: true}}); err != nil {
+		t.Fatalf("LoadScenarios: %v", err)
+	}
+	if err := state.SelectScenario("sojourn.comms.triage"); err != nil {
+		t.Fatalf("SelectScenario: %v", err)
+	}
+
+	out := make(chan DownlinkMessage)
+	up := make(chan []byte, 16)
+	done := make(chan struct{})
+	if err := state.Start(out, up, done); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer func() {
+		close(done)
+		close(up)
+		for range out {
+		}
+	}()
+
+	waitFor := func(what string, match func(DownlinkMessage) bool) {
+		t.Helper()
+		deadline := time.After(60 * time.Second)
+		for {
+			select {
+			case msg := <-out:
+				if match(msg) {
+					return
+				}
+			case <-deadline:
+				t.Fatalf("timed out waiting for %s", what)
+			}
+		}
+	}
+	isTLM := func(msg DownlinkMessage) bool { _, ok := msg.(*TLMDownlinkMessage); return ok }
+
+	waitFor("first telemetry", isTLM)
+
+	golden, err := state.GoldenImage()
+	if err != nil {
+		t.Fatalf("GoldenImage: %v", err)
+	}
+	running, err := state.RunningImage()
+	if err != nil {
+		t.Fatalf("RunningImage: %v", err)
+	}
+	if !bytes.Equal(running, golden) {
+		t.Fatal("freshly booted probe isn't running the golden image")
+	}
+
+	// A harmless edit: the version in the boot banner, printed only at boot.
+	at := bytes.Index(golden, []byte("v1.0"))
+	if at < 0 {
+		t.Fatal("banner version string not found in the image")
+	}
+	patchedImage := bytes.Clone(golden)
+	copy(patchedImage[at:], "v1.9")
+
+	pokes, err := state.PatchPokes(patchedImage)
+	if err != nil {
+		t.Fatalf("PatchPokes: %v", err)
+	}
+	t.Logf("patch: %q", pokes)
+	if len(pokes) != 1 {
+		t.Fatalf("pokes = %q, want one", pokes)
+	}
+	for _, poke := range pokes {
+		up <- []byte(poke)
+	}
+
+	waitFor("the POKE's ACK", func(msg DownlinkMessage) bool {
+		r, ok := msg.(*CommandResponseDownlinkMessage)
+		return ok && strings.HasPrefix(r.Response, "ACK POKE")
+	})
+	waitFor("telemetry after the patch", isTLM)
+
+	running, err = state.RunningImage()
+	if err != nil {
+		t.Fatalf("RunningImage after patch: %v", err)
+	}
+	if !bytes.Equal(running, patchedImage) {
+		t.Error("running image doesn't reflect the uploaded patch")
+	}
+	if again, err := state.PatchPokes(patchedImage); err != nil || len(again) != 0 {
+		t.Errorf("re-uploading the same patch = %q, %v; want nothing to send", again, err)
+	}
+
+	sessions, _ := filepath.Glob(filepath.Join(state.SaveDir, "sessions", "*"))
+	if len(sessions) != 1 {
+		t.Fatalf("sessions = %v", sessions)
+	}
+	records := readLog(t, filepath.Join(sessions[0], "commands.jsonl"))
+	if len(records) != 1 || records[0]["raw"] != pokes[0] || records[0]["charged"] != "writes" {
+		t.Errorf("command log = %v, want the POKE charged as a write", records)
 	}
 }
