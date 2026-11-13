@@ -6,7 +6,8 @@
 	import type { ScenarioResponse } from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
 
-	let { selectedLevel }: { selectedLevel: ScenarioResponse | undefined } = $props();
+	let { selectedLevel }: { selectedLevel: ScenarioResponse | undefined } =
+		$props();
 
 	function startSelected() {
 		if (!selectedLevel) return;
@@ -14,29 +15,31 @@
 		goto(resolve("/ground-system"));
 	}
 
-	let records = $derived<{
-		id: string,
-		name: string,
-		elapsedMs: number,
-		uplinks: number
-	}[]>(
+	let records = $derived<
+		{
+			id: string;
+			name: string;
+			elapsedMs: number;
+			uplinks: number;
+		}[]
+	>(
 		selectedLevel?.record
-		? selectedLevel.record.objectives.map((record) => {
-			const objective = selectedLevel.objectives.find((objective) => objective.id === record.id);
-			return {
-				id: record.id,
-				name: objective ? objective.name : "",
-				elapsedMs: record.elapsed_ms,
-				uplinks: record.uplinks
-			};
-		})
-		: []
+			? selectedLevel.record.objectives.map((record) => {
+					const objective = selectedLevel.objectives.find(
+						(objective) => objective.id === record.id
+					);
+					return {
+						id: record.id,
+						name: objective ? objective.name : "",
+						elapsedMs: record.elapsed_ms,
+						uplinks: record.uplinks,
+					};
+				})
+			: []
 	);
 </script>
 
-<Screen
-	bezelClass="w-full h-full"
->
+<Screen bezelClass="w-full h-full">
 	<div class="h-full overflow-y-auto p-2">
 		<p class="text-3xl font-bold">{selectedLevel?.name ?? "—"}</p>
 		<hr class="white mb-2 w-full" />
