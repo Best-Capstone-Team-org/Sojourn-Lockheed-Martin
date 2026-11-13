@@ -55,17 +55,9 @@
 </script>
 
 <Box class="flex h-full w-full items-center p-2">
-	<div
-		class="grid w-2/5 grid-cols-[auto_auto] content-center items-center justify-start gap-2 px-1 font-bold"
-	>
-		<span>HGA</span>
-		<Led bind:this={hgaLed} />
-		<span>LGA</span>
-		<Led bind:this={lgaLed} />
-	</div>
 	<Screen
 		class="flex h-full items-center justify-center p-2"
-		bezelClass="h-full w-3/5"
+		bezelClass="h-full w-1/2"
 	>
 		<div class="flex w-full items-center justify-center">
 			<img
@@ -75,4 +67,16 @@
 			/>
 		</div>
 	</Screen>
+	<div class="w-1/2 ml-2">
+		<div
+			class="grid w-full grid-cols-[auto_auto] content-center items-center justify-start gap-x-2 px-1 font-bold"
+		>
+			<span>HGA</span>
+			<Led bind:this={hgaLed} />
+			<span>LGA</span>
+			<Led bind:this={lgaLed} />
+		</div>
+	</div>
+	
+	
 </Box>

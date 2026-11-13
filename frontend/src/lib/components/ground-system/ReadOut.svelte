@@ -1,10 +1,8 @@
 <script lang="ts">
-	import Box from "$lib/components/Box/Box.svelte";
 	import ReadOutSection from "$lib/components/ground-system/ReadOutSection.svelte";
 	import Toggle from "$lib/components/Toggle/Toggle.svelte";
 	import type { Telemetry } from "$lib/api";
 	import { options } from "./Options.svelte";
-	import Led from "./Led.svelte";
 	import Screen from "../Screen/Screen.svelte";
 	import absent from "$lib/assets/absent-icon.png";
 
@@ -22,14 +20,6 @@
 	function toggleTelemetry(state: boolean) {
 		options.telemetry = state;
 	}
-
-	let led: Led;
-
-	$effect(() => {
-		if (readOutTlm) {
-			led.blink();
-		}
-	});
 
 	// read out data
 	const frameHeader = $derived([
@@ -84,10 +74,6 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col overflow-hidden">
-	<Box class="flex w-full shrink-0 items-center justify-between p-2">
-		<span class="text-xl font-bold">Read Out</span>
-		<Led bind:this={led} />
-	</Box>
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		{#each readOutSections as section (section.title)}
 			<ReadOutSection title={section.title}>
