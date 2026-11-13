@@ -24,6 +24,21 @@ export interface ScenarioResponse {
 	objectives: ObjectiveResponse[];
 	constraints: Constraints;
 	uplinkDelayS: number;
+	record: ScenarioRecord | null;
+}
+
+export interface ScenarioRecord {
+	session: string;
+	revision: number;
+	elapsed_ms: number;
+	uplinks: number;
+	objectives: ObjectiveTime[];
+}
+
+export interface ObjectiveTime {
+	id: string;
+	elapsed_ms: number;
+	uplinks: number;
 }
 
 export type ObjectiveStatus = "complete" | "failed" | "active" | "locked";
