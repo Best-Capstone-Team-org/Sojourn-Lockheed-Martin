@@ -65,7 +65,12 @@ export interface ResultsResponse {
 	todo: string;
 }
 
-export type UploadPatchResponse = Message;
+export interface UploadPatchResponse {
+	pokes: string[] | null;
+	writes: number;
+	dry_run?: boolean;
+	message?: string;
+}
 
 export type DownloadBinaryResponse = Message;
 

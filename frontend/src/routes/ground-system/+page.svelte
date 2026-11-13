@@ -7,12 +7,14 @@
 	import Terminal from "$lib/components/ground-system/Terminal.svelte";
 	import * as Resizable from "$lib/components/ui/resizable/index.js";
 	import {
+		apiFetch,
 		apiWebSocket,
 		isSatelliteDown,
 		type Telemetry,
 		type CommandDownlink,
 		type ObjectiveDetail,
 		type GradingStatus,
+		type UploadPatchResponse,
 	} from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
 
@@ -136,6 +138,29 @@
 			.map((line) => line.trim())
 			.filter((line) => line && !line.startsWith("#"));
 		terminal?.sendBatch(lines);
+	}
+
+	// The backend turns the image into POKEs and sends them itself, so the
+	// terminal never sees them.
+	async function uploadPatch(file: File) {
+		const body = new FormData();
+		body.append("file", file);
+		try {
+			const response = await apiFetch("upload-patch", {
+				method: "POST",
+				body,
+			});
+			const result: UploadPatchResponse = await response.json();
+			if (!response.ok) {
+				throw new Error(result.message ?? `HTTP ${response.status}`);
+			}
+			const count = result.pokes?.length ?? 0;
+			tlm.push(`PATCH: ${count} POKE${count === 1 ? "" : "s"} sent`);
+		} catch (error) {
+			tlm.push(
+				`PATCH REFUSED: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
 	}
 
 	function onDragOver(e: DragEvent) {
@@ -264,6 +289,7 @@
 											uplinkDelayS={gameState.scenario
 												?.uplinkDelayS ?? 0}
 											onBatchFile={runBatchFile}
+											onPatchFile={uploadPatch}
 										/>
 									</Resizable.Pane>
 								</Resizable.PaneGroup>
