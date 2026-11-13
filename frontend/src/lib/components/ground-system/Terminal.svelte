@@ -1,3 +1,15 @@
+<script
+	module
+	lang="ts"
+>
+	// When the command reaches the probe, and when its reply gets back.
+	export type Entry = {
+		command: string;
+		uplinkDueAt: number;
+		downlinkDueAt: number;
+	};
+</script>
+
 <script lang="ts">
 	import { onMount } from "svelte";
 	import TerminalScroll from "../TerminalScroll/TerminalScroll.svelte";
@@ -10,36 +22,34 @@
 		ws,
 		ready,
 		uplinkDelayS,
+		downlinkDelayS,
+		entries = $bindable(),
 		onUplinkInFlight,
+		onDownlinkInFlight,
 		onBatchFile,
 	}: {
 		ws: WebSocket | undefined;
 		ready: boolean;
 		uplinkDelayS: number;
+		downlinkDelayS: number;
+		entries: Entry[];
 		onUplinkInFlight: (inFlight: boolean) => void;
+		onDownlinkInFlight: (inFlight: boolean) => void;
 		onBatchFile: (file: File) => void;
 	} = $props();
 
 	let terminalMode = $state<"history" | "search">("history");
 	let textEntry = $state("");
 
-	// dueAt is set only while the command is still travelling to the probe.
-	type Entry = { command: string; dueAt?: number };
-	let entries = $state<Entry[]>([]);
-	let history = $derived(entries.map((entry) => entry.command));
+	// Commands from every level, for the arrow keys and Ctrl+R. The screen
+	// shows only `entries`, the commands sent this visit.
+	let history = $state<string[]>([]);
 	let now = $state(Date.now());
 	let historyIndex = $state(-1);
 
 	const persistHistory = () => {
 		try {
-			localStorage.setItem(
-				HISTORY_STORAGE_KEY,
-				JSON.stringify(
-					entries
-						.slice(-MAX_HISTORY_ENTRIES)
-						.map((entry) => entry.command)
-				)
-			);
+			localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
 		} catch (error) {
 			console.error("Unable to persist terminal history", error);
 		}
@@ -61,9 +71,7 @@
 			const validCommands = commands.filter(
 				(command): command is string => typeof command === "string"
 			);
-			entries = validCommands
-				.slice(-MAX_HISTORY_ENTRIES)
-				.map((command) => ({ command }));
+			history = validCommands.slice(-MAX_HISTORY_ENTRIES);
 		} catch (error) {
 			console.error("Unable to load terminal history", error);
 		}
@@ -83,18 +91,34 @@
 	});
 
 	// Whole seconds left, rounded up so the player never sees 0 s early.
-	const remaining = (entry: Entry) =>
-		entry.dueAt === undefined
-			? 0
-			: Math.max(0, Math.ceil((entry.dueAt - now) / 1000));
-	let inFlight = $derived(entries.some((entry) => remaining(entry) > 0));
+	const secondsLeft = (dueAt: number) =>
+		Math.max(0, Math.ceil((dueAt - now) / 1000));
+	let inFlight = $derived(
+		entries.some((entry) => secondsLeft(entry.uplinkDueAt) > 0)
+	);
+	// The reply's trip back starts when its command arrives.
+	let returning = $derived(
+		entries.some(
+			(entry) =>
+				secondsLeft(entry.uplinkDueAt) === 0 &&
+				secondsLeft(entry.downlinkDueAt) > 0
+		)
+	);
+	// A reply is due after its command arrives, so this covers both countdowns.
+	let counting = $derived(
+		entries.some((entry) => secondsLeft(entry.downlinkDueAt) > 0)
+	);
 
 	$effect(() => {
 		onUplinkInFlight(inFlight);
 	});
 
 	$effect(() => {
-		if (!inFlight) return;
+		onDownlinkInFlight(returning);
+	});
+
+	$effect(() => {
+		if (!counting) return;
 		const clock = setInterval(() => (now = Date.now()), 250);
 		return () => clearInterval(clock);
 	});
@@ -106,9 +130,15 @@
 		}
 		ws.send(cmd);
 		now = Date.now();
-		entries.push({ command: cmd, dueAt: now + uplinkDelayS * 1000 });
-		if (entries.length > MAX_HISTORY_ENTRIES) {
-			entries = entries.slice(-MAX_HISTORY_ENTRIES);
+		const uplinkDueAt = now + uplinkDelayS * 1000;
+		entries.push({
+			command: cmd,
+			uplinkDueAt,
+			downlinkDueAt: uplinkDueAt + downlinkDelayS * 1000,
+		});
+		history.push(cmd);
+		if (history.length > MAX_HISTORY_ENTRIES) {
+			history = history.slice(-MAX_HISTORY_ENTRIES);
 		}
 		persistHistory();
 		return true;
@@ -232,8 +262,13 @@
 			{#each entries as entry, index (index)}
 				<p class="mb-1 text-sm break-all">
 					<span>{entry.command}</span>
-					{#if remaining(entry) > 0}
-						<span class="ml-2 opacity-70">{remaining(entry)} s</span
+					{#if secondsLeft(entry.uplinkDueAt) > 0}
+						<span class="ml-2 opacity-70"
+							>uplink {secondsLeft(entry.uplinkDueAt)} s</span
+						>
+					{:else if secondsLeft(entry.downlinkDueAt) > 0}
+						<span class="ml-2 opacity-70"
+							>downlink {secondsLeft(entry.downlinkDueAt)} s</span
 						>
 					{/if}
 				</p>

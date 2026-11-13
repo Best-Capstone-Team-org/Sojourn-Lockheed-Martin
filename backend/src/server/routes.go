@@ -152,7 +152,8 @@ func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 
 			Constraints: constraints,
 
-			UplinkDelayS: scenario.Manifest.Link.UplinkDelayS,
+			UplinkDelayS:   scenario.Manifest.Link.UplinkDelayS,
+			DownlinkDelayS: scenario.Manifest.Link.DownlinkDelayS,
 
 			Record: records[scenario.Manifest.ID],
 		}
