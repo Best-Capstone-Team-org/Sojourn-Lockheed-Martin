@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Box from "$lib/components/Box/Box.svelte";
 	import Screen from "$lib/components/Screen/Screen.svelte";
+	import Led from "$lib/components/ground-system/Led.svelte";
 	import type { ScenarioResponse } from "$lib/api";
 	import easyProbe from "$lib/assets/easy-probe.png";
 	import mediumProbe from "$lib/assets/med-probe.png";
@@ -41,6 +42,10 @@
 				<p class="line-clamp-3 h-15 text-sm">
 					{scenario.description}
 				</p>
+			</div>
+
+			<div>
+				<Led color={scenario.record ? "green" : "off"} />
 			</div>
 		</div>
 	</div>
