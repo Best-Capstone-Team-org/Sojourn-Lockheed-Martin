@@ -94,6 +94,7 @@ func TestStartAppliesLinkDelays(t *testing.T) {
 	if elapsed := time.Since(sent); elapsed >= delay {
 		t.Errorf("setup write took %s; it should not wait for the uplink delay", elapsed)
 	}
+	l.downlink <- []byte("ACK POKE 1\r\n")
 
 	recvDownlink(t, out)
 	if elapsed := time.Since(sent); elapsed < delay {
