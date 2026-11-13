@@ -15,6 +15,23 @@
 		type GradingStatus,
 	} from "$lib/api";
 	import { gameState } from "$lib/components/ground-system/GameState.svelte";
+	import { beforeNavigate } from "$app/navigation";
+
+	// block accidental browser navigation
+	beforeNavigate((nav) => {
+		if (nav.type === "goto") return;
+
+		if (nav.type === "leave") {
+			nav.cancel();
+			return;
+		}
+
+		if (
+			!confirm("Are you sure you want to leave? Progress will not be saved :(")
+		) {
+			nav.cancel();
+		}
+	});
 
 	const RECONNECT_BASE_DELAY = 1000;
 	const MAX_RECONNECT_DELAY = 10000;
