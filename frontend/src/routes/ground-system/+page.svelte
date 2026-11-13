@@ -4,7 +4,9 @@
 	import TelemetryConsole from "$lib/components/ground-system/TelemetryConsole.svelte";
 	import Downlink from "$lib/components/ground-system/Downlink.svelte";
 	import ReadOut from "$lib/components/ground-system/ReadOut.svelte";
-	import Terminal from "$lib/components/ground-system/Terminal.svelte";
+	import Terminal, {
+		type Entry,
+	} from "$lib/components/ground-system/Terminal.svelte";
 	import * as Resizable from "$lib/components/ui/resizable/index.js";
 	import {
 		apiWebSocket,
@@ -24,6 +26,8 @@
 
 	let commandDownlink = $state<CommandDownlink | undefined>(undefined);
 	let uplinkInFlight = $state(false);
+	let downlinkInFlight = $state(false);
+	let entries = $state<Entry[]>([]);
 	let grading = $state<GradingStatus>({ degraded: false });
 
 	let tlm = $state<string[]>([]);
@@ -257,12 +261,17 @@
 									>
 										<Terminal
 											bind:this={terminal}
+											bind:entries
 											{ws}
 											{ready}
 											onUplinkInFlight={(inFlight) =>
 												(uplinkInFlight = inFlight)}
+											onDownlinkInFlight={(inFlight) =>
+												(downlinkInFlight = inFlight)}
 											uplinkDelayS={gameState.scenario
 												?.uplinkDelayS ?? 0}
+											downlinkDelayS={gameState.scenario
+												?.downlinkDelayS ?? 0}
 											onBatchFile={runBatchFile}
 										/>
 									</Resizable.Pane>
@@ -284,6 +293,7 @@
 							<TelemetryConsole
 								{commandDownlink}
 								{uplinkInFlight}
+								{downlinkInFlight}
 								{satelliteDown}
 							/>
 						</div>

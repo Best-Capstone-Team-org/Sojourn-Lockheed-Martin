@@ -11,10 +11,12 @@
 	let {
 		commandDownlink,
 		uplinkInFlight,
+		downlinkInFlight,
 		satelliteDown,
 	}: {
 		commandDownlink: CommandDownlink | undefined;
 		uplinkInFlight: boolean;
+		downlinkInFlight: boolean;
 		satelliteDown: boolean;
 	} = $props();
 
@@ -30,7 +32,7 @@
 			};
 		}
 
-		if (commandDownlink?.type === "commandResponse") {
+		if (downlinkInFlight) {
 			return {
 				src: satelliteDownlink,
 				alt: "Satellite transmitting downlink",

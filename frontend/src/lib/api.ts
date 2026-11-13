@@ -23,6 +23,7 @@ export interface ScenarioResponse {
 	difficulty: string;
 	objectives: ObjectiveResponse[];
 	constraints: Constraints;
+	downlinkDelayS: number;
 	uplinkDelayS: number;
 }
 
