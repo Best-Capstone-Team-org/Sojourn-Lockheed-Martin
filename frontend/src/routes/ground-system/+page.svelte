@@ -27,7 +27,9 @@
 		}
 
 		if (
-			!confirm("Are you sure you want to leave? Progress will not be saved :(")
+			!confirm(
+				"Are you sure you want to leave? Progress will not be saved :("
+			)
 		) {
 			nav.cancel();
 		}

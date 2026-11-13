@@ -67,7 +67,7 @@
 			/>
 		</div>
 	</Screen>
-	<div class="w-1/2 ml-2">
+	<div class="ml-2 w-1/2">
 		<div
 			class="grid w-full grid-cols-[auto_auto] content-center items-center justify-start gap-x-2 px-1 font-bold"
 		>
@@ -77,6 +77,4 @@
 			<Led bind:this={lgaLed} />
 		</div>
 	</div>
-	
-	
 </Box>
