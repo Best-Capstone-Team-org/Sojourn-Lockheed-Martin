@@ -159,6 +159,15 @@ func (g *Grader) UptimeMS() *uint64 {
 	return &ms
 }
 
+// ReadAppRAM reads length bytes of the running application from APP RAM.
+func (g *Grader) ReadAppRAM(length int) ([]byte, error) {
+	snapshot, err := g.capture([]emulator.MemoryRange{{Addr: appRAMBase, Len: length}})
+	if err != nil {
+		return nil, err
+	}
+	return snapshot.Read(appRAMBase, length)
+}
+
 func (g *Grader) capture(ranges []emulator.MemoryRange) (*emulator.MemorySnapshot, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()

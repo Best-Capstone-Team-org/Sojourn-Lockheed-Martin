@@ -270,7 +270,6 @@ func TestUnimplementedHandlers(t *testing.T) {
 		{"loadSave", s.loadSave, http.MethodPut},
 		{"save", s.save, http.MethodPut},
 		{"results", s.results, http.MethodGet},
-		{"uploadPatch", s.uploadPatch, http.MethodPost},
 	}
 
 	for _, tt := range tests {

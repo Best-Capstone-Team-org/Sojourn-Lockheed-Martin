@@ -149,22 +149,22 @@ func firstContactState(t *testing.T) *State {
 	return state
 }
 
-func TestPlayerBinaryDuringGame(t *testing.T) {
+func TestGoldenImageDuringGame(t *testing.T) {
 	state := firstContactState(t)
 	startGame(t, state)
 
-	image, err := state.PlayerBinary()
+	image, err := state.GoldenImage()
 	if err != nil {
-		t.Fatalf("PlayerBinary: %v", err)
+		t.Fatalf("GoldenImage: %v", err)
 	}
 	if len(image) < 4 || string(image[:4]) != "SRJN" {
 		t.Error("player binary does not start with the SRJN header")
 	}
 }
 
-func TestPlayerBinaryRequiresGameInProgress(t *testing.T) {
+func TestGoldenImageRequiresGameInProgress(t *testing.T) {
 	state := firstContactState(t)
-	if _, err := state.PlayerBinary(); !errors.Is(err, ErrNoGameInProgress) {
+	if _, err := state.GoldenImage(); !errors.Is(err, ErrNoGameInProgress) {
 		t.Fatalf("before start: err = %v, want ErrNoGameInProgress", err)
 	}
 
@@ -172,7 +172,7 @@ func TestPlayerBinaryRequiresGameInProgress(t *testing.T) {
 	if err := state.Stop(); err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
-	if _, err := state.PlayerBinary(); !errors.Is(err, ErrNoGameInProgress) {
+	if _, err := state.GoldenImage(); !errors.Is(err, ErrNoGameInProgress) {
 		t.Fatalf("after stop: err = %v, want ErrNoGameInProgress", err)
 	}
 }

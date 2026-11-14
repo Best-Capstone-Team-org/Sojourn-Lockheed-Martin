@@ -437,24 +437,58 @@ func (s *State) Stop() error {
 	return nil
 }
 
-func (s *State) UploadPatchedBinary(patchedBinaryPath string) error {
-	if s.phase != PhaseInProgress {
-		return unexpectedPhase("uploading patched binary")
-	}
+var (
+	ErrNoGameInProgress       = errors.New("no game in progress")
+	ErrProbeMemoryUnavailable = errors.New("the probe's memory can't be read right now")
+)
 
-	// TODO:
-
-	return nil
-}
-
-var ErrNoGameInProgress = errors.New("no game in progress")
-
-func (s *State) PlayerBinary() ([]byte, error) {
+func (s *State) GoldenImage() ([]byte, error) {
 	if s.phase != PhaseInProgress {
 		return nil, ErrNoGameInProgress
 	}
 
 	return emulator.AppImage(filepath.Join(s.Scenario.Dir, s.Scenario.Manifest.Firmware.ROM))
+}
+
+func (s *State) RunningImage() ([]byte, error) {
+	golden, err := s.GoldenImage()
+	if err != nil {
+		return nil, err
+	}
+	return s.readAppRAM(len(golden))
+}
+
+func (s *State) PatchPokes(patched []byte) ([]string, error) {
+	golden, err := s.GoldenImage()
+	if err != nil {
+		return nil, err
+	}
+	if len(patched) > appRAMEnd-appRAMBase {
+		return nil, ErrPatchTooLarge
+	}
+
+	running, err := s.readAppRAM(max(len(golden), len(patched)))
+	if err != nil {
+		return nil, err
+	}
+	return patchPokes(running, patched)
+}
+
+func (s *State) RemainingWrites() (int, bool) {
+	remaining, metered := s.allowance.remaining()[ResourceWrites]
+	return remaining, metered
+}
+
+func (s *State) readAppRAM(length int) ([]byte, error) {
+	if s.grader == nil {
+		return nil, ErrProbeMemoryUnavailable
+	}
+	data, err := s.grader.ReadAppRAM(length)
+	if err != nil {
+		app.ErrorLogger.Printf("Reading APP RAM: %v", err)
+		return nil, ErrProbeMemoryUnavailable
+	}
+	return data, nil
 }
 
 func (s *State) Evaluate(frame Frame) error {

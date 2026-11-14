@@ -3,6 +3,7 @@
 		BookIcon,
 		DownloadIcon,
 		FileDigitIcon,
+		HardDriveDownloadIcon,
 		UploadIcon,
 	} from "@lucide/svelte/icons";
 	import { fade } from "svelte/transition";
@@ -11,12 +12,15 @@
 	let {
 		visible,
 		onBatchFile,
+		onPatchFile,
 	}: {
 		visible: boolean;
 		onBatchFile: (file: File) => void;
+		onPatchFile: (file: File) => void;
 	} = $props();
 
 	let fileInput: HTMLInputElement;
+	let patchInput: HTMLInputElement;
 
 	// batch commands
 	const openBatchPicker = () => fileInput.click();
@@ -30,9 +34,9 @@
 
 	// downloads
 	const downloadManual = () => console.log("TODO download manual");
-	async function downloadBinary() {
+	async function downloadBinary(endpoint: string, filename: string) {
 		try {
-			const response = await apiFetch("download-binary");
+			const response = await apiFetch(endpoint);
 			if (!response.ok) {
 				const { message }: DownloadBinaryResponse =
 					await response.json();
@@ -42,7 +46,7 @@
 			const url = URL.createObjectURL(await response.blob());
 			const link = document.createElement("a");
 			link.href = url;
-			link.download = "probe.bin";
+			link.download = filename;
 			link.click();
 			URL.revokeObjectURL(url);
 		} catch (error) {
@@ -51,7 +55,14 @@
 	}
 
 	// upload binary
-	const uploadBinary = () => console.log("TODO: download manual");
+	const openPatchPicker = () => patchInput.click();
+	const handlePatchFile = (
+		e: Event & { currentTarget: HTMLInputElement }
+	) => {
+		const file = e.currentTarget.files?.[0];
+		if (file) onPatchFile(file);
+		e.currentTarget.value = "";
+	};
 
 	const quickActions = [
 		{
@@ -67,12 +78,18 @@
 		{
 			label: "Download Binary",
 			icon: DownloadIcon,
-			onclick: downloadBinary,
+			onclick: () => downloadBinary("download-binary", "probe.bin"),
+		},
+		{
+			label: "Download Golden Binary",
+			icon: HardDriveDownloadIcon,
+			onclick: () =>
+				downloadBinary("download-golden-binary", "probe_golden.bin"),
 		},
 		{
 			label: "Upload Binary",
 			icon: UploadIcon,
-			onclick: uploadBinary,
+			onclick: openPatchPicker,
 		},
 	];
 </script>
@@ -83,6 +100,14 @@
 	accept=".txt,text/plain"
 	hidden
 	onchange={handleBatchFile}
+/>
+
+<input
+	bind:this={patchInput}
+	type="file"
+	accept=".bin,application/octet-stream"
+	hidden
+	onchange={handlePatchFile}
 />
 
 {#if visible}

@@ -61,8 +61,11 @@ type resultsResponse struct {
 	// TODO:
 }
 
-type uploadPatch struct {
-	Message string `json:"message"`
+type uploadPatchResponse struct {
+	Pokes   []string `json:"pokes"`
+	Writes  int      `json:"writes"`
+	DryRun  bool     `json:"dry_run,omitempty"`
+	Message string   `json:"message,omitempty"`
 }
 
 type downloadBinaryResponse struct {
