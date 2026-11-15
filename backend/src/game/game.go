@@ -172,11 +172,12 @@ func (s *State) Start(downlinkChan chan DownlinkMessage, uplinkChan chan []byte,
 
 	go admitUplink(uplinkChan, admittedUplinkChan, s.allowance, refusals, refusalsDone)
 	go delayed(admittedUplinkChan, delayedUplinkChan, time.Duration(link.UplinkDelayS)*linkDelayUnit, done)
+	setup := newSetupLink()
 	go uplinkForwarder(delayedUplinkChan, emulatorUplinkChan, pendingCommands, booted, setupCommands,
-		probeUptime(s.grader))
+		setup, done, probeUptime(s.grader))
 
 	go s.downlinkTranslatorPump(translatedDownlinkChan, emulatorDownlinkChan, s.grader, pendingCommands, booted,
-		session)
+		setup, session)
 	go delayed(translatedDownlinkChan, delayedDownlinkChan, time.Duration(link.DownlinkDelayS)*linkDelayUnit, done)
 	go mergeDownlink(delayedDownlinkChan, refusals, downlinkChan, refusalsDone)
 
@@ -235,7 +236,77 @@ func mergeDownlink(delayedDownlinkChan <-chan DownlinkMessage, immediate <-chan 
 
 type pendingCommand struct {
 	command CommandLogEntry
-	setup   bool
+}
+
+// setupLink carries the probe's replies to setup writes from the downlink to
+// the uplink. Until done is closed, every command reply belongs to setup: the
+// player's commands are held back, so nothing else can be in flight.
+type setupLink struct {
+	replies chan string
+	done    chan struct{}
+	timeout time.Duration
+}
+
+func newSetupLink() *setupLink {
+	return &setupLink{
+		replies: make(chan string, pendingCommandLimit),
+		done:    make(chan struct{}),
+		timeout: setupReplyTimeout,
+	}
+}
+
+// active reports whether command replies still belong to setup.
+func (l *setupLink) active() bool {
+	if l == nil {
+		return false
+	}
+	select {
+	case <-l.done:
+		return false
+	default:
+		return true
+	}
+}
+
+var setupReplyTimeout = 2 * time.Second
+
+const setupAttempts = 3
+
+func applySetup(setupCommands []string, emulatorUplinkChan chan<- []byte, setup *setupLink,
+	stop <-chan struct{}) bool {
+	ok := true
+
+	for _, raw := range setupCommands {
+		app.GameLogger.Printf("Applying setup write: %s", raw)
+
+		reply, answered := "", false
+		for attempt := 1; attempt <= setupAttempts && !answered; attempt++ {
+			emulatorUplinkChan <- []byte(raw)
+
+			timer := time.NewTimer(setup.timeout)
+			select {
+			case reply = <-setup.replies:
+				answered = true
+			case <-timer.C:
+				app.ErrorLogger.Printf("Setup write `%s` got no reply (attempt %d of %d)", raw, attempt, setupAttempts)
+			case <-stop:
+				timer.Stop()
+				return false
+			}
+			timer.Stop()
+		}
+
+		switch {
+		case !answered:
+			app.ErrorLogger.Printf("Setup write `%s` was never acknowledged: the scenario is not set up as designed", raw)
+			ok = false
+		case !strings.HasPrefix(reply, "ACK "):
+			app.ErrorLogger.Printf("Setup write `%s` failed: %s", raw, reply)
+			ok = false
+		}
+	}
+
+	return ok
 }
 
 func probeUptime(grader *Grader) func() *uint64 {
@@ -247,17 +318,15 @@ func probeUptime(grader *Grader) func() *uint64 {
 
 func uplinkForwarder(playerUplinkChan <-chan []byte, emulatorUplinkChan chan<- []byte,
 	pendingCommands chan<- pendingCommand, booted <-chan struct{}, setupCommands []string,
-	uptime func() *uint64) {
+	setup *setupLink, stop <-chan struct{}, uptime func() *uint64) {
 	defer close(emulatorUplinkChan)
 
-	send := func(raw string, setup bool) {
+	send := func(raw string) {
 		command := parseCommand(raw)
-		if !setup {
-			command.TMs = uptime()
-		}
+		command.TMs = uptime()
 
 		select {
-		case pendingCommands <- pendingCommand{command: command, setup: setup}:
+		case pendingCommands <- pendingCommand{command: command}:
 		default:
 			app.ErrorLogger.Printf("Too many unanswered commands, not logging `%s`", raw)
 		}
@@ -279,23 +348,29 @@ waitForBoot:
 		}
 	}
 
-	for _, raw := range setupCommands {
-		app.GameLogger.Printf("Applying setup write: %s", raw)
-		send(raw, true)
+	if len(setupCommands) > 0 && applySetup(setupCommands, emulatorUplinkChan, setup, stop) {
+		app.GameLogger.Printf("Applied %d setup writes", len(setupCommands))
+	}
+	close(setup.done)
+
+	select {
+	case <-stop:
+		return
+	default:
 	}
 
 	for _, raw := range held {
-		send(raw, false)
+		send(raw)
 	}
 
 	for uplinkMessage := range playerUplinkChan {
-		send(strings.TrimSpace(string(uplinkMessage)), false)
+		send(strings.TrimSpace(string(uplinkMessage)))
 	}
 }
 
 func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessage,
 	emulatorDownlinkChan chan []byte, grader *Grader, pendingCommands <-chan pendingCommand,
-	booted chan<- struct{}, session *Session) {
+	booted chan<- struct{}, setup *setupLink, session *Session) {
 	app.GameLogger.Println("Starting downlink translator pump")
 
 	for downlinkMessage := range emulatorDownlinkChan {
@@ -335,16 +410,18 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 		} else {
 			app.ServerLogger.Printf("Command Response: `%s`\n", line)
 
+			if isCommandResponse(line) && setup.active() {
+				select {
+				case setup.replies <- line:
+				default:
+					app.ErrorLogger.Printf("Setup reply `%s` with no setup write waiting", line)
+				}
+				continue
+			}
+
 			if isCommandResponse(line) {
 				select {
 				case pending := <-pendingCommands:
-					if pending.setup {
-						if !strings.HasPrefix(line, "ACK ") {
-							app.ErrorLogger.Printf("Setup write `%s` failed: %s", pending.command.Raw, line)
-						}
-						continue
-					}
-
 					pending.command.Result = line
 					if grader != nil {
 						grader.LogCommand(pending.command)
@@ -368,10 +445,8 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 	for unanswered := true; unanswered; {
 		select {
 		case pending := <-pendingCommands:
-			if !pending.setup {
-				if err := session.Append(pending.command); err != nil {
-					app.ErrorLogger.Printf("Recording `%s`: %v", pending.command.Raw, err)
-				}
+			if err := session.Append(pending.command); err != nil {
+				app.ErrorLogger.Printf("Recording `%s`: %v", pending.command.Raw, err)
 			}
 		default:
 			unanswered = false

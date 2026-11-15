@@ -185,7 +185,7 @@ func TestDownlinkTranslatorPumpClosesGrader(t *testing.T) {
 
 	in := make(chan []byte)
 	out := make(chan DownlinkMessage)
-	go state.downlinkTranslatorPump(out, in, grader, nil, nil, nil)
+	go state.downlinkTranslatorPump(out, in, grader, nil, nil, nil, nil)
 	close(in)
 
 	select {
@@ -458,15 +458,16 @@ func TestSetupAppliedBeforePlayerCommands(t *testing.T) {
 	l.downlink <- []byte("SOJOURN FSW v1.0 boot  reboots=0 fault=0\r\n")
 	recvDownlink(t, out)
 
-	for _, want := range []string{"POKE 0x20000010 14000000", "POKE 0x20000020 01", "PEEK 0x20000010 4"} {
-		if got := recvUplink(t, l.uplink); got != want {
-			t.Fatalf("firmware uplink = %q, want %q", got, want)
+	for _, step := range []struct{ want, reply string }{
+		{"POKE 0x20000010 14000000", "ACK POKE 4"},
+		{"POKE 0x20000020 01", "NAK E04"},
+		{"PEEK 0x20000010 4", "ACK PEEK 02000000"},
+	} {
+		if got := recvUplink(t, l.uplink); got != step.want {
+			t.Fatalf("firmware uplink = %q, want %q", got, step.want)
 		}
+		l.downlink <- []byte(step.reply + "\r\n")
 	}
-
-	l.downlink <- []byte("ACK POKE 4\r\n")
-	l.downlink <- []byte("NAK E04\r\n")
-	l.downlink <- []byte("ACK PEEK 02000000\r\n")
 	msg, ok := recvDownlink(t, out).(*CommandResponseDownlinkMessage)
 	if !ok || msg.Response != "ACK PEEK 02000000" {
 		t.Fatalf("downlink = %#v, want only the player's PEEK reply", msg)
@@ -474,6 +475,102 @@ func TestSetupAppliedBeforePlayerCommands(t *testing.T) {
 
 	want := []CommandLogEntry{
 		{Raw: "PEEK 0x20000010 4", Verb: "PEEK", Charged: "reads", Addr: 0x20000010, Result: "ACK PEEK 02000000"},
+	}
+	if !slices.Equal(state.grader.log, want) {
+		t.Errorf("log = %+v, want %+v", state.grader.log, want)
+	}
+
+	close(up)
+	close(l.downlink)
+	for range out {
+	}
+}
+
+// The probe drops a command that arrives while it is busy, so each setup write
+// waits for the previous one to be answered.
+func TestSetupWritesWaitForEachReply(t *testing.T) {
+	launches := stubFirmware(t)
+	state := readyState(t)
+	u8a, u8b := uint8(1), uint8(2)
+	state.Scenario.Setup = &Setup{Writes: []SetupWrite{
+		{At: AddressRef{Sym: "g_mode"}, U8: &u8a},
+		{At: AddressRef{Sym: "g_buf"}, U8: &u8b},
+	}}
+
+	out := make(chan DownlinkMessage)
+	up := make(chan []byte)
+	if err := state.Start(out, up, make(chan struct{})); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	l := <-launches
+
+	l.downlink <- []byte("SOJOURN FSW v1.0 boot\r\n")
+	recvDownlink(t, out)
+
+	if got := recvUplink(t, l.uplink); got != "POKE 0x20000010 01" {
+		t.Fatalf("firmware uplink = %q, want the first setup write", got)
+	}
+	select {
+	case msg := <-l.uplink:
+		t.Fatalf("firmware got %q before the first setup write was answered", msg)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	l.downlink <- []byte("ACK POKE 1\r\n")
+	if got := recvUplink(t, l.uplink); got != "POKE 0x20000020 02" {
+		t.Fatalf("firmware uplink = %q, want the second setup write", got)
+	}
+
+	close(up)
+	close(l.downlink)
+	for range out {
+	}
+}
+
+// A setup write the probe never answers is sent again, and its missing reply
+// doesn't shift the player's replies onto the wrong commands.
+func TestUnansweredSetupWriteIsResent(t *testing.T) {
+	prev := setupReplyTimeout
+	setupReplyTimeout = 50 * time.Millisecond
+	t.Cleanup(func() { setupReplyTimeout = prev })
+
+	launches := stubFirmware(t)
+	state := readyState(t)
+	u8 := uint8(1)
+	state.Scenario.Setup = &Setup{Writes: []SetupWrite{{At: AddressRef{Sym: "g_mode"}, U8: &u8}}}
+	state.grader = NewGrader(state, "127.0.0.1:1")
+
+	out := make(chan DownlinkMessage)
+	up := make(chan []byte)
+	if err := state.Start(out, up, make(chan struct{})); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	l := <-launches
+
+	up <- []byte("PEEK 0x20000010 1")
+	l.downlink <- []byte("SOJOURN FSW v1.0 boot\r\n")
+	recvDownlink(t, out)
+
+	// Dropped: no reply.
+	if got := recvUplink(t, l.uplink); got != "POKE 0x20000010 01" {
+		t.Fatalf("firmware uplink = %q, want the setup write", got)
+	}
+	if got := recvUplink(t, l.uplink); got != "POKE 0x20000010 01" {
+		t.Fatalf("firmware uplink = %q, want the setup write sent again", got)
+	}
+	l.downlink <- []byte("ACK POKE 1\r\n")
+
+	if got := recvUplink(t, l.uplink); got != "PEEK 0x20000010 1" {
+		t.Fatalf("firmware uplink = %q, want the player's PEEK", got)
+	}
+	l.downlink <- []byte("ACK PEEK 01\r\n")
+	msg, ok := recvDownlink(t, out).(*CommandResponseDownlinkMessage)
+	if !ok || msg.Response != "ACK PEEK 01" {
+		t.Fatalf("downlink = %#v, want the player's PEEK reply", msg)
+	}
+
+	want := []CommandLogEntry{
+		{Raw: "PEEK 0x20000010 1", Verb: "PEEK", Charged: "reads", Addr: 0x20000010, Result: "ACK PEEK 01"},
 	}
 	if !slices.Equal(state.grader.log, want) {
 		t.Errorf("log = %+v, want %+v", state.grader.log, want)
