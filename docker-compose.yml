@@ -12,6 +12,7 @@ services:
       - BUILD_DIR=/app/frontend
       - SCENARIOS_DIR=/app/scenarios
       - SCENARIOS_USER_DIR=/app/scenarios-user
+      - MANUAL_PATH=/app/manual.pdf
       - SAVE_DIR=/savedata
     ports:
       - "127.0.0.1:8080:8080"

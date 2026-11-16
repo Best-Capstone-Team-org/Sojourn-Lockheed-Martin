@@ -8,6 +8,8 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
+	"slices"
 	"sojourn/app"
 	"sojourn/game"
 	"strconv"
@@ -31,6 +33,9 @@ type server struct {
 	uplinkOpen bool
 
 	gameRunningDone chan struct{}
+
+	// manualPath is the mission manual PDF every level shares.
+	manualPath string
 }
 
 func newServer() *server {
@@ -68,6 +73,11 @@ func Serve() {
 		app.ErrorLogger.Println("SAVE_DIR is not set: sessions will not be saved")
 	} else {
 		app.ServerLogger.Printf("Saving sessions to %s", server.gs.SaveDir)
+	}
+
+	server.manualPath = os.Getenv("MANUAL_PATH")
+	if server.manualPath == "" {
+		server.manualPath = "../../deps/sojourn/docs/manual.pdf"
 	}
 
 	mux := server.routes()
@@ -108,6 +118,8 @@ func (s *server) routes() *http.ServeMux {
 	mux.HandleFunc(apiPrefix+"/results", s.results)
 	mux.HandleFunc(apiPrefix+"/download-binary", s.downloadBinary)
 	mux.HandleFunc(apiPrefix+"/download-golden-binary", s.downloadGoldenBinary)
+	mux.HandleFunc(apiPrefix+"/download-manual", s.downloadManual)
+	mux.HandleFunc(apiPrefix+"/download-doc", s.downloadDoc)
 	mux.HandleFunc(apiPrefix+"/upload-patch", s.uploadPatch)
 
 	return mux
@@ -149,6 +161,11 @@ func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 			constraints["reads"] = *reads
 		}
 
+		docs := scenario.Manifest.Docs
+		if docs == nil {
+			docs = []string{}
+		}
+
 		sr := scenarioResponse{
 			ID:          scenario.Manifest.ID,
 			Name:        scenario.Manifest.Title,
@@ -165,6 +182,8 @@ func (s *server) scenarios(w http.ResponseWriter, r *http.Request) {
 			DownlinkDelayS: scenario.Manifest.Link.DownlinkDelayS,
 
 			Record: records[scenario.Manifest.ID],
+
+			Docs: docs,
 		}
 
 		response = append(response, sr)
@@ -400,6 +419,52 @@ func (s *server) serveImage(w http.ResponseWriter, r *http.Request,
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.Write(data)
+}
+
+// downloadManual sends the mission manual PDF every level shares.
+func (s *server) downloadManual(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodGet, w) {
+		return
+	}
+
+	serveDoc(w, s.manualPath)
+}
+
+// downloadDoc sends one of the files a level's manifest lists under "docs",
+// asked for as ?scenario-id=<id>&doc=<path as listed>.
+func (s *server) downloadDoc(w http.ResponseWriter, r *http.Request) {
+	if !s.checkRequestMethod(r, http.MethodGet, w) {
+		return
+	}
+
+	query := r.URL.Query()
+	scenarioId := query.Get("scenario-id")
+	doc := query.Get("doc")
+
+	scenario, ok := s.gs.AvailableScenarios[scenarioId]
+	if !ok || !slices.Contains(scenario.Manifest.Docs, doc) {
+		writeJSON(w, http.StatusNotFound, downloadBinaryResponse{
+			Message: fmt.Sprintf("scenario %q has no document %q", scenarioId, doc),
+		})
+		return
+	}
+
+	serveDoc(w, filepath.Join(scenario.Dir, doc))
+}
+
+// serveDoc sends a file as a download under its own name.
+func serveDoc(w http.ResponseWriter, path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		app.ErrorLogger.Printf("Error reading document: %v", err)
+		writeJSON(w, http.StatusInternalServerError, downloadBinaryResponse{Message: err.Error()})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(path)))
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.Write(data)
 }

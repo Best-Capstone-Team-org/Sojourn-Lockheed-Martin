@@ -26,6 +26,7 @@ export interface ScenarioResponse {
 	downlinkDelayS: number;
 	uplinkDelayS: number;
 	record: ScenarioRecord | null;
+	docs: string[];
 }
 
 export interface ScenarioRecord {

@@ -8,6 +8,7 @@
 	} from "@lucide/svelte/icons";
 	import { fade } from "svelte/transition";
 	import { apiFetch, type DownloadBinaryResponse } from "$lib/api";
+	import { gameState } from "$lib/components/ground-system/GameState.svelte";
 
 	let {
 		visible,
@@ -33,7 +34,24 @@
 	};
 
 	// downloads
-	const downloadManual = () => console.log("TODO download manual");
+	async function downloadManual() {
+		await downloadBinary("download-manual", "manual.pdf");
+
+		// then each file the level lists under "docs" in its manifest
+		const scenario = gameState.scenario;
+		if (!scenario) return;
+		for (const doc of scenario.docs) {
+			const query = new URLSearchParams({
+				"scenario-id": scenario.id,
+				doc,
+			});
+			await downloadBinary(
+				`download-doc?${query}`,
+				doc.slice(doc.lastIndexOf("/") + 1)
+			);
+		}
+	}
+
 	async function downloadBinary(endpoint: string, filename: string) {
 		try {
 			const response = await apiFetch(endpoint);
