@@ -50,6 +50,7 @@ const (
 
 type stubConfig struct {
 	packetSize int
+	maxRead    int // if set, refuse any single read longer than this
 	rle        bool
 	replyDelay time.Duration
 	fault      stubFault
@@ -189,6 +190,11 @@ func (s *stub) readMem(conn net.Conn, args string) {
 
 	// Like QEMU, refuse a read whose reply would not fit in one packet.
 	if int(n)*2+4 > s.cfg.packetSize {
+		s.send(conn, "E22", false)
+		return
+	}
+
+	if s.cfg.maxRead > 0 && int(n) > s.cfg.maxRead {
 		s.send(conn, "E22", false)
 		return
 	}
@@ -365,6 +371,23 @@ func TestReadWithSmallPacketSize(t *testing.T) {
 		t.Fatalf("Read: %v", err)
 	}
 	if want := s.get(sramBase, 4096); !bytes.Equal(got, want) {
+		t.Fatal("data differs from memory")
+	}
+}
+
+func TestReadChunksCappedAt1024WithLargePacketSize(t *testing.T) {
+	// The stub advertises room for far more than 1024 bytes per reply but
+	// refuses any read longer than 1024; R24.9 caps chunks there regardless.
+	s := newStub(t, stubConfig{packetSize: 0x10000, maxRead: 1024})
+	g := connect(t, s)
+	halt(t, g)
+	defer g.Resume()
+
+	got, err := g.Read(sramBase+3, 9216)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if want := s.get(sramBase+3, 9216); !bytes.Equal(got, want) {
 		t.Fatal("data differs from memory")
 	}
 }
