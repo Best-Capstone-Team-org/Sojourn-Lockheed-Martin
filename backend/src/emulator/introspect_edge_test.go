@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -235,7 +236,8 @@ func TestHaltFailsWithoutStopReply(t *testing.T) {
 		conn.Write([]byte("+"))
 		reply(conn, "PacketSize=1000")
 		readPacket(r) // c
-		r.ReadByte()  // interrupt
+		conn.Write([]byte("+"))
+		r.ReadByte() // interrupt
 		conn.Close()
 	})
 
@@ -258,7 +260,8 @@ func TestSnapshotReportsResumeFailure(t *testing.T) {
 		conn.Write([]byte("+"))
 		reply(conn, "PacketSize=1000")
 		readPacket(r) // c
-		r.ReadByte()  // interrupt
+		conn.Write([]byte("+"))
+		r.ReadByte() // interrupt
 		reply(conn, "T05")
 		readPacket(r) // m
 		reset(conn)
@@ -274,7 +277,8 @@ func TestSnapshotReportsResumeFailure(t *testing.T) {
 	if err == nil || snap != nil {
 		t.Fatalf("NewMemorySnapshot = %v, %v; want an error", snap, err)
 	}
-	if !strings.Contains(err.Error(), "reading receive") || !strings.Contains(err.Error(), "resuming") {
+	// The reset arrives where the read packet's acknowledgement is awaited.
+	if !strings.Contains(err.Error(), "reading acknowledgement") || !strings.Contains(err.Error(), "resuming") {
 		t.Fatalf("err = %v, want both the read and the resume failure", err)
 	}
 }
@@ -430,5 +434,176 @@ func TestSnapshotWithinWindowSucceeds(t *testing.T) {
 	time.Sleep(emulator.SnapshotWindow + 50*time.Millisecond)
 	if _, err := emulator.NewMemorySnapshot(in, []emulator.MemoryRange{{Addr: 0x20000000, Len: 1}}); err != nil {
 		t.Errorf("second capture: %v", err)
+	}
+}
+
+// nackStub rejects the first `rejections` transmissions of each packet with
+// '-' before accepting it, and records every raw packet the client sends.
+func nackStub(t *testing.T, rejections int) (string, func() []string) {
+	t.Helper()
+	var mu sync.Mutex
+	var raw []string
+
+	addr := scripted(t, func(conn net.Conn, r *bufio.Reader) {
+		rejected := map[string]int{}
+		for {
+			if _, err := r.ReadString('$'); err != nil {
+				return
+			}
+			body, err := r.ReadString('#')
+			if err != nil {
+				return
+			}
+			sum := make([]byte, 2)
+			if _, err := io.ReadFull(r, sum); err != nil {
+				return
+			}
+			payload := body[:len(body)-1]
+
+			mu.Lock()
+			raw = append(raw, "$"+body+string(sum))
+			mu.Unlock()
+
+			if rejected[payload] < rejections {
+				rejected[payload]++
+				conn.Write([]byte("-"))
+				continue
+			}
+			conn.Write([]byte("+"))
+			if payload == "qSupported" {
+				reply(conn, "PacketSize=1000")
+			}
+		}
+	})
+
+	return addr, func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(raw)
+	}
+}
+
+func TestPacketsAreResentWhenRejected(t *testing.T) {
+	addr, raw := nackStub(t, 2)
+
+	g, err := emulator.Connect(addr)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer g.Close()
+
+	// qSupported and the continue that ends attaching: each sent three times,
+	// twice rejected then accepted.
+	sent := raw()
+	counts := map[string]int{}
+	for _, packet := range sent {
+		counts[packet]++
+	}
+	for _, payload := range []string{"qSupported", "c"} {
+		packet := fmt.Sprintf("$%s#%02x", payload, checksum(payload))
+		if counts[packet] != 3 {
+			t.Errorf("%s sent %d times, want 3: %q", packet, counts[packet], sent)
+		}
+	}
+}
+
+func TestPacketRejectedTooOftenFails(t *testing.T) {
+	addr, raw := nackStub(t, 1000)
+
+	start := time.Now()
+	if g, err := emulator.Connect(addr); err == nil {
+		g.Close()
+		t.Fatal("Connect succeeded although every packet was rejected")
+	} else if !strings.Contains(err.Error(), "rejected") {
+		t.Errorf("err = %v, want a rejection error", err)
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("gave up after %s; resends should not wait for a timeout", elapsed)
+	}
+	if sent := len(raw()); sent != 4 {
+		t.Errorf("qSupported sent %d times, want 4 (one send and 3 resends)", sent)
+	}
+}
+
+func TestPacketFraming(t *testing.T) {
+	addr, raw := nackStub(t, 0)
+	g, err := emulator.Connect(addr)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	g.Close()
+
+	framed := regexp.MustCompile(`^\$([^#$]*)#([0-9a-f]{2})$`)
+	for _, packet := range raw() {
+		m := framed.FindStringSubmatch(packet)
+		if m == nil {
+			t.Errorf("%q is not $payload#cc with a lowercase hex checksum", packet)
+			continue
+		}
+		if want := fmt.Sprintf("%02x", checksum(m[1])); m[2] != want {
+			t.Errorf("%q has checksum %s, want %s (payload sum mod 256)", packet, m[2], want)
+		}
+	}
+}
+
+// A stub that stops acknowledging partway through a capture must not stretch
+// the snapshot window: waiting for an acknowledgement counts against it too.
+func TestSnapshotWindowBoundsAcknowledgements(t *testing.T) {
+	sawContinue := make(chan struct{}, 1)
+	addr := scripted(t, func(conn net.Conn, r *bufio.Reader) {
+		for {
+			b, err := r.ReadByte()
+			if err != nil {
+				return
+			}
+			switch b {
+			case 0x03:
+				reply(conn, "T05")
+				continue
+			case '$':
+			default:
+				continue
+			}
+			body, err := r.ReadString('#')
+			if err != nil {
+				return
+			}
+			r.Discard(2)
+			switch payload := body[:len(body)-1]; {
+			case payload == "qSupported":
+				conn.Write([]byte("+"))
+				reply(conn, "PacketSize=1000")
+			case payload == "c":
+				select {
+				case sawContinue <- struct{}{}:
+				default:
+				}
+				conn.Write([]byte("+"))
+			}
+			// Memory reads are never acknowledged or answered.
+		}
+	})
+
+	g, err := emulator.Connect(addr)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer g.Close()
+	<-sawContinue // the continue that ends attaching
+
+	start := time.Now()
+	_, err = emulator.NewMemorySnapshot(g, []emulator.MemoryRange{{Addr: 0x20000000, Len: 4}})
+	elapsed := time.Since(start)
+
+	if !errors.Is(err, emulator.ErrSnapshotWindow) {
+		t.Fatalf("err = %v, want ErrSnapshotWindow", err)
+	}
+	if elapsed > emulator.SnapshotWindow+150*time.Millisecond {
+		t.Errorf("gave up after %s; the window is %s", elapsed, emulator.SnapshotWindow)
+	}
+	select {
+	case <-sawContinue:
+	case <-time.After(time.Second):
+		t.Error("no continue after the failed capture")
 	}
 }
