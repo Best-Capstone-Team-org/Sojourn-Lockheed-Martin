@@ -14,6 +14,9 @@ import (
 
 const timeout = 5 * time.Second
 
+// resumeTimeout bounds how long a continue may wait for its acknowledgement.
+const resumeTimeout = 100 * time.Millisecond
+
 type Introspect struct {
 	conn       net.Conn
 	r          *bufio.Reader
@@ -81,8 +84,12 @@ func (in *Introspect) Resume() error {
 		return nil
 	}
 
-	// Resuming must not inherit an expired snapshot deadline.
-	in.deadline = time.Time{}
+	// Resuming must not inherit an expired snapshot deadline, nor keep the
+	// guest halted waiting on a stub that has stopped answering: if the
+	// continue isn't acknowledged promptly, the caller drops the connection
+	// and a fresh attach resumes the guest.
+	in.deadline = time.Now().Add(resumeTimeout)
+	defer func() { in.deadline = time.Time{} }()
 
 	if err := in.send("c"); err != nil {
 		return err
@@ -160,9 +167,54 @@ func (in *Introspect) sendAndReceive(data string) (string, error) {
 	return in.receive()
 }
 
+// maxResends bounds how many times a packet is resent after the stub
+// rejects it with '-'.
+const maxResends = 3
+
+// send frames data as $data#cc and resends it while the stub answers '-'.
 func (in *Introspect) send(data string) error {
-	msg := fmt.Sprintf("$%s#%02x", data, checksum(data))
-	return in.sendBytes([]byte(msg))
+	msg := []byte(fmt.Sprintf("$%s#%02x", data, checksum(data)))
+
+	for attempt := 0; ; attempt++ {
+		if err := in.sendBytes(msg); err != nil {
+			return err
+		}
+
+		acked, err := in.awaitAck()
+		if err != nil {
+			return err
+		}
+		if acked {
+			return nil
+		}
+		if attempt == maxResends {
+			return fmt.Errorf("packet %q rejected %d times", data, attempt+1)
+		}
+	}
+}
+
+// awaitAck reads the stub's acknowledgement of the packet just sent: true for
+// '+', false for '-'. A stub not sending acknowledgements replies straight
+// away, so the start of a packet also counts as '+' and is left for receive.
+func (in *Introspect) awaitAck() (bool, error) {
+	in.conn.SetReadDeadline(in.ioDeadline())
+
+	for {
+		b, err := in.r.ReadByte()
+		if err != nil {
+			return false, fmt.Errorf("reading acknowledgement: %w", err)
+		}
+
+		switch b {
+		case '+':
+			return true, nil
+		case '-':
+			return false, nil
+		case '$':
+			in.r.UnreadByte()
+			return true, nil
+		}
+	}
 }
 
 func (in *Introspect) ioDeadline() time.Time {
