@@ -14,6 +14,8 @@ import (
 
 const timeout = 5 * time.Second
 
+const maxReadChunk = 1024
+
 // resumeTimeout bounds how long a continue may wait for its acknowledgement.
 const resumeTimeout = 100 * time.Millisecond
 
@@ -104,7 +106,7 @@ func (in *Introspect) Read(addr uint32, length int) ([]byte, error) {
 		return nil, errors.New("read while not halted")
 	}
 
-	chunk := (in.packetSize - 4) / 2
+	chunk := min(maxReadChunk, (in.packetSize-4)/2)
 	result := make([]byte, 0, length)
 
 	for len(result) < length {
