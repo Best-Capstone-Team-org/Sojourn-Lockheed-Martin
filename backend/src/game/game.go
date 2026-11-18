@@ -25,6 +25,9 @@ type State struct {
 
 	AvailableScenarios map[string]*Scenario
 
+	// StrictValidation fails packages that have validation warnings.
+	StrictValidation bool
+
 	SaveDir string
 }
 
@@ -84,6 +87,15 @@ func (s *State) LoadScenarios(scenariosDirs []ScenariosDir) error {
 					err,
 				)
 				continue
+			}
+
+			if len(scenario.Warnings) > 0 && s.StrictValidation {
+				app.ErrorLogger.Printf("Skipping scenario %q in strict mode: %s",
+					scenarioDir.Name(), strings.Join(scenario.Warnings, "; "))
+				continue
+			}
+			for _, warning := range scenario.Warnings {
+				app.ErrorLogger.Printf("Warning: scenario %q: %s", scenarioDir.Name(), warning)
 			}
 
 			s.AvailableScenarios[scenario.Manifest.ID] = scenario

@@ -359,7 +359,7 @@ func TestServeListenError(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		Serve()
+		Serve(Options{})
 		close(done)
 	}()
 

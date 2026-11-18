@@ -3,8 +3,11 @@ package game
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -16,6 +19,10 @@ type Scenario struct {
 	Setup      *Setup
 	Symbols    SymbolsFile
 	MemMap     MemMapFile
+
+	// Warnings are problems that don't fail validation (format spec §12)
+	// unless the daemon runs in strict mode.
+	Warnings []string
 }
 
 func validateObjectiveRequirements(objectives []Objective) error {
@@ -251,6 +258,7 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return nil, fmt.Errorf("failed to parse manifest: %w", err)
 	}
+	manifestData := data
 
 	if err := validateManifestJSON(data, manifest); err != nil {
 		return nil, err
@@ -370,7 +378,66 @@ func LoadScenarioWithOptions(dir string, pureMode bool) (*Scenario, error) {
 		return nil, err
 	}
 
+	scenario.Warnings = validationWarnings(manifestData, manifest, objectivesFile.Objectives, setup)
+
 	return scenario, nil
+}
+
+// validationWarnings lists what format spec §12 warns about without failing
+// a package: unknown manifest keys, an objective with no hints, a setup write
+// with no note, and a package declared impure.
+func validationWarnings(manifestData []byte, manifest Manifest, objectives []Objective, setup *Setup) []string {
+	var warnings []string
+
+	var raw map[string]any
+	if json.Unmarshal(manifestData, &raw) == nil {
+		warnings = append(warnings, unknownKeys(raw, reflect.TypeOf(Manifest{}), "")...)
+	}
+
+	for _, objective := range objectives {
+		if len(objective.Hints) == 0 {
+			warnings = append(warnings, fmt.Sprintf("objective %q has no hints", objective.ID))
+		}
+	}
+
+	if setup != nil {
+		for i, write := range setup.Writes {
+			if strings.TrimSpace(write.Note) == "" {
+				warnings = append(warnings, fmt.Sprintf("setup write %d has no note", i))
+			}
+		}
+	}
+
+	if manifest.Impure {
+		warnings = append(warnings, "package is declared impure")
+	}
+
+	return warnings
+}
+
+// unknownKeys reports keys in raw that t, a manifest struct, does not define,
+// descending into the nested objects it does.
+func unknownKeys(raw map[string]any, t reflect.Type, prefix string) []string {
+	known := map[string]reflect.Type{}
+	for i := 0; i < t.NumField(); i++ {
+		name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ",")
+		if name != "" && name != "-" {
+			known[name] = t.Field(i).Type
+		}
+	}
+
+	var warnings []string
+	for _, key := range slices.Sorted(maps.Keys(raw)) {
+		fieldType, ok := known[key]
+		if !ok {
+			warnings = append(warnings, fmt.Sprintf("manifest has unknown key %q", prefix+key))
+			continue
+		}
+		if nested, ok := raw[key].(map[string]any); ok && fieldType.Kind() == reflect.Struct {
+			warnings = append(warnings, unknownKeys(nested, fieldType, prefix+key+".")...)
+		}
+	}
+	return warnings
 }
 
 // RESOLVE SCENARIO REFERENCES

@@ -42,8 +42,18 @@ func newServer() *server {
 	return &server{gs: game.InitState()}
 }
 
-func Serve() {
+// Options configures the daemon from its command line.
+type Options struct {
+	// StrictValidation turns scenario validation warnings into failures.
+	StrictValidation bool
+}
+
+func Serve(options Options) {
 	server := newServer()
+	server.gs.StrictValidation = options.StrictValidation
+	if options.StrictValidation {
+		app.ServerLogger.Println("Strict scenario validation: packages with warnings will not load")
+	}
 
 	scenariosDir := os.Getenv("SCENARIOS_DIR")
 	if scenariosDir == "" {
