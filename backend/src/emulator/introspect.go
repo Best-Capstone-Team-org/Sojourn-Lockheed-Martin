@@ -19,6 +19,9 @@ type Introspect struct {
 	r          *bufio.Reader
 	packetSize int
 	halted     bool
+
+	// deadline, when set, bounds every exchange in a snapshot window.
+	deadline time.Time
 }
 
 func Connect(addr string) (*Introspect, error) {
@@ -61,11 +64,15 @@ func (in *Introspect) Halt() error {
 	if err := in.sendBytes([]byte{0x03}); err != nil {
 		return err
 	}
+
+	// The guest may stop even if its stop reply never arrives, so from here
+	// on Resume must send a continue.
+	in.halted = true
+
 	if _, err := in.receive(); err != nil {
 		return err
 	}
 
-	in.halted = true
 	return nil
 }
 
@@ -73,6 +80,9 @@ func (in *Introspect) Resume() error {
 	if !in.halted {
 		return nil
 	}
+
+	// Resuming must not inherit an expired snapshot deadline.
+	in.deadline = time.Time{}
 
 	if err := in.send("c"); err != nil {
 		return err
@@ -155,8 +165,16 @@ func (in *Introspect) send(data string) error {
 	return in.sendBytes([]byte(msg))
 }
 
+func (in *Introspect) ioDeadline() time.Time {
+	d := time.Now().Add(timeout)
+	if !in.deadline.IsZero() && in.deadline.Before(d) {
+		return in.deadline
+	}
+	return d
+}
+
 func (in *Introspect) sendBytes(bytes []byte) error {
-	in.conn.SetWriteDeadline(time.Now().Add(timeout))
+	in.conn.SetWriteDeadline(in.ioDeadline())
 
 	if _, err := in.conn.Write(bytes); err != nil {
 		return err
@@ -166,7 +184,7 @@ func (in *Introspect) sendBytes(bytes []byte) error {
 }
 
 func (in *Introspect) receive() (string, error) {
-	in.conn.SetReadDeadline(time.Now().Add(timeout))
+	in.conn.SetReadDeadline(in.ioDeadline())
 
 	_, err := in.r.ReadString('$')
 	if err != nil {

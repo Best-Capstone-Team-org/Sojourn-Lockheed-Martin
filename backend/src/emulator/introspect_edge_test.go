@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -297,5 +299,136 @@ func TestConnectClosesConnectionOnFailure(t *testing.T) {
 	case <-closed:
 	case <-time.After(5 * time.Second):
 		t.Fatal("Connect left the connection open after failing")
+	}
+}
+
+// windowStub answers like QEMU, but delays its stop reply and memory replies,
+// and records every packet and interrupt the client sends.
+func windowStub(t *testing.T, stopDelay, readDelay time.Duration, answerStop bool) (string, func() []string) {
+	t.Helper()
+	var mu sync.Mutex
+	var seen []string
+
+	addr := scripted(t, func(conn net.Conn, r *bufio.Reader) {
+		for {
+			b, err := r.ReadByte()
+			if err != nil {
+				return
+			}
+			switch b {
+			case 0x03:
+				mu.Lock()
+				seen = append(seen, "halt")
+				mu.Unlock()
+				if answerStop {
+					time.Sleep(stopDelay)
+					reply(conn, "T05")
+				}
+				continue
+			case '$':
+			default:
+				continue
+			}
+
+			body, err := r.ReadString('#')
+			if err != nil {
+				return
+			}
+			r.Discard(2)
+			conn.Write([]byte("+"))
+			payload := body[:len(body)-1]
+
+			mu.Lock()
+			seen = append(seen, payload)
+			mu.Unlock()
+
+			switch {
+			case payload == "qSupported":
+				reply(conn, "PacketSize=1000")
+			case strings.HasPrefix(payload, "m"):
+				time.Sleep(readDelay)
+				reply(conn, "00")
+			case payload == "D":
+				reply(conn, "OK")
+				return
+			}
+		}
+	})
+
+	return addr, func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(seen)
+	}
+}
+
+func TestSnapshotWindowIsBounded(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		stopDelay  time.Duration
+		readDelay  time.Duration
+		answerStop bool
+	}{
+		{"slow reads", 0, 400 * time.Millisecond, true},
+		{"stop reply never arrives", 0, 0, false},
+		{"slow stop reply", 400 * time.Millisecond, 0, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			addr, seen := windowStub(t, tc.stopDelay, tc.readDelay, tc.answerStop)
+			in, err := emulator.Connect(addr)
+			if err != nil {
+				t.Fatalf("Connect: %v", err)
+			}
+			defer in.Close()
+
+			start := time.Now()
+			snap, err := emulator.NewMemorySnapshot(in, []emulator.MemoryRange{{Addr: 0x20000000, Len: 1}})
+			elapsed := time.Since(start)
+
+			if !errors.Is(err, emulator.ErrSnapshotWindow) || snap != nil {
+				t.Fatalf("NewMemorySnapshot = %v, %v; want ErrSnapshotWindow", snap, err)
+			}
+			if elapsed > emulator.SnapshotWindow+150*time.Millisecond {
+				t.Errorf("gave up after %s; the window is %s", elapsed, emulator.SnapshotWindow)
+			}
+
+			// The guest was asked to halt, so it must be told to continue,
+			// even though the stop reply may never have arrived.
+			deadline := time.Now().Add(time.Second)
+			for {
+				packets := seen()
+				halt := slices.Index(packets, "halt")
+				if halt >= 0 && slices.Contains(packets[halt:], "c") {
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Fatalf("no continue after the halt: %q", packets)
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+		})
+	}
+}
+
+func TestSnapshotWithinWindowSucceeds(t *testing.T) {
+	addr, _ := windowStub(t, 0, 50*time.Millisecond, true)
+	in, err := emulator.Connect(addr)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer in.Close()
+
+	snap, err := emulator.NewMemorySnapshot(in, []emulator.MemoryRange{{Addr: 0x20000000, Len: 1}})
+	if err != nil {
+		t.Fatalf("NewMemorySnapshot: %v", err)
+	}
+	if data, err := snap.Read(0x20000000, 1); err != nil || data[0] != 0 {
+		t.Errorf("Read = %v, %v", data, err)
+	}
+
+	// The window's deadline must not leak into later exchanges.
+	time.Sleep(emulator.SnapshotWindow + 50*time.Millisecond)
+	if _, err := emulator.NewMemorySnapshot(in, []emulator.MemoryRange{{Addr: 0x20000000, Len: 1}}); err != nil {
+		t.Errorf("second capture: %v", err)
 	}
 }
