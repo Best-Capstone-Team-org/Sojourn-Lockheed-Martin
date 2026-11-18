@@ -23,6 +23,7 @@ WORKDIR /app
 COPY --from=backend /out/sojourn /usr/local/bin/sojourn
 COPY --from=frontend /app/frontend/build ./frontend
 COPY --from=scenarios /scenarios ./scenarios
+COPY deps/sojourn/docs/manual.pdf ./manual.pdf
 
 # Player state lives only on this volume (charter R14.1).
 ENV SAVE_DIR=/savedata

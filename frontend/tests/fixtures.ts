@@ -23,6 +23,7 @@ export const scenarios: ScenarioResponse[] = [
 		downlinkDelayS: 0,
 		uplinkDelayS: 0,
 		record: null,
+		docs: [],
 	},
 	{
 		id: "first-contact",
@@ -49,6 +50,7 @@ export const scenarios: ScenarioResponse[] = [
 		downlinkDelayS: 0,
 		uplinkDelayS: 0,
 		record: null,
+		docs: [],
 	},
 	{
 		id: "ion-storm",
@@ -69,6 +71,7 @@ export const scenarios: ScenarioResponse[] = [
 		downlinkDelayS: 0,
 		uplinkDelayS: 0,
 		record: null,
+		docs: [],
 	},
 ];
 

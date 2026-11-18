@@ -30,6 +30,8 @@ type scenarioResponse struct {
 	DownlinkDelayS int `json:"downlinkDelayS"`
 
 	Record *game.ScenarioRecord `json:"record"`
+
+	Docs []string `json:"docs"`
 }
 
 type selectScenarioResponse struct {
