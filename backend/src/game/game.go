@@ -1,8 +1,11 @@
 package game
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net"
 	"os"
@@ -71,11 +74,26 @@ func (s *State) LoadScenarios(scenariosDirs []ScenariosDir) error {
 		}
 
 		for _, scenarioDir := range files {
-			if !scenarioDir.IsDir() {
+			path := filepath.Join(scenariosDir.Dir, scenarioDir.Name())
+			extracted := ""
+
+			// A package is a directory, or a .tar.gz archive whose root
+			// is the package root.
+			switch {
+			case scenarioDir.IsDir():
+			case scenarioDir.Type().IsRegular() && strings.HasSuffix(scenarioDir.Name(), ".tar.gz"):
+				var err error
+				extracted, err = extractScenarioArchive(path)
+				if err != nil {
+					app.ErrorLogger.Printf("Skipping invalid scenario archive %q: %v", scenarioDir.Name(), err)
+					continue
+				}
+				path = extracted
+			default:
 				continue
 			}
 
-			scenario, err := LoadScenario(filepath.Join(scenariosDir.Dir, scenarioDir.Name()))
+			scenario, err := LoadScenario(path)
 
 			if err != nil {
 				app.ErrorLogger.Printf(
@@ -83,6 +101,9 @@ func (s *State) LoadScenarios(scenariosDirs []ScenariosDir) error {
 					scenarioDir.Name(),
 					err,
 				)
+				if extracted != "" {
+					os.RemoveAll(extracted)
+				}
 				continue
 			}
 
@@ -601,4 +622,83 @@ func (s *State) MemoryRanges() ([]emulator.MemoryRange, error) {
 
 func unexpectedPhase(phase string) error {
 	return errors.New(fmt.Sprintf("Unexpected game state when %s", phase))
+}
+
+// maxScenarioArchiveBytes caps what one archive may unpack to.
+const maxScenarioArchiveBytes = 64 << 20
+
+// extractScenarioArchive unpacks a .tar.gz scenario package into a fresh
+// temporary directory and returns it. Archives are untrusted: entries may only
+// be directories and regular files, and must stay inside the package root.
+func extractScenarioArchive(path string) (_ string, err error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return "", err
+	}
+	defer gz.Close()
+
+	tmp, err := os.MkdirTemp("", "sojourn-scenario-*")
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		if err != nil {
+			os.RemoveAll(tmp)
+		}
+	}()
+
+	tr := tar.NewReader(gz)
+	var total int64
+	for {
+		header, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			return tmp, nil
+		}
+		if err != nil {
+			return "", err
+		}
+
+		name := filepath.Clean(strings.TrimPrefix(header.Name, "./"))
+		if name == "." {
+			continue
+		}
+		if !filepath.IsLocal(name) {
+			return "", fmt.Errorf("entry %q is outside the package root", header.Name)
+		}
+		target := filepath.Join(tmp, name)
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0o755); err != nil {
+				return "", err
+			}
+		case tar.TypeReg:
+			total += header.Size
+			if total > maxScenarioArchiveBytes {
+				return "", fmt.Errorf("archive unpacks to more than %d bytes", maxScenarioArchiveBytes)
+			}
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return "", err
+			}
+			out, err := os.OpenFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+			if err != nil {
+				return "", err
+			}
+			_, err = io.Copy(out, io.LimitReader(tr, header.Size))
+			if closeErr := out.Close(); err == nil {
+				err = closeErr
+			}
+			if err != nil {
+				return "", err
+			}
+		default:
+			return "", fmt.Errorf("entry %q is not a regular file or directory", header.Name)
+		}
+	}
 }
