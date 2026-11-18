@@ -388,8 +388,6 @@ func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessag
 				continue
 			}
 
-			emulator.PrintTelemetryFrame(frame)
-
 			if err := grader.Grade(frame); err != nil {
 				app.ErrorLogger.Printf("Grading: %v", err)
 			}
