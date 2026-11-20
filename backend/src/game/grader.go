@@ -46,6 +46,10 @@ type Grader struct {
 	gdbAddr string
 	log     []CommandLogEntry
 
+	// previous is the last frame that passed its CRC: events are computed
+	// against it (format spec §7).
+	previous *emulator.TelemetryFrame
+
 	// mu guards introspect, which the uplink stamps commands through while
 	// the downlink grades frames, and status.
 	mu         sync.Mutex
@@ -93,8 +97,13 @@ func (g *Grader) Grade(frame *emulator.TelemetryFrame) error {
 		Telemetry: frame.AsMap(),
 		Log:       slices.Clone(g.log),
 		Budget:    budgetUsed(g.log),
-		// TODO: fill in
-		// Events
+	}
+
+	// A frame that failed its CRC can't be trusted to say what changed, so
+	// it has no events and the next frame compares against the last good one.
+	if frame.CRCOK {
+		f.Events = emulator.TelemetryEvents(g.previous, frame)
+		g.previous = frame
 	}
 
 	evaluate := g.state.Evaluate
