@@ -101,3 +101,10 @@ type stateDownlink struct {
 	Constraints map[string]int                       `json:"constraints"`
 	Grading     game.GradingStatus                   `json:"grading"`
 }
+
+type scenarioRefusedDownlink struct {
+	Type     string `json:"type"`
+	Reason   string `json:"reason"`
+	Declared string `json:"declared"`
+	Reported string `json:"reported,omitempty"`
+}

@@ -41,3 +41,11 @@ type CommandRefusedDownlinkMessage struct {
 }
 
 func (m *CommandRefusedDownlinkMessage) downlinkMessage() {}
+
+type ScenarioRefusedDownlinkMessage struct {
+	Reason   string
+	Declared string
+	Reported string
+}
+
+func (m *ScenarioRefusedDownlinkMessage) downlinkMessage() {}

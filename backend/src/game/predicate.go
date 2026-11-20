@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
 	"strings"
@@ -407,6 +408,22 @@ func applyMask(value any, mask int) (any, string) {
 		return v & uint32(mask), ""
 	case uint64:
 		return v & uint64(mask), ""
+	case int8:
+		return v & int8(mask), ""
+	case int16:
+		return v & int16(mask), ""
+	case int32:
+		return v & int32(mask), ""
+	case int64:
+		return v & int64(mask), ""
+	case int:
+		return v & mask, ""
+	case float64:
+		// JSON numbers decode as float64; only whole ones have bits.
+		if v != math.Trunc(v) || math.Abs(v) > 1<<53 {
+			return nil, fmt.Sprintf("Value %v has no bits to mask", v)
+		}
+		return int64(v) & int64(mask), ""
 	default:
 		return nil, fmt.Sprintf("Unsupported type %T for mask application", value)
 	}

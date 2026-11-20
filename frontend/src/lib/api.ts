@@ -120,6 +120,12 @@ export type CommandDownlink =
 			command: string;
 			reason: string;
 			constraints: Constraints;
+	  }
+	| {
+			type: "scenarioRefused";
+			reason: string;
+			declared: string;
+			reported?: string;
 	  };
 
 export interface Save {

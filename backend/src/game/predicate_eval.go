@@ -22,21 +22,27 @@ func (e *Evaluation) evaluatePredicate(frame Frame, predicate Predicate) (bool, 
 
 		return compareValues(actual, predicate.Value, predicate.Cmp), ""
 	case "tlm_bits":
+		if !frame.CRCOK {
+			return false, ""
+		}
 		actual, found := getTelemetryValue(frame, predicate.Path)
 		if !found {
 			return false, ""
 		}
 
+		// A path that ends on something with no bits, such as a string or
+		// a channel object, names no maskable field: missing data is false.
 		masked, errMsg := applyMask(actual, predicate.Mask)
 		if errMsg != "" {
-			return false, errMsg
+			return false, ""
 		}
 
 		return compareValues(masked, predicate.Value, predicate.Cmp), ""
 	case "channel_present":
-		return telemetryChannelPresent(frame, predicate.ID), ""
+		// A frame that failed CRC says nothing about which channels are present.
+		return frame.CRCOK && telemetryChannelPresent(frame, predicate.ID), ""
 	case "channel_absent":
-		return !telemetryChannelPresent(frame, predicate.ID), ""
+		return frame.CRCOK && !telemetryChannelPresent(frame, predicate.ID), ""
 	case "all":
 		var predicates []Predicate
 		if err := json.Unmarshal(predicate.Of, &predicates); err != nil {

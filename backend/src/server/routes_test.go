@@ -681,3 +681,50 @@ func TestScenariosReportRecord(t *testing.T) {
 		t.Errorf("record = %+v", record)
 	}
 }
+
+func TestDownlinkPumpScenarioRefused(t *testing.T) {
+	s := newTestServer(t)
+	s.downlinkChan = make(chan game.DownlinkMessage)
+	pumpDone := make(chan struct{})
+
+	client := wsPair(t, func(conn *websocket.Conn) {
+		s.wsConn = conn
+		go func() {
+			s.downlinkPump()
+			close(pumpDone)
+		}()
+	})
+	client.SetReadDeadline(time.Now().Add(5 * time.Second))
+
+	s.downlinkChan <- &game.ScenarioRefusedDownlinkMessage{
+		Reason:   "Scenario refused: the probe booted 0xdeadbeef, the package declares 0xf72478e0.",
+		Declared: "0xf72478e0",
+		Reported: "0xdeadbeef",
+	}
+	var refused scenarioRefusedDownlink
+	if err := client.ReadJSON(&refused); err != nil {
+		t.Fatalf("read refusal: %v", err)
+	}
+	if refused.Type != "scenarioRefused" || refused.Declared != "0xf72478e0" || refused.Reported != "0xdeadbeef" ||
+		!strings.Contains(refused.Reason, "refused") {
+		t.Errorf("refusal = %+v", refused)
+	}
+
+	_, _, err := client.ReadMessage()
+	if !websocket.IsCloseError(err, websocket.ClosePolicyViolation) {
+		t.Fatalf("after refusal: %v, want the socket closed as a policy violation", err)
+	}
+
+	// The pump keeps draining so the game never blocks on a closed console.
+	select {
+	case s.downlinkChan <- &game.CommandResponseDownlinkMessage{Response: "late"}:
+	case <-time.After(5 * time.Second):
+		t.Fatal("downlink pump stopped draining after refusal")
+	}
+	close(s.downlinkChan)
+	select {
+	case <-pumpDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("downlink pump did not exit after channel close")
+	}
+}
