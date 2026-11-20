@@ -86,3 +86,44 @@ func TestGraderRejectsFramesWhenNotInProgress(t *testing.T) {
 		t.Fatal("expected Grade to fail with no scenario")
 	}
 }
+
+// Event predicates see what changed since the last good frame (R23.12).
+func TestGraderComputesEvents(t *testing.T) {
+	state := readyState(t,
+		Objective{ID: "fallback", Success: Predicate{Op: "event", Match: "ANTENNA HGA -> LGA"}},
+		Objective{ID: "rebooted", Success: Predicate{Op: "event", Match: `^PROBE REBOOTED \(\d+ -> \d+`, Regex: true}},
+	)
+	startGame(t, state)
+	g := NewGrader(state, "127.0.0.1:1")
+	defer g.Close()
+
+	frame := func(antenna, reboots byte, crcOK bool) *emulator.TelemetryFrame {
+		return &emulator.TelemetryFrame{CRCOK: crcOK, Mode: "NOMINAL", LastFault: "-", Reboots: reboots,
+			Comms: &emulator.CommsData{Antenna: antenna, Budget: 100, XStat: 1, HGADeployPct: 100}}
+	}
+	grade := func(f *emulator.TelemetryFrame) {
+		t.Helper()
+		if err := g.Grade(f); err != nil {
+			t.Fatalf("Grade: %v", err)
+		}
+	}
+
+	grade(frame(0, 0, true)) // first frame: nothing to compare against
+	if got := status(t, &state.evaluation, "fallback"); got != ObjectiveStatusActive {
+		t.Fatalf("fallback = %s after the first frame, want active", got)
+	}
+
+	// A corrupt frame claiming LGA is no evidence, and isn't what the next
+	// frame is compared against.
+	grade(frame(1, 0, false))
+	if got := status(t, &state.evaluation, "fallback"); got != ObjectiveStatusActive {
+		t.Fatalf("fallback = %s after a bad-CRC frame, want active", got)
+	}
+
+	grade(frame(1, 1, true))
+	for _, id := range []string{"fallback", "rebooted"} {
+		if got := status(t, &state.evaluation, id); got != ObjectiveStatusComplete {
+			t.Errorf("%s = %s, want complete", id, got)
+		}
+	}
+}
