@@ -479,6 +479,8 @@ func serveDoc(w http.ResponseWriter, path string) {
 	w.Write(data)
 }
 
+var errScenarioRefused = errors.New("scenario refused")
+
 func (s *server) downlinkPump() {
 	app.ServerLogger.Println("Starting downlink pump")
 
@@ -511,8 +513,26 @@ func (s *server) downlinkPump() {
 				Reason:      downlinkMessage.Reason,
 				Constraints: downlinkMessage.Constraints,
 			})
+		case *game.ScenarioRefusedDownlinkMessage:
+			// Closing the socket stops the firmware.
+			err = s.wsConn.WriteJSON(scenarioRefusedDownlink{
+				Type:     "scenarioRefused",
+				Reason:   downlinkMessage.Reason,
+				Declared: downlinkMessage.Declared,
+				Reported: downlinkMessage.Reported,
+			})
+			if err == nil {
+				closeMessage := websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "scenario refused")
+				s.wsConn.WriteControl(websocket.CloseMessage, closeMessage, time.Now().Add(time.Second))
+				err = errScenarioRefused
+			}
 		}
 
+		if errors.Is(err, errScenarioRefused) {
+			app.ServerLogger.Println("Scenario refused, closing WS connection")
+			s.wsConn.Close()
+			break
+		}
 		if err != nil {
 			app.ServerLogger.Printf("Error writing JSON, probably WS connection closed: %+v\n", err)
 			s.wsConn.Close()

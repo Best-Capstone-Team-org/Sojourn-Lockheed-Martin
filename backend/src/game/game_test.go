@@ -34,7 +34,18 @@ func stubFirmware(t *testing.T) <-chan firmwareLaunch {
 	}
 	t.Cleanup(func() { launchFirmware = prev })
 
+	stubAppCRC(t, func(s *State) (uint32, error) {
+		return parseAppCRC(s.Scenario.Manifest.Firmware.AppCRC32)
+	})
+
 	return launches
+}
+
+func stubAppCRC(t *testing.T, read func(*State) (uint32, error)) {
+	t.Helper()
+	prev := readAppCRC
+	readAppCRC = read
+	t.Cleanup(func() { readAppCRC = prev })
 }
 
 // startGame starts state without booting real firmware.

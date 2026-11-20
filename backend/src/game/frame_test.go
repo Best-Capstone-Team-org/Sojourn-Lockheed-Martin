@@ -33,6 +33,7 @@ func rawPredicate(t *testing.T, p any) json.RawMessage {
 func frameEvaluation(t *testing.T, objectives ...Objective) *Evaluation {
 	t.Helper()
 	s := &Scenario{
+		Manifest:   Manifest{Firmware: FirmwareConfig{AppCRC32: "0xf72478e0"}},
 		Objectives: objectives,
 		Symbols: SymbolsFile{
 			Symbols: map[string]string{"g_mode": "0x20000010", "g_buf": "0x20000020"},

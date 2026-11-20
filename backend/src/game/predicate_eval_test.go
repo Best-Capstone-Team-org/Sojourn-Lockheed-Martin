@@ -26,8 +26,7 @@ func TestEvaluatePredicateErrors(t *testing.T) {
 	bad := &AddressRef{Sym: "missing"}
 	at := &AddressRef{Sym: "g_mode"}
 	notJSON := []byte("{")
-	failing := Predicate{Op: "tlm_bits", Path: "s", Mask: 1}
-	tele := map[string]any{"s": "str"}
+	failing := Predicate{Op: "nope"}
 
 	tests := []struct {
 		name  string
@@ -35,19 +34,18 @@ func TestEvaluatePredicateErrors(t *testing.T) {
 		frame Frame
 		want  string
 	}{
-		{"tlm_bits mask", failing, Frame{CRCOK: true, Telemetry: tele}, "mask"},
 		{"all of", Predicate{Op: "all", Of: notJSON}, Frame{}, "'all'"},
-		{"all child", Predicate{Op: "all", Of: rawPredicate(t, []Predicate{failing})}, Frame{CRCOK: true, Telemetry: tele}, "mask"},
+		{"all child", Predicate{Op: "all", Of: rawPredicate(t, []Predicate{failing})}, Frame{}, "Unknown"},
 		{"any of", Predicate{Op: "any", Of: notJSON}, Frame{}, "'any'"},
-		{"any child", Predicate{Op: "any", Of: rawPredicate(t, []Predicate{failing})}, Frame{CRCOK: true, Telemetry: tele}, "mask"},
+		{"any child", Predicate{Op: "any", Of: rawPredicate(t, []Predicate{failing})}, Frame{}, "Unknown"},
 		{"not of", Predicate{Op: "not", Of: notJSON}, Frame{}, "'not'"},
-		{"not child", Predicate{Op: "not", Of: rawPredicate(t, failing)}, Frame{CRCOK: true, Telemetry: tele}, "mask"},
+		{"not child", Predicate{Op: "not", Of: rawPredicate(t, failing)}, Frame{}, "Unknown"},
 		{"ever of", Predicate{Op: "ever", Of: notJSON}, Frame{}, "'ever'"},
 		{"sustained of", Predicate{Op: "sustained", Of: notJSON}, Frame{}, "'sustained'"},
 		{"sustained frames", Predicate{Op: "sustained", Of: rawPredicate(t, failing)}, Frame{}, "frames"},
 		{"within of", Predicate{Op: "within", Of: notJSON}, Frame{}, "'within'"},
 		{"within frames", Predicate{Op: "within", Of: rawPredicate(t, failing)}, Frame{}, "frames"},
-		{"within child", Predicate{Op: "within", Frames: 2, Of: rawPredicate(t, failing)}, Frame{CRCOK: true, Telemetry: tele}, "mask"},
+		{"within child", Predicate{Op: "within", Frames: 2, Of: rawPredicate(t, failing)}, Frame{}, "Unknown"},
 		{"commanded address", Predicate{Op: "commanded", At: bad}, Frame{}, "commanded address"},
 		{"script runner", Predicate{Op: "script"}, Frame{}, "runner"},
 		{"unknown", Predicate{Op: "nope"}, Frame{}, "Unknown"},
@@ -145,9 +143,10 @@ func TestEvaluateMemNotEqual(t *testing.T) {
 
 func TestEvaluateTemporalChildErrorsInHistory(t *testing.T) {
 	e := frameEvaluation(t)
-	child := Predicate{Op: "tlm_bits", Path: "s", Mask: 1, Cmp: "eq", Value: 1.0}
-	e.history = []Frame{{Telemetry: map[string]any{"s": "str"}}, {Telemetry: map[string]any{"s": "str"}}}
-	now := Frame{CRCOK: true, Telemetry: map[string]any{"s": uint8(0)}}
+	// Past frames carry no memory, so the child errors only in history.
+	child := Predicate{Op: "mem_u8", At: &AddressRef{Sym: "g_mode"}, Cmp: "eq", Value: 1.0}
+	e.history = []Frame{{}, {}}
+	now := Frame{Memory: sram(0)}
 
 	for _, p := range []Predicate{
 		{Op: "ever", Of: rawPredicate(t, child)},
@@ -261,14 +260,18 @@ func TestApplyMaskTypes(t *testing.T) {
 		{uint16(0xFFFF), uint16(0x0F)},
 		{uint32(0xFFFFFFFF), uint32(0x0F)},
 		{uint64(0xFF), uint64(0x0F)},
+		{int32(-1), int32(0x0F)},
+		{255.0, int64(0x0F)},
 	}
 	for _, tt := range tests {
 		if got, msg := applyMask(tt.value, 0x0F); got != tt.want || msg != "" {
 			t.Errorf("applyMask(%T) = %v, %q", tt.value, got, msg)
 		}
 	}
-	if _, msg := applyMask(1.0, 1); msg == "" {
-		t.Error("expected float mask to fail")
+	for _, value := range []any{1.5, "0x01", map[string]any{}} {
+		if _, msg := applyMask(value, 1); msg == "" {
+			t.Errorf("applyMask(%#v) succeeded, want an error", value)
+		}
 	}
 }
 

@@ -67,6 +67,8 @@
 	);
 
 	let attempts = $state(0);
+	// A refused scenario will be refused again, so don't reconnect.
+	let refused = false;
 	let retryTimer: ReturnType<typeof setTimeout> | undefined;
 	let retry = $state(0);
 
@@ -109,6 +111,11 @@
 				tlm.push(`CMD REFUSED: ${message.reason}`);
 				break;
 
+			case "scenarioRefused":
+				refused = true;
+				tlm.push(message.reason);
+				break;
+
 			case "state":
 				grading = message.grading;
 				for (const update of message.objectives) {
@@ -141,6 +148,9 @@
 
 	function handleSocketDisconnect() {
 		ready = false;
+		if (refused) {
+			return;
+		}
 		scheduleReconnect();
 	}
 

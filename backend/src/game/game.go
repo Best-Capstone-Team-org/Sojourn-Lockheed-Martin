@@ -209,7 +209,8 @@ func (s *State) Start(downlinkChan chan DownlinkMessage, uplinkChan chan []byte,
 	go uplinkForwarder(delayedUplinkChan, emulatorUplinkChan, pendingCommands, booted, setupCommands,
 		setup, done, probeUptime(s.grader))
 
-	go s.downlinkTranslatorPump(translatedDownlinkChan, emulatorDownlinkChan, s.grader, pendingCommands, booted,
+	boot := &bootGate{booted: booted, deadline: time.Now().Add(appImageCheckWindow), stop: done}
+	go s.downlinkTranslatorPump(translatedDownlinkChan, emulatorDownlinkChan, s.grader, pendingCommands, boot,
 		setup, session)
 	go delayed(translatedDownlinkChan, delayedDownlinkChan, time.Duration(link.DownlinkDelayS)*linkDelayUnit, done)
 	go mergeDownlink(delayedDownlinkChan, refusals, downlinkChan, refusalsDone)
@@ -401,17 +402,69 @@ waitForBoot:
 	}
 }
 
+type bootGate struct {
+	booted   chan<- struct{}
+	deadline time.Time
+	stop     <-chan struct{}
+}
+
 func (s *State) downlinkTranslatorPump(interfaceDownlinkChan chan DownlinkMessage,
 	emulatorDownlinkChan chan []byte, grader *Grader, pendingCommands <-chan pendingCommand,
-	booted chan<- struct{}, setup *setupLink, session *Session) {
+	boot *bootGate, setup *setupLink, session *Session) {
 	app.GameLogger.Println("Starting downlink translator pump")
 
-	for downlinkMessage := range emulatorDownlinkChan {
+	var bootTimeout <-chan time.Time
+	if boot != nil {
+		timer := time.NewTimer(time.Until(boot.deadline))
+		defer timer.Stop()
+		bootTimeout = timer.C
+	}
+
+	refused := false
+	refuse := func(mismatch *AppImageMismatch) {
+		refused = true
+		select {
+		case <-boot.stop:
+			return
+		default:
+		}
+		app.ErrorLogger.Printf("%s (declared %s, reported %q)", mismatch.Reason, mismatch.Declared, mismatch.Reported)
+		interfaceDownlinkChan <- &ScenarioRefusedDownlinkMessage{
+			Reason:   mismatch.Reason,
+			Declared: mismatch.Declared,
+			Reported: mismatch.Reported,
+		}
+	}
+
+pump:
+	for {
+		var downlinkMessage []byte
+		select {
+		case message, ok := <-emulatorDownlinkChan:
+			if !ok {
+				break pump
+			}
+			downlinkMessage = message
+		case <-bootTimeout:
+			bootTimeout = nil
+			refuse(appImageUnconfirmed(s.appImageDeclared(), errors.New("no boot banner")))
+			continue
+		}
+		if refused {
+			continue
+		}
+
 		line := strings.TrimSpace(string(downlinkMessage))
 
-		if booted != nil && strings.HasPrefix(line, bootBanner) {
-			close(booted)
-			booted = nil
+		if boot != nil && boot.booted != nil && strings.HasPrefix(line, bootBanner) {
+			bootTimeout = nil
+			if mismatch := s.verifyAppImage(boot.deadline, boot.stop); mismatch != nil {
+				refuse(mismatch)
+				continue
+			}
+			app.GameLogger.Printf("Probe booted application image %s", s.Scenario.Manifest.Firmware.AppCRC32)
+			close(boot.booted)
+			boot.booted = nil
 		}
 
 		if strings.HasPrefix(line, "TLM ") {

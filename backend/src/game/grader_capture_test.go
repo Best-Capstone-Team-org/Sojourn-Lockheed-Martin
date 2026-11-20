@@ -154,12 +154,12 @@ func TestGraderCaptureFailureReconnects(t *testing.T) {
 func TestGraderEvaluationError(t *testing.T) {
 	state := readyState(t, Objective{
 		ID:      "bits",
-		Success: Predicate{Op: "tlm_bits", Path: "mode", Mask: 1, Cmp: "eq", Value: 1.0},
+		Success: Predicate{Op: "script", Lang: "python", Entry: "checks/a.py:f"},
 	})
 	startGame(t, state)
 	g := NewGrader(state, "127.0.0.1:1")
 
-	// mode is a string, which cannot be masked.
+	// No script runner is configured, so the predicate cannot be evaluated.
 	if err := g.Grade(&emulator.TelemetryFrame{CRCOK: true, Mode: "SAFE"}); err == nil {
 		t.Fatal("expected Grade to report the evaluation error")
 	}
