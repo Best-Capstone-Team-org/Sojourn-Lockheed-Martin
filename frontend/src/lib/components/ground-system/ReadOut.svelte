@@ -25,7 +25,7 @@
 	const frameHeader = $derived([
 		{ label: "Mode", value: frame?.mode },
 		{ label: "Uptime", value: frame?.uptime, unit: "s" },
-		{ label: "Bus", value: frame?.bus, unit: "V" },
+		{ label: "Bus", value: frame?.bus, unit: "mV" },
 		{ label: "Load", value: frame?.load, unit: "mW" },
 		{ label: "Reboot", value: frame?.reboots },
 		{ label: "Last Fault", value: frame?.lastFault },
